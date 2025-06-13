@@ -181,7 +181,7 @@ if __name__ == '__main__':
          init_factor=1,
          noise_factor=0,
          const_factor=0,
-         lr=0.01,
+         lr=0.001,
          target=6,
          attr_methods='Saliency',
          lamlSum=1.0,
@@ -189,7 +189,7 @@ if __name__ == '__main__':
          lamL2norm=1.0,
          lamCMF=1.0,
          lamConv=1.0,
-         lamL1wave=1.0,
+         lamL1wave=0.05,
          lamL1attr=5.0)
 
 
