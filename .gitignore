@@ -1,0 +1,14 @@
+# ignore the virtual environment
+/myenv
+
+# ignore the dataset
+/data
+
+# ignore other repos
+/adaptive-wavelets
+
+# ignore the settings
+/.vscode
+
+# ingore all the __pycache__
+/**/__pycache__
