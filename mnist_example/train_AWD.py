@@ -16,6 +16,10 @@ from models.cnn import CNN
 from datasets.dataloader import get_mnist
 from utils.general import *
 
+print("Current working dir:", os.getcwd())
+print("Script dir:", os.path.dirname(__file__))
+print("sys.path:", sys.path)
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 root = get_parent_path(lvl=1)
 
