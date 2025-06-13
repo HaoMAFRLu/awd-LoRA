@@ -8,11 +8,6 @@ import pickle
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-print("Current working dir:", os.getcwd())
-print("Script dir:", os.path.dirname(__file__))
-print("sys.path:", sys.path)
-print("CNN module path:", os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'models', 'cnn.py')))
-
 from awave.losses import get_loss_f
 from awave.utils.train import Trainer
 from awave.utils.evaluate import Validator
@@ -155,7 +150,7 @@ def main(batch_size,
 
     # calculate losses
     print('calculating losses and metric...')
-    validator = Validator(model, test_loader)
+    validator = Validator(model, test_loader, device=device)
     rec_loss, lsum_loss, hsum_loss, L2norm_loss, CMF_loss, conv_loss, L1wave_loss, L1saliency_loss, L1inputxgrad_loss = validator(wt, target=target)
     
     data = {
@@ -179,7 +174,7 @@ def main(batch_size,
 if __name__ == '__main__':
     main(batch_size=128,
          is_warmstart=False,
-         num_epochs=2,
+         num_epochs=3,
          wave='db5',
          mode='zero',
          J=4,
