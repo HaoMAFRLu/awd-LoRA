@@ -174,7 +174,7 @@ def main(batch_size,
 if __name__ == '__main__':
     main(batch_size=128,
          is_warmstart=False,
-         num_epochs=3,
+         num_epochs=100,
          wave='db5',
          mode='zero',
          J=4,

@@ -19,15 +19,20 @@ from utils.general import *
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 root = get_parent_path(lvl=1)
 
-def get_single_result(path):
-    params = 
+def get_params(path):
+    pass
 
+def get_single_result(path):
+    params = get_params(os.path.join(path, 'params'))
+    wt = DWT2d(wave='db3', mode='zero', J=4, init_factor=1, noise_factor=0.0).to(device)
+    wt.load_state_dict(torch.load(opj(out_dir, fname)))
+    return wt
 
 def main(folders):
     for folder in folders:
         path_folder = os.path.join(root, 'data', 'awd_training', folder)
-        _result, _model = get_single_result(path_folder)
-        path_folder = os.path.join(root, 'data', '')
+        _result, _wt = get_single_result(path_folder)
+        
 
 if __name__ == '__main__':
     folders = ['1']
