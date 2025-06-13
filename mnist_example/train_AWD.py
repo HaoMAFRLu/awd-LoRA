@@ -12,11 +12,6 @@ from awave.transform2d import DWT2d
 from awave.utils.warmstart import warm_start
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-print("Current working dir:", os.getcwd())
-print("Script dir:", os.path.dirname(__file__))
-print("sys.path:", sys.path)
-
 from models.cnn import CNN
 from datasets.dataloader import get_mnist
 from utils.general import *
