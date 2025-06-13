@@ -5,12 +5,6 @@ import torch
 import random
 import pickle
 
-from awave.losses import get_loss_f
-from awave.utils.train import Trainer
-from awave.utils.evaluate import Validator
-from awave.transform2d import DWT2d
-from awave.utils.warmstart import warm_start
-
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -18,6 +12,12 @@ print("Current working dir:", os.getcwd())
 print("Script dir:", os.path.dirname(__file__))
 print("sys.path:", sys.path)
 print("CNN module path:", os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'models', 'cnn.py')))
+
+from awave.losses import get_loss_f
+from awave.utils.train import Trainer
+from awave.utils.evaluate import Validator
+from awave.transform2d import DWT2d
+from awave.utils.warmstart import warm_start
 
 from models.cnn import CNN
 from datasets.dataloader import get_mnist
@@ -85,6 +85,32 @@ def main(batch_size,
     path_folder = os.path.join(root, 'data', 'awd_training', folder_name)
     mkdir(path_folder)
 
+    data = {
+        'batch_size': batch_size,
+        'is_warmstart': is_warmstart,
+        'num_epochs': num_epochs,
+        'wave': wave,
+        'mode': mode,
+        'J': J,
+        'init_factor': init_factor,
+        'noise_factor': noise_factor,
+        'const_factor': const_factor,
+        'lr': lr,
+        'target': target,
+        'attr_methods': attr_methods,
+        'lamlSum': lamlSum,
+        'lamhSum': lamhSum,
+        'lamL2norm': lamL2norm,
+        'lamCMF': lamCMF,
+        'lamConv': lamConv,
+        'lamL1wave': lamL1wave,
+        'lamL1attr': lamL1attr
+    }
+
+    path_file = os.path.join(path_folder, 'params')
+    with open(path_file, 'wb') as file:
+        pickle.dump(data, file)
+
     # get the dataloader
     train_loader, test_loader = get_mnist(batch_size=batch_size)
     # get the pretrained model
@@ -121,7 +147,8 @@ def main(batch_size,
                       use_residuals=True, 
                       attr_methods=attr_methods, 
                       device=device, 
-                      n_print=1)
+                      n_print=1,
+                      path_folder=path_folder)
 
     # run
     trainer(train_loader, epochs=num_epochs)
@@ -132,25 +159,6 @@ def main(batch_size,
     rec_loss, lsum_loss, hsum_loss, L2norm_loss, CMF_loss, conv_loss, L1wave_loss, L1saliency_loss, L1inputxgrad_loss = validator(wt, target=target)
     
     data = {
-        'batch_size': batch_size,
-        'is_warmstart': is_warmstart,
-        'num_epochs': num_epochs,
-        'wave': wave,
-        'mode': mode,
-        'J': J,
-        'init_factor': init_factor,
-        'noise_factor': noise_factor,
-        'const_factor': const_factor,
-        'lr': lr,
-        'target': target,
-        'attr_methods': attr_methods,
-        'lamlSum': lamlSum,
-        'lamhSum': lamhSum,
-        'lamL2norm': lamL2norm,
-        'lamCMF': lamCMF,
-        'lamConv': lamConv,
-        'lamL1wave': lamL1wave,
-        'lamL1attr': lamL1attr,
         'train_losses': trainer.train_losses,
         'rec_loss': rec_loss,
         'lsum_loss': lsum_loss,
@@ -164,25 +172,21 @@ def main(batch_size,
         'net': wt
     }
 
-    path_file = os.path.join(path_folder, 'params')
+    path_file = os.path.join(path_folder, 'results')
     with open(path_file, 'wb') as file:
         pickle.dump(data, file)
-
-    path_file = os.path.join(path_folder, 'model.pth')
-    torch.save(wt.state_dict(), path_file)
-
 
 if __name__ == '__main__':
     main(batch_size=128,
          is_warmstart=False,
-         num_epochs=100,
+         num_epochs=2,
          wave='db5',
          mode='zero',
          J=4,
          init_factor=1,
          noise_factor=0,
          const_factor=0,
-         lr=0.1,
+         lr=0.01,
          target=6,
          attr_methods='Saliency',
          lamlSum=1.0,
