@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import random
 import pickle
+import argparse
 
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -46,11 +47,13 @@ def get_wave_transform(is_warmstart,
                        noise_factor,
                        const_factor):
     if is_warmstart is False:
-        wt = DWT2d(wave=wave, mode=mode, J=J,
-                    init_factor=init_factor,
-                    noise_factor=noise_factor,
-                    const_factor=const_factor,
-                    device=device)
+        wt = DWT2d(wave=wave, 
+                   mode=mode, 
+                   J=J,
+                   init_factor=init_factor,
+                   noise_factor=noise_factor,
+                   const_factor=const_factor,
+                   device=device)
     else:
         pass
         # wt = warm_start(p, out_dir).to(device)
@@ -76,7 +79,8 @@ def main(batch_size,
          lamConv: float = 1.,
          lamL1wave: float = 1.,
          lamL1attr: float = 1.):
-    folder_name = get_folder_name()
+    # folder_name = get_folder_name()
+    folder_name = 'wave_' + str(lamL1wave) + '_attr_' + str(lamL1attr)
     path_folder = os.path.join(root, 'data', 'awd_training', folder_name)
     mkdir(path_folder)
 
@@ -172,9 +176,14 @@ def main(batch_size,
         pickle.dump(data, file)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="AWD")
+    parser.add_argument('--lamL1wave', type=float, required=True, help="wave")
+    parser.add_argument('--lamL1attr', type=float, required=True, help="attr")
+    args = parser.parse_args()
+
     main(batch_size=128,
          is_warmstart=False,
-         num_epochs=100,
+         num_epochs=50,
          wave='db5',
          mode='zero',
          J=4,
@@ -189,7 +198,7 @@ if __name__ == '__main__':
          lamL2norm=1.0,
          lamCMF=1.0,
          lamConv=1.0,
-         lamL1wave=0.05,
-         lamL1attr=5.0)
+         lamL1wave=args.lamL1wave,
+         lamL1attr=args.lamL1attr)
 
 
