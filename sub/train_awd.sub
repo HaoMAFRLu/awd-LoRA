@@ -1,8 +1,9 @@
 executable = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
-arguments = -u ../mnist_example/train_AWD.py
-error  = ../jobs/task$(Process).err
-output = ../jobs/task$(Process).out
-log    = ../jobs/task$(Process).log
+arguments = -u mnist_example/train_AWD.py
+initialdir = /lustre/home/hma2/projects/awd-LoRA
+error  = jobs/task$(Process).err
+output = jobs/task$(Process).out
+log    = jobs/task$(Process).log
 request_gpus = 1
 request_memory = 65536
 request_cpus = 1
