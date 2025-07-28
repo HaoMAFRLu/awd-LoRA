@@ -1,0 +1,19 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/torchrun
+arguments       = \
+    --nproc_per_node=5 \
+    --nnodes=1 \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint=127.0.0.1:29500 \
+    -u LowSpa/example_DDP.py
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/task$(Process).log
+error           = jobs/task$(Process).err
+output          = jobs/task$(Process).out
+
+request_cpus    = 5
+request_memory  = 65536
+request_gpus    = 5
+
+queue 1
