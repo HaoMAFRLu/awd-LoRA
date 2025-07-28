@@ -1,5 +1,5 @@
 model_type: GPT
-
+seed: 42
 layers:
   - name: transformer.h.0.attn.c_attn.weight
     params:

@@ -373,6 +373,9 @@ class LowSpaTrainer():
             ep_loss, ep_loss1, ep_loss2 = 0.0, 0.0, 0.0
             # reset solvers for the new epoch
             self.solvers_reset()
+            # important for DDP randomness
+            if self.model_type == 'GPT':
+                self.data_loader.set_epoch(epoch)
             # training over data
             for data, target in is_main_process():
                 loss, loss1, loss2 = self.single_step_train(data, target)
