@@ -32,13 +32,9 @@ class GPTCrossEntropyLoss(nn.Module):
         )
     
 def mkdir(path: Path) -> None:
-    """Check if the folder exists and create it
-    if it does not exist.
-    """
-    folder = os.path.exists(path)
-    if not folder:
-        os.makedirs(path)
-
+    """Check if the folder exists and create it if it does not."""
+    os.makedirs(path, exist_ok=True)
+    
 def get_parent_path(lvl: int=0) -> Path:
     """Get the lvl-th parent path as root path.
     Return current file path when lvl is zero.
