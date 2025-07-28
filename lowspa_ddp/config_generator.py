@@ -79,10 +79,10 @@ def generate_config(
                 })
 
     # Add final language model head
-    cfg['layers'].append({
-        'name': 'transformer.ln_f.weight',
-        'params': copy.deepcopy(proj['lm_head'])
-    })
+    # cfg['layers'].append({
+    #     'name': 'transformer.ln_f.weight',
+    #     'params': copy.deepcopy(proj['lm_head'])
+    # })
 
     # Define a dumper class that suppresses aliases and customizes float formatting
     class NoAliasDumper(yaml.SafeDumper):
