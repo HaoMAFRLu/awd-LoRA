@@ -61,6 +61,10 @@ class LowSpaTrainer():
         self.layer_info['loss1'] = []
         self.layer_info['loss2'] = []
 
+        print(f"Rank {self.rank} assigned layers: {self.assigned_layers}")
+        print('=' * 50)
+        print(f"Model names: {self.names_model_layers}")
+
         # initialize the ADMM solvers
         self.ADMM_solvers = []
         for entry in self.cfg_layers:
