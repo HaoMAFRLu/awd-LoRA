@@ -3,7 +3,7 @@ import torch.distributed as dist
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 import functools
-import os
+import os, socket
 import pickle
 from tqdm import tqdm
 
@@ -33,6 +33,11 @@ class LowSpaTrainer():
         self.rank, self.world_size = self._init_distributed()
         torch.cuda.set_device(self.rank % torch.cuda.device_count())
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
+
+        # print device info
+        dev_idx = torch.cuda.current_device()
+        props   = torch.cuda.get_device_properties(dev_idx)
+        print(f"[Rank {self.rank}] using {props.name}")    
 
         # Wrap model in DDP
         self.model.cuda()
