@@ -32,6 +32,7 @@ class LowSpaTrainer():
 
         self.rank, self.world_size = self._init_distributed()
         torch.cuda.set_device(self.rank % torch.cuda.device_count())
+        self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
 
         # Wrap model in DDP
         self.model.cuda()
@@ -80,9 +81,9 @@ class LowSpaTrainer():
             self.ADMM_solvers.append(solver)
         
         # after initialization, sync the initial weights
-        self.LL = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.'+entry['name'])) for entry in self.cfg_layers}
-        self.SS = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.'+entry['name'])) for entry in self.cfg_layers}
-        self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.'+entry['name'])) for entry in self.cfg_layers}
+        self.LL = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.'+entry['name']), device='cpu') for entry in self.cfg_layers}
+        self.SS = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.'+entry['name']), device='cpu') for entry in self.cfg_layers}
+        self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.'+entry['name']), device='cpu') for entry in self.cfg_layers}
         
         self.sync_weights()
 
@@ -173,9 +174,9 @@ class LowSpaTrainer():
             if solver.layer_gpu_map == self.rank:
                 loss += solver.get_loss_term(solver.L, solver.S, solver.Y)
             else:
-                loss += solver.get_loss_term(self.LL[solver.layer_name],
-                                             self.SS[solver.layer_name],
-                                             self.YY[solver.layer_name])
+                loss += solver.get_loss_term(self.LL[solver.layer_name].to(self.device),
+                                             self.SS[solver.layer_name].to(self.device),
+                                             self.YY[solver.layer_name].to(self.device))
         return loss
 
     def gather_results(self, local_results):
@@ -258,7 +259,7 @@ class LowSpaTrainer():
         local_weights = {}
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                local_weights[solver.layer_name] = (solver.L, solver.S, solver.Y)
+                local_weights[solver.layer_name] = (solver.L.to('cpu'), solver.S.to('cpu'), solver.Y.to('cpu'))
         return local_weights
     
     def gather_weights(self, local_weights):

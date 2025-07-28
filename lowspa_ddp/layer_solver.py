@@ -37,18 +37,18 @@ class ADMMSolver():
         """
         Compute the loss term for the model.
         """
-        def _dev(x): 
-            return str(x.device) if torch.is_tensor(x) else f"<non-tensor:{type(x)}>"
+        # def _dev(x): 
+        #     return str(x.device) if torch.is_tensor(x) else f"<non-tensor:{type(x)}>"
 
-        print(
-            "[debug devices]",
-            "current:", torch.cuda.current_device(),
-            "X:", _dev(self.X_with_grad),
-            "L:", _dev(L),
-            "S:", _dev(S),
-            "Y:", _dev(Y),
-            "rho:", _dev(self.rho) if isinstance(self.rho, torch.Tensor) else type(self.rho)
-        )
+        # print(
+        #     "[debug devices]",
+        #     "current:", torch.cuda.current_device(),
+        #     "X:", _dev(self.X_with_grad),
+        #     "L:", _dev(L),
+        #     "S:", _dev(S),
+        #     "Y:", _dev(Y),
+        #     "rho:", _dev(self.rho) if isinstance(self.rho, torch.Tensor) else type(self.rho)
+        # )
 
         if self.loss_version == 'v1':
             loss = self.rho/2 * torch.norm(self.X_with_grad - L - S + Y/self.rho, p='fro') ** 2
@@ -126,9 +126,9 @@ class ADMMSolver():
         """
         Calculate the results after running the solver.
         """
-        self.results = {'L': self.L,
-                        'S': self.S,
-                        'Y': self.Y,
+        self.results = {'L': self.L.to('cpu'),
+                        'S': self.S.to('cpu'),
+                        'Y': self.Y.to('cpu'),
                         'nr_rank': self.nr_rank,
                         'nr_nonzero': int(torch.count_nonzero(self.S)),
                         'nr_total_rank': self.nr_total_rank,
