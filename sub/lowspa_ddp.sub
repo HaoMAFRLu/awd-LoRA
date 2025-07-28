@@ -1,7 +1,7 @@
 executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
 arguments       = \
     -u -m torch.distributed.run \
-    --nproc_per_node=5 \
+    --nproc_per_node=25 \
     --nnodes=1 \
     --rdzv_backend=c10d \
     --rdzv_endpoint=127.0.0.1:29500 \
@@ -13,8 +13,8 @@ log             = jobs/task$(Process).log
 error           = jobs/task$(Process).err
 output          = jobs/task$(Process).out
 
-request_cpus    = 5
+request_cpus    = 25
 request_memory  = 65536
-request_gpus    = 5
+request_gpus    = 25
 
 queue 1

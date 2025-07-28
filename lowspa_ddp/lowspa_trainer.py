@@ -37,7 +37,7 @@ class LowSpaTrainer():
         # print device info
         dev_idx = torch.cuda.current_device()
         props   = torch.cuda.get_device_properties(dev_idx)
-        print(f"[Rank {self.rank}] using {props.name}")    
+        print(f"[Rank {self.rank}] using {props.name}, {props.total_memory / (1024 ** 3):.2f} GiB")       
 
         # Wrap model in DDP
         self.model.cuda()
