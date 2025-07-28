@@ -48,7 +48,7 @@ class LowSpaTrainer():
         # assign layers to different GPUs
         self.assigned_layers = self.assign_layers(self.cfg_layers, self.rank, self.world_size)
         # get all the weights for the assigned layers
-        XX = {entry: self.get_weight(self.ddp_model, 'module.'+entry) for entry in self.assigned_layers}
+        XX = {entry: self.get_weight(self.ddp_model, 'module.'+entry) for entry in self.cfg_layers}
         
         self.layer_info = {entry: {
             'loss': [],
@@ -62,15 +62,15 @@ class LowSpaTrainer():
         self.layer_info['loss2'] = []
 
         # print assinged layers and model names
-        if self.rank == 0:
-            for name in self.names_model_layers:
-                print(f"Layer: {name}")
-            print('=' * 50)
-            for name in list(XX.keys()):
-                print(f"Layer: {name}")
-            print('=' * 50)
-            for entry in self.cfg_layers:
-                print(f"Layer: {entry['name']}")
+        # if self.rank == 0:
+        #     for name in self.names_model_layers:
+        #         print(f"Layer: {name}")
+        #     print('=' * 50)
+        #     for name in list(XX.keys()):
+        #         print(f"Layer: {name}")
+        #     print('=' * 50)
+        #     for entry in self.cfg_layers:
+        #         print(f"Layer: {entry['name']}")
 
         # initialize the ADMM solvers
         self.ADMM_solvers = []
