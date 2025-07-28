@@ -161,7 +161,7 @@ def get_gpt_dataloader(batch_size=128,
     train_loader = GPTLoader(split='train',
                              batch_size=batch_size,
                              block_size=block_size,
-                             steps_per_epoch=5)
+                             steps_per_epoch=200)
     test_loader = GPTLoader(split='val',
                             batch_size=batch_size,
                             block_size=block_size)

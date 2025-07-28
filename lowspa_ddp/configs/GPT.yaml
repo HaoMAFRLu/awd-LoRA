@@ -73,8 +73,8 @@ layers:
     is_cal: true
 - name: transformer.h.0.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -117,8 +117,8 @@ layers:
     is_cal: true
 - name: transformer.h.1.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -161,8 +161,8 @@ layers:
     is_cal: true
 - name: transformer.h.2.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -205,8 +205,8 @@ layers:
     is_cal: true
 - name: transformer.h.3.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -249,8 +249,8 @@ layers:
     is_cal: true
 - name: transformer.h.4.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -293,8 +293,8 @@ layers:
     is_cal: true
 - name: transformer.h.5.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -337,8 +337,8 @@ layers:
     is_cal: true
 - name: transformer.h.6.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -381,8 +381,8 @@ layers:
     is_cal: true
 - name: transformer.h.7.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -425,8 +425,8 @@ layers:
     is_cal: true
 - name: transformer.h.8.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -469,8 +469,8 @@ layers:
     is_cal: true
 - name: transformer.h.9.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -513,8 +513,8 @@ layers:
     is_cal: true
 - name: transformer.h.10.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -557,8 +557,8 @@ layers:
     is_cal: true
 - name: transformer.h.11.mlp.c_proj.weight
   params:
-    alpha: 0.0001
-    beta: 0.00001
+    alpha: 0.00005
+    beta: 0.000008
     rho: 0.001
     energy: 0.9
     init_energy: 0.3

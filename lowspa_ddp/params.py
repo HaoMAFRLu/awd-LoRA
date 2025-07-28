@@ -83,8 +83,8 @@ mlp_c_fc_params = {
 }
 
 mlp_c_proj_params = {
-    'alpha':        0.0001,  # Regularization parameter
-    'beta':         0.00001, # Sparsity parameter
+    'alpha':        0.00005,  # Regularization parameter
+    'beta':         0.000008, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
