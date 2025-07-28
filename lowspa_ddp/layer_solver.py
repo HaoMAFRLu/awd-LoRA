@@ -19,6 +19,7 @@ class ADMMSolver():
             X: Initial weight matrix for this layer
         """
         self.X_with_grad = X  # Initial weight matrix
+        self.layer_name = layer_name
         
         # read the params
         for key, val in params.items():
@@ -29,9 +30,6 @@ class ADMMSolver():
             _, s, _ = torch.linalg.svd(X, full_matrices=False)
             self.nr_total_rank = len(s)
             self.nr_elements = X.numel()
-
-            self.layer_name = layer_name
-            
             # Initialize SVD factors
             self.initialization()
 
