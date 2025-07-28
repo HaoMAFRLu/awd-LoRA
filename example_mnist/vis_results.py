@@ -78,39 +78,72 @@ def get_index(lamL1wave, lamL1attr, lamL1wave_grid, lamL1attr_grid):
     
     return index2o, index2t
 
-def get_psi(index2o, index2t, lamL1wave_grid, lamL1attr_grid, models):
+def get_psi(index2o, index2t, lamL1wave_grid, lamL1attr_grid, models, results):
     R, C = len(lamL1wave_grid), len(lamL1attr_grid)
     psi_list, wt_list = [], []
     x_list = []
+    loss_list = []
     for r in range(R):
         for c in range(C):
             idx = index2o.get((r, c))
             if idx is None:                 # 该网格点可能没有实验
                 psi_list.append(None)
                 wt_list.append(None)
+                loss_list.append(None)
                 continue
-
+            
+            _loss = results[idx]['train_losses']
             wt = models[idx]
             wt_list.append(wt)
+            loss_list.append(_loss)
 
             phi, psi, x = get_wavefun(wt)
             psi_list.append(psi)
             x_list.append(x)
 
-    return x_list, psi_list
+    return x_list, psi_list, loss_list
 
 def main(folders):
     params, results, models = get_params_results_models(folders)
     lamL1wave, lamL1attr = get_key('lamL1wave', params), get_key('lamL1attr', params)
     lamL1wave_grid, lamL1attr_grid = get_grid(lamL1wave), get_grid(lamL1attr)
     index2o, index2t = get_index(lamL1wave, lamL1attr, lamL1wave_grid, lamL1attr_grid)
-    x_list, psi_list = get_psi(index2o, index2t, lamL1wave_grid, lamL1attr_grid, models)
+    x_list, psi_list, loss_list = get_psi(index2o, index2t, lamL1wave_grid, lamL1attr_grid, models, results)
 
     R, C = len(lamL1wave_grid), len(lamL1attr_grid)
 
+    # plt.figure(figsize=(C + 1, R + 1), dpi=200)
+    # gs = gridspec.GridSpec(R, C,
+    #                     wspace=0.0, hspace=0.0,
+    #                     top=1. - 0.5 / (R + 1), bottom=0.5 / (R + 1),
+    #                     left=0.5 / (C + 1), right=1 - 0.5 / (C + 1))
+
+    # i = 0
+    # for r in range(R):
+    #     for c in range(C):
+    #         ax = plt.subplot(gs[r, c])
+    #         ax.plot(x_list[i], psi_list[i])
+    #         ax.set_xticklabels([])
+    #         ax.set_yticklabels([])
+    #         ax.tick_params(
+    #             axis='both',
+    #             which='both',
+    #             bottom=False,
+    #             top=False,
+    #             left=False,
+    #             right=False,
+    #             labelbottom=False)
+    #         if c == 0:
+    #             plt.ylabel(str(lamL1wave_grid[r]))
+    #         if r == 0:
+    #             plt.title(str(lamL1attr_grid[c]))
+    #         i += 1
+
+    # plt.show()
+
     plt.figure(figsize=(C + 1, R + 1), dpi=200)
     gs = gridspec.GridSpec(R, C,
-                        wspace=0.0, hspace=0.0,
+                        wspace=2.0, hspace=2.0,
                         top=1. - 0.5 / (R + 1), bottom=0.5 / (R + 1),
                         left=0.5 / (C + 1), right=1 - 0.5 / (C + 1))
 
@@ -118,17 +151,7 @@ def main(folders):
     for r in range(R):
         for c in range(C):
             ax = plt.subplot(gs[r, c])
-            ax.plot(x_list[i], psi_list[i])
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-            ax.tick_params(
-                axis='both',
-                which='both',
-                bottom=False,
-                top=False,
-                left=False,
-                right=False,
-                labelbottom=False)
+            ax.plot(loss_list[i])
             if c == 0:
                 plt.ylabel(str(lamL1wave_grid[r]))
             if r == 0:
@@ -137,8 +160,34 @@ def main(folders):
 
     plt.show()
     
+    # idx1 = 0
+    # idx2 = 3
+    # wt = models[index2o[(idx1, idx2)]]
+    # filt = get_2dfilts(wt)
+    # phi, psi, x = get_wavefun(wt)
+
+    # # print
+
+    # plot_1dfilts(filt[0], is_title=True, figsize=(2, 2))
+    # plot_wavefun((phi, psi, x), is_title=True, figsize=(3, 1))
+
+    # plt.plot(np.log(results['train_losses'][index2o[(idx1, idx2)]]))
+    # plt.xlabel("epochs")
+    # plt.ylabel("log train loss")
+    # plt.title('Log-train loss vs epochs')
+    # plt.show()
 
 if __name__ == '__main__':
-    folders = ['2025-06-13_14-58-07',
-               '2025-06-13_15-06-17']
+    folders = ['wave_0.1_attr_1.0',
+               'wave_0.01_attr_1.0',
+               'wave_0.001_attr_1.0',
+               'wave_0.1_attr_2.0',
+               'wave_0.01_attr_2.0',
+               'wave_0.001_attr_2.0',
+               'wave_0.1_attr_3.0',
+               'wave_0.01_attr_3.0',
+               'wave_0.001_attr_3.0',
+               'wave_0.1_attr_4.0',
+               'wave_0.01_attr_4.0',
+               'wave_0.001_attr_4.0']
     main(folders=folders)

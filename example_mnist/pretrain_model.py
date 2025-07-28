@@ -8,7 +8,7 @@ import os, sys
 import pickle
 from tqdm import tqdm
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models.cnn import CNN
 from datasets.dataloader import get_mnist
 from utils.general import *
@@ -105,6 +105,6 @@ def main(batch_size,
     plt.show()
 
 if __name__ == '__main__':
-    main(batch_size=128,
-         num_epochs=100,
+    main(batch_size=512,
+         num_epochs=50,
          lr=0.001,)

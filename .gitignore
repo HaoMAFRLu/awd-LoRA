@@ -12,3 +12,19 @@
 
 # ingore all the __pycache__
 /**/__pycache__
+
+# ignore the language dataset
+/datasets/data
+
+# ignore tests
+/test
+
+# ignore RPCA
+/RPCA-LoRA
+
+# ignore the papers
+/paper
+
+# ignore the nanoGPT
+/nanoGPT
+
