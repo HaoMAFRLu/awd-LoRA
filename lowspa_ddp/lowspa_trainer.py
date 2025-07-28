@@ -54,13 +54,13 @@ class LowSpaTrainer():
         # assign layers to different GPUs
         self.assigned_layers = self.assign_layers(self.cfg_layers, self.rank, self.world_size)
         
-        self.layer_info = {entry: {
+        self.layer_info = {entry['name']: {
             'loss': [],
             'rank': [],
             'nonzero': [],
             'total_rank': [],
             'total_elements': []
-        } for entry in self.assigned_layers}
+        } for entry in self.cfg_layers}
         self.layer_info['loss'] = []
         self.layer_info['loss1'] = []
         self.layer_info['loss2'] = []
