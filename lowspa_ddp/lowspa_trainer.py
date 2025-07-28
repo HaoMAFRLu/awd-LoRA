@@ -47,8 +47,6 @@ class LowSpaTrainer():
         self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
         # assign layers to different GPUs
         self.assigned_layers = self.assign_layers(self.cfg_layers, self.rank, self.world_size)
-        # get all the weights for the assigned layers
-        XX = {entry: self.get_weight(self.ddp_model, 'module.'+entry) for entry in self.cfg_layers}
         
         self.layer_info = {entry: {
             'loss': [],
@@ -77,14 +75,15 @@ class LowSpaTrainer():
         for entry in self.cfg_layers:
             name = entry['name']
             params = entry['params']
-            solver = ADMMSolver(name, params, XX[name], is_full=name in self.assigned_layers)
+            solver = ADMMSolver(name, params, self.get_weight(self.ddp_model, 'module.'+name), is_full=name in self.assigned_layers)
             solver.layer_gpu_map = self.rank if name in self.assigned_layers else -1
             self.ADMM_solvers.append(solver)
         
         # after initialization, sync the initial weights
-        self.LL = {entry: torch.zeros_like(XX[entry]) for entry in self.assigned_layers}
-        self.SS = {entry: torch.zeros_like(XX[entry]) for entry in self.assigned_layers}
-        self.YY = {entry: torch.zeros_like(XX[entry]) for entry in self.assigned_layers}
+        self.LL = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.'+entry['name'])) for entry in self.cfg_layers}
+        self.SS = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.'+entry['name'])) for entry in self.cfg_layers}
+        self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.'+entry['name'])) for entry in self.cfg_layers}
+        
         self.sync_weights()
 
     @staticmethod
@@ -195,13 +194,6 @@ class LowSpaTrainer():
                     self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
                     self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
  
-    def broadcast_results(self, results):
-        """Broadcast a dict of factors from rank 0 to all ranks"""
-        # factors is a dict or None
-        brd = [results]
-        dist.broadcast_object_list(brd, src=0)
-        return brd[0]
-
     def single_step_train(self, data, target):
         """
         Single training step for the model.
@@ -241,8 +233,6 @@ class LowSpaTrainer():
         with open(os.path.join(path_folder, 'results.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
-    
-
     def gather_results(self, local_results):
         """Gather dicts from all ranks to rank 0"""
         gathered = [None] * self.world_size
@@ -258,7 +248,19 @@ class LowSpaTrainer():
                     self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
                     self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
                     self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
-        
+    
+    def get_local_weights(self):
+        """
+        Get local weights for the current rank.
+        Returns:
+            dict with layer names and their corresponding weights.
+        """
+        local_weights = {}
+        for solver in self.ADMM_solvers:
+            if solver.layer_gpu_map == self.rank:
+                local_weights[solver.layer_name] = (solver.L, solver.S, solver.Y)
+        return local_weights
+    
     def gather_weights(self, local_weights):
         """Gather dicts from all ranks to rank 0"""
         gathered = [None] * self.world_size
@@ -277,6 +279,17 @@ class LowSpaTrainer():
         """
         local_weights = self.get_local_weights()
         self.gather_weights(local_weights)
+        self.LL, self.SS, self.YY = self.broadcast_weights()
+
+    def broadcast_weights(self):
+        """
+        Broadcast weights from rank 0 to all ranks.
+        Returns:
+            L, S, Y: broadcasted weights
+        """
+        brd = [self.LL, self.SS, self.YY]
+        dist.broadcast_object_list(brd, src=0)
+        return brd[0], brd[1], brd[2]
     
     def sync_results(self):
         """
@@ -285,6 +298,7 @@ class LowSpaTrainer():
         """
         local_results = self.get_local_results()
         self.gather_results(local_results)
+        self.LL, self.SS, self.YY = self.broadcast_weights()
         
     def get_local_results(self):
         """
@@ -297,18 +311,6 @@ class LowSpaTrainer():
             if solver.layer_gpu_map == self.rank:
                 local_results[solver.layer_name] = solver.results
         return local_results
-    
-    def get_local_weights(self):
-        """
-        Get local weights for the current rank.
-        Returns:
-            dict with layer names and their corresponding weights.
-        """
-        local_weights = {}
-        for solver in self.ADMM_solvers:
-            if solver.layer_gpu_map == self.rank:
-                local_weights[solver.layer_name] = (solver.L, solver.S, solver.Y)
-        return local_weights
     
     def run_ADMM_solvers(self):
         """ Run ADMM solvers for the current rank.

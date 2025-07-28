@@ -31,7 +31,7 @@ def main(path_config: str) -> None:
     num_workers = params['num_workers']
     # get the data loader
     model, train_loader, test_loader = get_model_and_dataloader(model_type, batch_size, num_workers)
-    ddp_trainer = LowSpaTrainer(model, model_type, test_loader, cfg)
+    ddp_trainer = LowSpaTrainer(model, model_type, train_loader, cfg)
     ddp_trainer.train(num_epochs=num_epochs, path_folder=path_folder)
     
 if __name__ == "__main__":
