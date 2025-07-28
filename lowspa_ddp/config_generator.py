@@ -33,8 +33,9 @@ def generate_config(
     # Base configuration structure
     cfg = {
         'model_type': 'GPT',
+        'seed': 42,
         'training': {
-            'batch_size': 1,
+            'batch_size': 16,
             'num_epochs': 100,
             'num_workers': 4,
             'dataloader': 'train_loader',
@@ -79,7 +80,7 @@ def generate_config(
 
     # Add final language model head
     cfg['layers'].append({
-        'name': 'lm_head.weight',
+        'name': 'transformer.ln_f.weight',
         'params': copy.deepcopy(proj['lm_head'])
     })
 

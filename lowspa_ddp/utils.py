@@ -6,6 +6,8 @@ from tabulate import tabulate
 import os
 from pathlib import Path
 import torch.nn.functional as F
+import random
+import numpy as np
 
 class GPTCrossEntropyLoss(nn.Module):
     def __init__(self, ignore_index: int = -1):
@@ -134,3 +136,18 @@ def count_parameters(model: nn.Module) -> int:
         Total number of parameters in the model.
     """
     return sum(p.numel() for p in model.parameters())
+
+def set_seed(seed: int):
+    # 1) Python built‑ins
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    # 2) Numpy
+    np.random.seed(seed)
+    # 3) PyTorch CPU
+    torch.manual_seed(seed)
+    # 4) PyTorch GPU (all devices)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    # 5) CuDNN determinism
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False

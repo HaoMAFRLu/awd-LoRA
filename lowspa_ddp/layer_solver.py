@@ -12,7 +12,8 @@ class ADMMSolver():
     def __init__(self, 
                  layer_name: str, 
                  params: dict,
-                 X: torch.Tensor) -> None:
+                 X: torch.Tensor,
+                 is_full: bool) -> None:
         """
         Args:
             layer_name: Name of the layer this solver applies to
@@ -20,27 +21,30 @@ class ADMMSolver():
             X: Initial weight matrix for this layer
         """
         self.X_with_grad = X  # Initial weight matrix
-        self.X = X.detach()
-
-        _, s, _ = torch.linalg.svd(X, full_matrices=False)
-        self.nr_total_rank = len(s)
-        self.nr_elements = X.numel()
-
-        self.layer_name = layer_name
+        
         # read the params
         for key, val in params.items():
             setattr(self, key, val)
-        # Initialize SVD factors
-        self.initialization()
 
-    def get_loss_term(self):
+        if is_full:
+            self.X = X.detach()
+            _, s, _ = torch.linalg.svd(X, full_matrices=False)
+            self.nr_total_rank = len(s)
+            self.nr_elements = X.numel()
+
+            self.layer_name = layer_name
+            
+            # Initialize SVD factors
+            self.initialization()
+
+    def get_loss_term(self, L, S, Y):
         """
         Compute the loss term for the model.
         """
         if self.loss_version == 'v1':
-            loss = self.rho/2 * torch.norm(self.X_with_grad - self.L - self.S + self.Y/self.rho, p='fro') ** 2
+            loss = self.rho/2 * torch.norm(self.X_with_grad - L - S + Y/self.rho, p='fro') ** 2
         elif self.loss_version == 'v2':
-            loss = self.rho/2 * torch.norm(self.X_with_grad - self.L, p='fro') ** 2
+            loss = self.rho/2 * torch.norm(self.X_with_grad - L, p='fro') ** 2
         
         self.nr_cals += 1
         self.total_loss += loss.item()

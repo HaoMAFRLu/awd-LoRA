@@ -1,5 +1,5 @@
-model: simple_CNN
-
+model_type: CNN
+seed: 42
 layers:
   - name: fc1.weight
     params:
@@ -35,12 +35,6 @@ scheduler:
   params:
     step_size: 5
     gamma: 0.7
-
-loss_fn:
-  name: CrossEntropyLoss
-  params:
-    wtight: null
-    reduction: mean
 
 optimizer:
   name: Adam

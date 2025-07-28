@@ -125,7 +125,7 @@ if __name__ == "__main__":
     print(model)
     print('=' * 50)
     total_params = count_parameters(model)
-    names = get_linear_layers_name(model)
+    names = [name for name, _ in model.named_parameters()] 
     print(f"Model type: {model_type}, Total parameters: {total_params}")
     for name in names:
         print(f"Linear layer name: {name}")
