@@ -360,7 +360,13 @@ class LowSpaTrainer():
     def train(self, 
               num_epochs: int, 
               path_folder: str=None):
-        
+
+        def is_main_process():
+            if self.rank == 0:
+                return tqdm(self.data_loader)
+            else:
+                return self.data_loader
+            
         self.ddp_model.train()
         
         for epoch in range(num_epochs):
@@ -368,7 +374,7 @@ class LowSpaTrainer():
             # reset solvers for the new epoch
             self.solvers_reset()
             # training over data
-            for data, target in tqdm(self.data_loader):
+            for data, target in is_main_process():
                 loss, loss1, loss2 = self.single_step_train(data, target)
                 ep_loss += loss
                 ep_loss1 += loss1
