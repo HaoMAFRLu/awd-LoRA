@@ -58,7 +58,9 @@ class LowSpaTrainer():
             'loss': [],
             'rank': [],
             'alpha': [],
+            'dalpha': [],
             'beta': [],
+            'dbeta': [],
             'rho': [],
             'nonzero': [],
             'total_rank': [],
@@ -203,6 +205,8 @@ class LowSpaTrainer():
                     self.YY[layer_name] = data['Y']
                     self.layer_info[layer_name]['alpha'].append(data['alpha'])
                     self.layer_info[layer_name]['beta'].append(data['beta'])
+                    self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
+                    self.layer_info[layer_name]['dbeta'].append(data['dbeta'])
                     self.layer_info[layer_name]['rho'].append(data['rho'])
                     self.layer_info[layer_name]['loss'].append(data['avg_loss'])
                     self.layer_info[layer_name]['rank'].append(data['nr_rank'])
@@ -346,6 +350,8 @@ class LowSpaTrainer():
                         'loss': layer_info[entry['name']]['loss'][-1],
                         'alpha': layer_info[entry['name']]['alpha'][-1],
                         'beta': layer_info[entry['name']]['beta'][-1],
+                        'dalpha': layer_info[entry['name']]['dalpha'][-1],
+                        'dbeta': layer_info[entry['name']]['dbeta'][-1],
                         'rho': layer_info[entry['name']]['rho'][-1],
                         'non_zero': layer_info[entry['name']]['nonzero'][-1],
                         'rank': layer_info[entry['name']]['rank'][-1],

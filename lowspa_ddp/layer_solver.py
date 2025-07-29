@@ -26,6 +26,9 @@ class ADMMSolver():
         for key, val in params.items():
             setattr(self, key, val)
 
+        self.dalpha = 0.0
+        self.dbeta = 0.0
+
         # overwrite the hyperparameters
         if self.is_adaptive:
             row, col = X.shape  
@@ -144,8 +147,10 @@ class ADMMSolver():
             L, S, Y, singular_values = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho, energy_quantile)
             nr_rank = get_energy_quantile(singular_values, quantile=energy_quantile)
             if self.is_adaptive:
-                self.alpha = self.rate_decay*self.alpha + (1 - self.rate_decay)*self.update_alpha(self.rate_rank, singular_values, self.rho)
-                self.beta = self.rate_decay*self.beta + (1 - self.rate_decay)*self.update_beta(self.rate_sparsity, S, self.rho)
+                self.dalpha = self.update_alpha(self.rate_rank, singular_values, self.rho)
+                self.dbeta = self.update_beta(self.rate_sparsity, S, self.rho)
+                self.alpha = self.rate_decay*self.alpha + (1 - self.rate_decay)*self.dalpha
+                self.beta = self.rate_decay*self.beta + (1 - self.rate_decay)*self.dbeta
             if torch.linalg.norm(X - L - S, 'fro') < tol:
                 break
         return L, S, Y, nr_rank
@@ -170,6 +175,8 @@ class ADMMSolver():
                         'Y': self.Y.to('cpu'),
                         'alpha': self.alpha,
                         'beta': self.beta,
+                        'dalpha': self.dalpha,
+                        'dbeta': self.dbeta,
                         'rho': self.rho,
                         'nr_rank': self.nr_rank,
                         'nr_nonzero': int(torch.count_nonzero(self.S)),

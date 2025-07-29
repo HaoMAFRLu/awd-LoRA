@@ -112,14 +112,16 @@ def print_epoch(epoch: int,
               f"Loss2: {losses['loss2']:.6f}")
     print(header)
 
-    headers = ["name", "layer loss", "non-zero", "rank", "alpha", "beta", "rho"]
+    headers = ["name", "layer loss", "non-zero", "rank", "alpha", "dalpha", "beta", "dbeta", "rho"]
     rows = [
         [s["name"], 
          f"{s['loss']:.6f}", 
          f"{s['non_zero']}/{s['total_elements']} ({100. * s['non_zero']/s['total_elements']:.2f}%)", 
          f"{s['rank']}/{s['total_rank']} ({100. * s['rank']/s['total_rank']:.2f}%)",
-         f"{s['alpha']:.8f}",
+         f"{s['alpha']:.8f}", 
+         f"{s['dalpha']:.8f}",
          f"{s['beta']:.8f}",
+         f"{s['dbeta']:.8f}",
          f"{s['rho']:.8f}"]
         for s in layer_stats
     ]
