@@ -21,8 +21,8 @@ optimizer:
 layers:
 - name: transformer.wte.weight
   params:
-    alpha_to_rho: 0.01
-    beta_to_rho: 0.01
+    alpha_to_rho: 0.001
+    beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -30,8 +30,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.wpe.weight
@@ -45,8 +45,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.attn.c_attn.weight
@@ -60,8 +60,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.attn.c_proj.weight
@@ -75,8 +75,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.mlp.c_fc.weight
@@ -90,8 +90,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.mlp.c_proj.weight
@@ -105,8 +105,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.attn.c_attn.weight
@@ -120,8 +120,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.attn.c_proj.weight
@@ -135,8 +135,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.mlp.c_fc.weight
@@ -150,8 +150,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.mlp.c_proj.weight
@@ -165,8 +165,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.attn.c_attn.weight
@@ -180,8 +180,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.attn.c_proj.weight
@@ -195,8 +195,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.mlp.c_fc.weight
@@ -210,8 +210,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.mlp.c_proj.weight
@@ -225,8 +225,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.attn.c_attn.weight
@@ -240,8 +240,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.attn.c_proj.weight
@@ -255,8 +255,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.mlp.c_fc.weight
@@ -270,8 +270,8 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.mlp.c_proj.weight
@@ -285,7 +285,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
-    rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_rank: 0.15
+    rate_sparsity: 0.02
     is_adaptive: true
     rate_decay: 0.9
