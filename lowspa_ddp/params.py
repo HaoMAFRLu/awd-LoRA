@@ -8,6 +8,10 @@ embedding_wte_params = {
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
     'is_cal':       True,    # Whether to calculate sparse matrix
+    'rate_rank':    0.2,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
+    'rate_decay':     0.9  # Rate of decay for the adaptive parameters
 }
 
 embedding_wpe_params = {
@@ -20,11 +24,15 @@ embedding_wpe_params = {
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
     'is_cal':       True,    # Whether to calculate sparse matrix
+    'rate_rank':    0.2,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
+    'rate_decay':     0.9  # Rate of decay for the adaptive parameters
 }
 
 lm_head_params = {
-    'alpha_to_rho': 0.1,  # Regularization parameter
-    'beta_to_rho':  0.01, # Sparsity parameter
+    'alpha_to_rho': 0.01,  # Regularization parameter
+    'beta_to_rho':  0.005, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
@@ -32,11 +40,15 @@ lm_head_params = {
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
     'is_cal':       True,    # Whether to calculate sparse matrix
+    'rate_rank':    0.2,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
+    'rate_decay':     0.9  # Rate of decay for the adaptive parameters
 }
 
 attn_c_attn_params = {
-    'alpha_to_rho': 0.1,  # Regularization parameter
-    'beta_to_rho':  0.01, # Sparsity parameter
+    'alpha_to_rho': 0.01,  # Regularization parameter
+    'beta_to_rho':  0.005, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
@@ -44,10 +56,14 @@ attn_c_attn_params = {
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
     'is_cal':        True,    # Whether to calculate sparse matrix
+    'rate_rank':    0.2,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
+    'rate_decay':     0.9  # Rate of decay for the adaptive parameters
 }
 
 attn_c_proj_params = {
-    'alpha_to_rho': 0.05,  # Regularization parameter
+    'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.005, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
@@ -56,22 +72,14 @@ attn_c_proj_params = {
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
     'is_cal':       True,    # Whether to calculate sparse matrix
+    'rate_rank':    0.2,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
+    'rate_decay':     0.9  # Rate of decay for the adaptive parameters
 }
 
 mlp_c_fc_params = {
-    'alpha_to_rho': 0.1,  # Regularization parameter
-    'beta_to_rho':  0.01, # Sparsity parameter
-    'rho':          0.001,   # Penalty parameter
-    'energy':       0.9,     # Energy parameter
-    'init_energy':  0.3,     # Initial energy
-    'iter_max':     1,       # Max ADMM iterations per layer
-    'tol':          0.001,   # Convergence tolerance
-    'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
-    'is_cal':       True,    # Whether to calculate sparse matrix
-}
-
-mlp_c_proj_params = {
-    'alpha_to_rho': 0.05,  # Regularization parameter
+    'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.005, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
@@ -80,6 +88,26 @@ mlp_c_proj_params = {
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
     'is_cal':       True,    # Whether to calculate sparse matrix
+    'rate_rank':    0.2,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
+    'rate_decay':     0.9  # Rate of decay for the adaptive parameters
+}
+
+mlp_c_proj_params = {
+    'alpha_to_rho': 0.01,  # Regularization parameter
+    'beta_to_rho':  0.005, # Sparsity parameter
+    'rho':          0.001,   # Penalty parameter
+    'energy':       0.9,     # Energy parameter
+    'init_energy':  0.3,     # Initial energy
+    'iter_max':     1,       # Max ADMM iterations per layer
+    'tol':          0.001,   # Convergence tolerance
+    'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
+    'is_cal':       True,    # Whether to calculate sparse matrix
+    'rate_rank':    0.2,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
+    'rate_decay':     0.9  # Rate of decay for the adaptive parameters
 }
 
 def projection():

@@ -35,7 +35,7 @@ def generate_config(
         'model_type': 'GPT',
         'seed': 42,
         'training': {
-            'batch_size': 8,
+            'batch_size': 16,
             'num_epochs': 100,
             'num_workers': 4,
             'dataloader': 'train_loader',
@@ -50,7 +50,7 @@ def generate_config(
         'optimizer': {
             'name': 'AdamW',
             'params': {
-                'lr':           0.008,
+                'lr':           0.001,
                 'betas':        None,
             }
         },

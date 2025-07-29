@@ -26,7 +26,10 @@ class ADMMSolver():
             setattr(self, key, val)
 
         # overwrite the hyperparameters
-        row, col = X.shape
+        if self.is_adaptive:
+            row, col = X.shape  
+            self.rho = 1 / (5 * row * col)
+        
         self.alpha = self.rho * self.alpha_to_rho
         self.beta = self.rho * self.beta_to_rho
 
@@ -85,7 +88,32 @@ class ADMMSolver():
         L = U @ torch.diag(_s) @ Vt
         S = soft_threshold(X - L + Y/rho, beta/rho)
         Y = Y + rho * (X - L - S)
-        return L, S, Y, get_energy_quantile(_s, quantile=energy_quantile)
+        return L, S, Y, _s
+
+    def update_alpha(self, 
+                     rate_rank: float, 
+                     s: torch.Tensor, 
+                     rho: float) -> float:
+        """Update the alpha parameter based on the rank of singular values."""
+        total_rank = len(s)
+        idx = int(total_rank * rate_rank)
+        # find idx maximum singular value
+        if idx < total_rank:
+            return s[idx] * rho
+        else:
+            return s[-1] * rho
+    
+    def update_beta(self, 
+                    rate_sparsity: float, 
+                    S: torch.Tensor, 
+                    rho: float) -> float:
+        """Update the beta parameter based on the sparsity of the matrix."""
+        vals, _ = torch.sort(S.flatten(), descending=True)
+        idx = int(len(vals) * rate_sparsity)
+        if idx < len(vals):
+            return vals[idx] * rho
+        else:
+            return vals[-1] * rho
 
     def PRCA(self,
              X: torch.Tensor, 
@@ -111,7 +139,11 @@ class ADMMSolver():
             Updated low-rank and sparse components, and dual variable.
         """
         for it in range(iter_max):
-            L, S, Y, nr_rank = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho, energy_quantile)
+            L, S, Y, singular_values = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho, energy_quantile)
+            nr_rank = get_energy_quantile(singular_values, quantile=energy_quantile)
+            if self.is_adaptive:
+                self.alpha = self.rate_decay*self.alpha + (1 - self.rate_decay)*self.update_alpha(self.rate_rank, singular_values, self.rho)
+                self.beta = self.rate_decay*self.beta + (1 - self.rate_decay)*self.update_beta(self.rate_sparsity, S, self.rho)
             if torch.linalg.norm(X - L - S, 'fro') < tol:
                 break
         return L, S, Y, nr_rank

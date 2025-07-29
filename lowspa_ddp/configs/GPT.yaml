@@ -1,7 +1,7 @@
 model_type: GPT
 seed: 42
 training:
-  batch_size: 8
+  batch_size: 16
   num_epochs: 100
   num_workers: 4
   dataloader: train_loader
@@ -13,7 +13,7 @@ scheduler:
 optimizer:
   name: AdamW
   params:
-    lr: 0.008
+    lr: 0.001
     betas: null
 layers:
 - name: transformer.wte.weight
@@ -27,6 +27,10 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.wpe.weight
   params:
     alpha_to_rho: 0.1
@@ -38,10 +42,14 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.0.attn.c_attn.weight
   params:
-    alpha_to_rho: 0.1
-    beta_to_rho: 0.01
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -49,9 +57,13 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.0.attn.c_proj.weight
   params:
-    alpha_to_rho: 0.05
+    alpha_to_rho: 0.01
     beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
@@ -60,10 +72,14 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.0.mlp.c_fc.weight
   params:
-    alpha_to_rho: 0.1
-    beta_to_rho: 0.01
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -71,9 +87,13 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.0.mlp.c_proj.weight
   params:
-    alpha_to_rho: 0.05
+    alpha_to_rho: 0.01
     beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
@@ -82,10 +102,14 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.1.attn.c_attn.weight
   params:
-    alpha_to_rho: 0.1
-    beta_to_rho: 0.01
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -93,9 +117,13 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.1.attn.c_proj.weight
   params:
-    alpha_to_rho: 0.05
+    alpha_to_rho: 0.01
     beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
@@ -104,10 +132,14 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.1.mlp.c_fc.weight
   params:
-    alpha_to_rho: 0.1
-    beta_to_rho: 0.01
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -115,9 +147,13 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.1.mlp.c_proj.weight
   params:
-    alpha_to_rho: 0.05
+    alpha_to_rho: 0.01
     beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
@@ -126,10 +162,14 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.2.attn.c_attn.weight
   params:
-    alpha_to_rho: 0.1
-    beta_to_rho: 0.01
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -137,9 +177,13 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.2.attn.c_proj.weight
   params:
-    alpha_to_rho: 0.05
+    alpha_to_rho: 0.01
     beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
@@ -148,10 +192,14 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.2.mlp.c_fc.weight
   params:
-    alpha_to_rho: 0.1
-    beta_to_rho: 0.01
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -159,9 +207,13 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.2.mlp.c_proj.weight
   params:
-    alpha_to_rho: 0.05
+    alpha_to_rho: 0.01
     beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
@@ -170,10 +222,14 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.3.attn.c_attn.weight
   params:
-    alpha_to_rho: 0.1
-    beta_to_rho: 0.01
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -181,9 +237,13 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.3.attn.c_proj.weight
   params:
-    alpha_to_rho: 0.05
+    alpha_to_rho: 0.01
     beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
@@ -192,20 +252,13 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
 - name: transformer.h.3.mlp.c_fc.weight
   params:
-    alpha_to_rho: 0.1
-    beta_to_rho: 0.01
-    rho: 0.001
-    energy: 0.9
-    init_energy: 0.3
-    iter_max: 1
-    tol: 0.001
-    loss_version: v1
-    is_cal: true
-- name: transformer.h.3.mlp.c_proj.weight
-  params:
-    alpha_to_rho: 0.05
+    alpha_to_rho: 0.01
     beta_to_rho: 0.005
     rho: 0.001
     energy: 0.9
@@ -214,3 +267,22 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
+- name: transformer.h.3.mlp.c_proj.weight
+  params:
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.005
+    rho: 0.001
+    energy: 0.9
+    init_energy: 0.3
+    iter_max: 1
+    tol: 0.001
+    loss_version: v1
+    is_cal: true
+    rate_rank: 0.2
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
