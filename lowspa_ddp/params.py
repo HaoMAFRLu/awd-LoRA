@@ -1,6 +1,6 @@
 embedding_wte_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
-    'beta_to_rho':  0.001, # Sparsity parameter
+    'beta_to_rho':  0.01, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
@@ -11,7 +11,7 @@ embedding_wte_params = {
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.02,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.998  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.99  # Rate of decay for the adaptive parameters
 }
 
 embedding_wpe_params = {
