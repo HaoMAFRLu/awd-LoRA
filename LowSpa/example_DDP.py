@@ -16,21 +16,20 @@ def main(path_config: str) -> None:
     with open(path_config) as f:
         cfg = yaml.safe_load(f)
     
-    model_type = cfg['model_type']
     seed = cfg['seed']
     set_seed(seed)
 
+    model_type = cfg['model']['name']
     folder_name = datetime.now().strftime("%Y%m%d_%H%M%S")
     path_folder = os.path.join(root, 'data', 'lowspa_ddp', model_type, folder_name)
     mkdir(path_folder)
     shutil.copy(path_config, path_folder)
     
     params = cfg.get('training')
-    batch_size = params['batch_size']
     num_epochs = params['num_epochs']
-    num_workers = params['num_workers']
+
     # get the data loader
-    model, train_loader, test_loader = get_model_and_dataloader(model_type, batch_size, num_workers)
+    model, train_loader, test_loader = get_model_and_dataloader(cfg['model'], cfg['training'])
     ddp_trainer = LowSpaTrainer(model, model_type, train_loader, cfg)
     ddp_trainer.train(num_epochs=num_epochs, path_folder=path_folder)
     

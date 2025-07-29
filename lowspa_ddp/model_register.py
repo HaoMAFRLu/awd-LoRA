@@ -28,25 +28,20 @@ def get_GPT(gpt_conf: GPTConfig):
     """
     return GPT(gpt_conf)
 
-def get_model(model_type: str):
+def get_model(cfg: dict):
     """
-    Get the model based on the model type.
-    
-    Args:
-        model_type (str): The type of the model to get ('CNN' or 'GPT').
-    
-    Returns:
-        model: The instantiated model.
+    Get the model based on the configuration.
     """
-    if model_type == 'CNN':
+    if cfg['name'] == 'CNN':
         return get_CNN()
-    elif model_type == 'GPT':
-        n_layer    = 4      
-        n_head     = 4     
-        n_embd     = 256   
-        block_size = 1024   
-        vocab_size = 50304   
+    elif cfg['name'] == 'GPT':
+        params = cfg.get('params', {})
+        n_layer    = params.get('n_layer', 12)
+        n_head     = params.get('n_head', 12)
+        n_embd     = params.get('n_embd', 768)
+        block_size = params.get('block_size', 1024)
 
+        vocab_size = 50304   
         dropout    = 0.0     
         bias       = False   
 
@@ -86,9 +81,8 @@ def get_dataloader(model_type: str,
      else:
           raise ValueError(f"Unsupported model type: {model_type}")
 
-def get_model_and_dataloader(model_type: str,
-                             batch_size: int = 64,
-                             num_workers: int = 0):
+def get_model_and_dataloader(cfg_model: dict,
+                             cfg_training: dict):
     """
     Get the model and dataloader based on the model type.
     
@@ -100,7 +94,11 @@ def get_model_and_dataloader(model_type: str,
         train_loader: DataLoader for the training set.
         test_loader: DataLoader for the test set.
     """
-    model = get_model(model_type)
+    model_type = cfg_model.get('name', 'CNN')
+    batch_size = cfg_training.get('batch_size', 64)
+    num_workers = cfg_training.get('num_workers', 0)
+
+    model = get_model(cfg_model)
     train_loader, test_loader = get_dataloader(model_type,
                                                batch_size=batch_size, 
                                                num_workers=num_workers)

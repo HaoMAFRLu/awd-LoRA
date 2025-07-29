@@ -1,5 +1,7 @@
-model_type: CNN
 seed: 42
+model: 
+  name:  CNN
+  params: null
 layers:
   - name: fc1.weight
     params:

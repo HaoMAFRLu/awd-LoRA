@@ -97,7 +97,7 @@ def get_energy_quantile(s, quantile=0.9) -> int:
         return 0
     else:
         energy = torch.cumsum(s**2, dim=0) / torch.sum(s**2)
-        return int(torch.where(energy >= quantile)[0][0])
+        return int(torch.where(energy >= quantile)[0][0])+1
 
 def print_epoch(epoch: int, 
                 total_epochs: int, 

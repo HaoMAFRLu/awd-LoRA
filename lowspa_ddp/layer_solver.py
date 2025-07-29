@@ -103,7 +103,7 @@ class ADMMSolver():
         total_rank = len(s)
         idx = int(total_rank * rate_rank)
         # find idx maximum singular value
-        return (s[idx] - eps) * rho
+        return max(s[idx] - eps, 0.0) * rho
     
     def update_beta(self, 
                     rate_sparsity: float, 
@@ -141,7 +141,7 @@ class ADMMSolver():
             Updated low-rank and sparse components, and dual variable.
         """
         for it in range(iter_max):
-            if self.layer_name == 'fc1.weight':
+            if self.layer_name == 'transformer.wte.weight':
                 print('here')
             L, S, Y, singular_values = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho)
             nr_rank = get_energy_quantile(singular_values, quantile=energy_quantile)
