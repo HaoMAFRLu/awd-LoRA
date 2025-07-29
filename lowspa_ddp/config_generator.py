@@ -50,7 +50,7 @@ def generate_config(
         'optimizer': {
             'name': 'AdamW',
             'params': {
-                'lr':           0.001,
+                'lr':           0.0005,
                 'betas':        None,
             }
         },

@@ -13,7 +13,7 @@ scheduler:
 optimizer:
   name: AdamW
   params:
-    lr: 0.001
+    lr: 0.0005
     betas: null
 layers:
 - name: transformer.wte.weight
@@ -28,7 +28,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.wpe.weight
@@ -43,7 +43,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.attn.c_attn.weight
@@ -58,7 +58,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.attn.c_proj.weight
@@ -73,7 +73,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.mlp.c_fc.weight
@@ -88,7 +88,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.mlp.c_proj.weight
@@ -103,7 +103,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.attn.c_attn.weight
@@ -118,7 +118,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.attn.c_proj.weight
@@ -133,7 +133,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.mlp.c_fc.weight
@@ -148,7 +148,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.mlp.c_proj.weight
@@ -163,7 +163,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.attn.c_attn.weight
@@ -178,7 +178,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.attn.c_proj.weight
@@ -193,7 +193,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.mlp.c_fc.weight
@@ -208,7 +208,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.mlp.c_proj.weight
@@ -223,7 +223,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.attn.c_attn.weight
@@ -238,7 +238,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.attn.c_proj.weight
@@ -253,7 +253,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.mlp.c_fc.weight
@@ -268,7 +268,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.mlp.c_proj.weight
@@ -283,6 +283,6 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.1
+    rate_sparsity: 0.01
     is_adaptive: true
     rate_decay: 0.9
