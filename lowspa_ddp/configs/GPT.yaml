@@ -33,7 +33,7 @@ layers:
     rate_rank: 0.15
     rate_sparsity: 0.02
     is_adaptive: true
-    rate_decay: 0.99
+    rate_decay: 0.995
 - name: transformer.wpe.weight
   params:
     alpha_to_rho: 0.01
