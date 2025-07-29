@@ -36,6 +36,7 @@ class ADMMSolver():
         
         self.alpha = self.rho * self.alpha_to_rho
         self.beta = self.rho * self.beta_to_rho
+        self.rate_rank += 0.05
 
         if is_full:
             self.X = X.detach()
@@ -85,8 +86,7 @@ class ADMMSolver():
                          Y: torch.Tensor,
                          alpha: float,
                          beta: float,
-                         rho: float,
-                         energy_quantile: float) -> tuple:
+                         rho: float) -> tuple:
         U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
         _s = soft_threshold(s, alpha/rho)
         L = U @ torch.diag(_s) @ Vt
@@ -97,28 +97,25 @@ class ADMMSolver():
     def update_alpha(self, 
                      rate_rank: float, 
                      s: torch.Tensor, 
-                     rho: float) -> float:
+                     rho: float,
+                     eps: float=1e-4) -> float:
         """Update the alpha parameter based on the rank of singular values."""
         total_rank = len(s)
         idx = int(total_rank * rate_rank)
         # find idx maximum singular value
-        if idx < total_rank:
-            return s[idx] * rho
-        else:
-            return s[-1] * rho
+        return (s[idx] - eps) * rho
     
     def update_beta(self, 
                     rate_sparsity: float, 
                     S: torch.Tensor, 
                     rho: float,
-                    scalar: float=1.1) -> float:
+                    scalar: float=1.0,
+                    eps: float=1e-4) -> float:
         """Update the beta parameter based on the sparsity of the matrix."""
-        vals, _ = torch.sort(S.flatten(), descending=True)
+        vals, _ = torch.sort(S.abs().flatten(), descending=True)
         idx = int(len(vals) * rate_sparsity)
-        if idx < len(vals):
-            return vals[idx] * rho * scalar
-        else:
-            return vals[-1] * rho * scalar
+        return (vals[idx] - eps) * rho * scalar  # in case the same values
+
 
     def PRCA(self,
              X: torch.Tensor, 
@@ -144,9 +141,11 @@ class ADMMSolver():
             Updated low-rank and sparse components, and dual variable.
         """
         for it in range(iter_max):
-            L, S, Y, singular_values = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho, energy_quantile)
+            if self.layer_name == 'fc1.weight':
+                print('here')
+            L, S, Y, singular_values = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho)
             nr_rank = get_energy_quantile(singular_values, quantile=energy_quantile)
-            if self.is_adaptive:
+            if self.is_adaptive:                
                 self.dalpha = (1 - self.rate_decay)*self.update_alpha(self.rate_rank, singular_values, self.rho)
                 self.dbeta = (1 - self.rate_decay)*self.update_beta(self.rate_sparsity, S, self.rho)
                 self.alpha = self.rate_decay*self.alpha + self.dalpha
