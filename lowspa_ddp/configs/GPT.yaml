@@ -1,7 +1,7 @@
 model_type: GPT
 seed: 42
 training:
-  batch_size: 8
+  batch_size: 12
   num_epochs: 6000
   num_workers: 4
   dataloader: train_loader
@@ -21,7 +21,7 @@ optimizer:
 layers:
 - name: transformer.wte.weight
   params:
-    alpha_to_rho: 0.1
+    alpha_to_rho: 0.01
     beta_to_rho: 0.01
     rho: 0.001
     energy: 0.9
@@ -31,12 +31,12 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.wpe.weight
   params:
-    alpha_to_rho: 0.1
+    alpha_to_rho: 0.01
     beta_to_rho: 0.01
     rho: 0.001
     energy: 0.9
@@ -46,7 +46,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.attn.c_attn.weight
@@ -61,7 +61,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.attn.c_proj.weight
@@ -76,7 +76,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.0.mlp.c_fc.weight
@@ -121,7 +121,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.attn.c_proj.weight
@@ -136,7 +136,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.1.mlp.c_fc.weight
@@ -181,7 +181,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.attn.c_proj.weight
@@ -196,7 +196,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.2.mlp.c_fc.weight
@@ -241,7 +241,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.attn.c_proj.weight
@@ -256,7 +256,7 @@ layers:
     loss_version: v1
     is_cal: true
     rate_rank: 0.2
-    rate_sparsity: 0.01
+    rate_sparsity: 0.1
     is_adaptive: true
     rate_decay: 0.9
 - name: transformer.h.3.mlp.c_fc.weight

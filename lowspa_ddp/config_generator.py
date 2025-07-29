@@ -35,7 +35,7 @@ def generate_config(
         'model_type': 'GPT',
         'seed': 42,
         'training': {
-            'batch_size': 8,
+            'batch_size': 12,
             'num_epochs': 6000,
             'num_workers': 4,
             'dataloader': 'train_loader',
