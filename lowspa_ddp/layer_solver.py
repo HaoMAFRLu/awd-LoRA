@@ -147,10 +147,10 @@ class ADMMSolver():
             L, S, Y, singular_values = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho, energy_quantile)
             nr_rank = get_energy_quantile(singular_values, quantile=energy_quantile)
             if self.is_adaptive:
-                self.dalpha = self.update_alpha(self.rate_rank, singular_values, self.rho)
-                self.dbeta = self.update_beta(self.rate_sparsity, S, self.rho)
-                self.alpha = self.rate_decay*self.alpha + (1 - self.rate_decay)*self.dalpha
-                self.beta = self.rate_decay*self.beta + (1 - self.rate_decay)*self.dbeta
+                self.dalpha = (1 - self.rate_decay)*self.update_alpha(self.rate_rank, singular_values, self.rho)
+                self.dbeta = (1 - self.rate_decay)*self.update_beta(self.rate_sparsity, S, self.rho)
+                self.alpha = self.rate_decay*self.alpha + self.dalpha
+                self.beta = self.rate_decay*self.beta + self.dbeta
             if torch.linalg.norm(X - L - S, 'fro') < tol:
                 break
         return L, S, Y, nr_rank
