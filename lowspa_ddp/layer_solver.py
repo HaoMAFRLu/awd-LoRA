@@ -20,10 +20,16 @@ class ADMMSolver():
         """
         self.X_with_grad = X  # Initial weight matrix
         self.layer_name = layer_name
-        
+
         # read the params
         for key, val in params.items():
             setattr(self, key, val)
+
+        # overwrite the hyperparameters
+        row, col = X.shape
+        self.rho = 1 /(5 * np.sqrt(row * col))
+        self.alpha = self.rho * 1/np.sqrt(row * col)
+        self.beta = self.alpha * 1/(np.sqrt(max(row, col)))
 
         if is_full:
             self.X = X.detach()
