@@ -21,7 +21,7 @@ optimizer:
 layers:
 - name: transformer.wte.weight
   params:
-    alpha_to_rho: 0.001
+    alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
@@ -33,7 +33,7 @@ layers:
     rate_rank: 0.15
     rate_sparsity: 0.02
     is_adaptive: true
-    rate_decay: 0.9
+    rate_decay: 0.998
 - name: transformer.wpe.weight
   params:
     alpha_to_rho: 0.01
