@@ -3,8 +3,8 @@ seed: 42
 layers:
   - name: fc1.weight
     params:
-      alpha: 0.0001  # Regularization parameter for the layer
-      beta: 0.00001  # Sparsity parameter for the layer
+      alpha_to_rho: 0.1  # Regularization parameter for the layer
+      beta_to_rho: 0.01  # Sparsity parameter for the layer
       rho: 0.001  # Penalty parameter for the layer
       energy: 0.9  # Energy parameter for the layer
       init_energy: 0.3  # Initial energy for the layer
@@ -14,8 +14,8 @@ layers:
       is_cal: True  # Whether to calculate the sparse matrix for this layer
   - name: fc2.weight
     params:
-      alpha: 0.0001
-      beta: 0.00002
+      alpha_to_rho: 0.1
+      beta_to_rho: 0.02
       rho: 0.001
       energy: 0.9
       init_energy: 0.3

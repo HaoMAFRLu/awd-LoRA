@@ -41,9 +41,9 @@ def get_model(model_type: str):
     if model_type == 'CNN':
         return get_CNN()
     elif model_type == 'GPT':
-        n_layer    = 12      
-        n_head     = 12     
-        n_embd     = 768    
+        n_layer    = 4      
+        n_head     = 4     
+        n_embd     = 256   
         block_size = 1024   
         vocab_size = 50304   
 

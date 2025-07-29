@@ -27,9 +27,8 @@ class ADMMSolver():
 
         # overwrite the hyperparameters
         row, col = X.shape
-        self.rho = 1 /(5 * np.sqrt(row * col))
-        self.alpha = self.rho * 1/np.sqrt(row * col)
-        self.beta = self.alpha * 1/(np.sqrt(max(row, col)))
+        self.alpha = self.rho * self.alpha_to_rho
+        self.beta = self.rho * self.beta_to_rho
 
         if is_full:
             self.X = X.detach()
@@ -135,6 +134,9 @@ class ADMMSolver():
         self.results = {'L': self.L.to('cpu'),
                         'S': self.S.to('cpu'),
                         'Y': self.Y.to('cpu'),
+                        'alpha': self.alpha,
+                        'beta': self.beta,
+                        'rho': self.rho,
                         'nr_rank': self.nr_rank,
                         'nr_nonzero': int(torch.count_nonzero(self.S)),
                         'nr_total_rank': self.nr_total_rank,

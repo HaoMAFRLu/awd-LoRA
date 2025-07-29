@@ -57,6 +57,9 @@ class LowSpaTrainer():
         self.layer_info = {entry['name']: {
             'loss': [],
             'rank': [],
+            'alpha': [],
+            'beta': [],
+            'rho': [],
             'nonzero': [],
             'total_rank': [],
             'total_elements': []
@@ -194,6 +197,9 @@ class LowSpaTrainer():
                     self.LL[layer_name] = data['L']
                     self.SS[layer_name] = data['S']
                     self.YY[layer_name] = data['Y']
+                    self.layer_info[layer_name]['alpha'].append(data['alpha'])
+                    self.layer_info[layer_name]['beta'].append(data['beta'])
+                    self.layer_info[layer_name]['rho'].append(data['rho'])
                     self.layer_info[layer_name]['loss'].append(data['avg_loss'])
                     self.layer_info[layer_name]['rank'].append(data['nr_rank'])
                     self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
@@ -238,22 +244,6 @@ class LowSpaTrainer():
         }
         with open(os.path.join(path_folder, 'results.pkl'), 'wb') as f:
             pickle.dump(data, f)
-
-    def gather_results(self, local_results):
-        """Gather dicts from all ranks to rank 0"""
-        gathered = [None] * self.world_size
-        dist.all_gather_object(gathered, local_results)
-        if self.rank == 0:
-            for p in gathered:
-                for layer_name, data in p.items():
-                    self.LL[layer_name] = data['L']
-                    self.SS[layer_name] = data['S']
-                    self.YY[layer_name] = data['Y']
-                    self.layer_info[layer_name]['loss'].append(data['avg_loss'])
-                    self.layer_info[layer_name]['rank'].append(data['nr_rank'])
-                    self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
-                    self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
-                    self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
     
     def get_local_weights(self):
         """
@@ -350,6 +340,9 @@ class LowSpaTrainer():
         
         layer_stats = [{'name': entry['name'],
                         'loss': layer_info[entry['name']]['loss'][-1],
+                        'alpha': layer_info[entry['name']]['alpha'][-1],
+                        'beta': layer_info[entry['name']]['beta'][-1],
+                        'rho': layer_info[entry['name']]['rho'][-1],
                         'non_zero': layer_info[entry['name']]['nonzero'][-1],
                         'rank': layer_info[entry['name']]['rank'][-1],
                         'total_rank': layer_info[entry['name']]['total_rank'][-1],

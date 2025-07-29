@@ -115,7 +115,7 @@ def generate_config(
 
 if __name__ == "__main__":
     # Customize parameters as needed
-    NUM_HEADS = 12
+    NUM_HEADS = 4
     INCLUDE_EMBEDDINGS = True
     OUTPUT_FILE = "GPT.yaml"
     OUTPUT_PATH = os.path.join(root, 'lowspa_ddp', 'configs', OUTPUT_FILE)
