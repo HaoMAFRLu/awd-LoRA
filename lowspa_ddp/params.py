@@ -11,7 +11,7 @@ embedding_wte_params = {
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.02,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.99  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.9999  # Rate of decay for the adaptive parameters
 }
 
 embedding_wpe_params = {
