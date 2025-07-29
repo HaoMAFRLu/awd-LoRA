@@ -11,6 +11,7 @@ class ADMMSolver():
                  layer_name: str, 
                  params: dict,
                  X: torch.Tensor,
+                 nr_layers: int,
                  is_full: bool) -> None:
         """
         Args:
@@ -28,7 +29,7 @@ class ADMMSolver():
         # overwrite the hyperparameters
         if self.is_adaptive:
             row, col = X.shape  
-            self.rho = 1 / (5 * row * col)
+            self.rho = 1.0 / (2 * nr_layers * max(row, col))
         
         self.alpha = self.rho * self.alpha_to_rho
         self.beta = self.rho * self.beta_to_rho

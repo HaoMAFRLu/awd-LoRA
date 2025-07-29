@@ -84,7 +84,11 @@ class LowSpaTrainer():
         for entry in self.cfg_layers:
             name = entry['name']
             params = entry['params']
-            solver = ADMMSolver(name, params, self.get_weight(self.ddp_model, 'module.'+name), is_full=name in self.assigned_layers)
+            solver = ADMMSolver(name, 
+                                params, 
+                                self.get_weight(self.ddp_model, 'module.'+name), 
+                                len(self.cfg_layers),
+                                is_full=name in self.assigned_layers)
             solver.layer_gpu_map = self.rank if name in self.assigned_layers else -1
             self.ADMM_solvers.append(solver)
         

@@ -12,8 +12,8 @@ layers:
       tol: 0.001  # Tolerance for convergence
       loss_version: v1  # Version of the loss function, v1: X - L - S -Y/rho, v2: X - L
       is_cal: True  # Whether to calculate the sparse matrix for this layer
-      rate_rank: 0.2  # Rate of rank reduction for the layer
-      rate_sparsity: 0.01  # Rate of sparsity for the layer
+      rate_rank: 0.20  # Rate of rank reduction for the layer
+      rate_sparsity: 0.1  # Rate of sparsity for the layer
       is_adaptive: True  # Whether to use adaptive parameters for the layer
       rate_decay: 0.9  # Rate of decay for the adaptive parameters
   - name: fc2.weight
@@ -27,8 +27,8 @@ layers:
       tol: 0.001
       loss_version: v1
       is_cal: True
-      rate_rank: 0.2  # Rate of rank reduction for the layer
-      rate_sparsity: 0.01  # Rate of sparsity for the layer
+      rate_rank: 0.20  # Rate of rank reduction for the layer
+      rate_sparsity: 0.1  # Rate of sparsity for the layer
       is_adaptive: True  # Whether to use adaptive parameters for the layer
       rate_decay: 0.9  # Rate of decay for the adaptive parameters
 

@@ -35,8 +35,8 @@ def generate_config(
         'model_type': 'GPT',
         'seed': 42,
         'training': {
-            'batch_size': 16,
-            'num_epochs': 100,
+            'batch_size': 8,
+            'num_epochs': 6000,
             'num_workers': 4,
             'dataloader': 'train_loader',
         },
@@ -44,14 +44,15 @@ def generate_config(
             'name': 'StepLR',
             'params': {
                 'step_size': 5,
-                'gamma': 0.7,
+                'gamma': 0.85,
             }
         },
         'optimizer': {
             'name': 'AdamW',
             'params': {
-                'lr':           0.0005,
-                'betas':        None,
+                'lr':           0.0006,
+                'weight_decay': 0.1,
+                'betas':       [0.9, 0.95]
             }
         },
         'layers': []
