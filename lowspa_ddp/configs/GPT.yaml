@@ -48,7 +48,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_ca: true
+    is_cal: true
 - name: transformer.h.0.attn.c_proj.weight
   params:
     alpha_to_rho: 0.05
@@ -92,7 +92,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_ca: true
+    is_cal: true
 - name: transformer.h.1.attn.c_proj.weight
   params:
     alpha_to_rho: 0.05
@@ -136,7 +136,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_ca: true
+    is_cal: true
 - name: transformer.h.2.attn.c_proj.weight
   params:
     alpha_to_rho: 0.05
@@ -180,7 +180,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_ca: true
+    is_cal: true
 - name: transformer.h.3.attn.c_proj.weight
   params:
     alpha_to_rho: 0.05

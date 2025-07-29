@@ -43,7 +43,7 @@ attn_c_attn_params = {
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
-    'is_ca':        True,    # Whether to calculate sparse matrix
+    'is_cal':        True,    # Whether to calculate sparse matrix
 }
 
 attn_c_proj_params = {
