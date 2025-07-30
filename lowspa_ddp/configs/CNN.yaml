@@ -1,4 +1,5 @@
 seed: 42
+num_epochs: 100
 model: 
   name:  CNN
   params: null
@@ -34,11 +35,11 @@ layers:
       is_adaptive: True  # Whether to use adaptive parameters for the layer
       rate_decay: 0.9  # Rate of decay for the adaptive parameters
 
-training:
+dataloader:
+  type: train
+  dataset: MNIST
   batch_size: 512
-  num_epochs: 100
   num_workers: 4
-  dataloader: train_loader  
 
 scheduler:
   name: StepLR

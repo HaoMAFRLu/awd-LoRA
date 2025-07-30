@@ -40,8 +40,8 @@ def get_model(cfg: dict):
         n_head     = params.get('n_head', 12)
         n_embd     = params.get('n_embd', 768)
         block_size = params.get('block_size', 1024)
+        vocab_size = params.get('vocab_size', 1024)
 
-        vocab_size = 50304   
         dropout    = 0.0     
         bias       = False   
 
@@ -58,9 +58,7 @@ def get_model(cfg: dict):
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
 
-def get_dataloader(model_type: str,
-                   batch_size: int = 64,
-                   num_workers: int = 0):
+def get_dataloader(model_type: str, cfg: dict):
      """
      Get the dataloader based on the model type.
      
@@ -74,15 +72,32 @@ def get_dataloader(model_type: str,
           test_loader: DataLoader for the test set.
      """
      if model_type == 'CNN':
-          return get_mnist(batch_size=batch_size, 
-                           num_workers=num_workers)
+            batch_size = cfg.get('batch_size', 512)
+            num_workers = cfg.get('num_workers', 4)
+            dataloader_type = cfg.get('type', 'train')
+            train_loader, test_loader = get_mnist(batch_size=batch_size, num_workers=num_workers)
+            if dataloader_type == 'train':
+                return train_loader
+            elif dataloader_type == 'test':
+                return test_loader
      elif model_type == 'GPT':
-          return get_gpt_dataloader(batch_size=batch_size)
+            split = cfg.get('split', 'train')
+            batch_size = cfg.get('batch_size', 64)
+            block_size = cfg.get('block_size', 1024)
+            dataset = cfg.get('dataset', 'openwebtext')
+            steps_per_epoch = cfg.get('steps_per_epoch', None)
+            tokens_per_epoch = cfg.get('tokens_per_epoch', None)
+            return get_gpt_dataloader(split=split,
+                                      batch_size=batch_size,
+                                      block_size=block_size,
+                                      dataset=dataset,
+                                      steps_per_epoch=steps_per_epoch,
+                                      tokens_per_epoch=tokens_per_epoch)
      else:
-          raise ValueError(f"Unsupported model type: {model_type}")
+            raise ValueError(f"Unsupported model type: {model_type}")
 
 def get_model_and_dataloader(cfg_model: dict,
-                             cfg_training: dict):
+                             cfg_dataloader: dict):
     """
     Get the model and dataloader based on the model type.
     
@@ -95,14 +110,10 @@ def get_model_and_dataloader(cfg_model: dict,
         test_loader: DataLoader for the test set.
     """
     model_type = cfg_model.get('name', 'CNN')
-    batch_size = cfg_training.get('batch_size', 64)
-    num_workers = cfg_training.get('num_workers', 0)
 
     model = get_model(cfg_model)
-    train_loader, test_loader = get_dataloader(model_type,
-                                               batch_size=batch_size, 
-                                               num_workers=num_workers)
-    return model, train_loader, test_loader
+    data_loader = get_dataloader(model_type, cfg_dataloader)
+    return model, data_loader
 
 def get_linear_layers_name(model):
     """

@@ -32,11 +32,10 @@ class ADMMSolver():
         # overwrite the hyperparameters
         if self.is_adaptive:
             row, col = X.shape  
-            self.rho = 1.0 / (2 * nr_layers * max(row, col))
+            self.rho = 1.0 / (2 * np.sqrt(nr_layers * max(row, col)))
         
         self.alpha = self.rho * self.alpha_to_rho
         self.beta = self.rho * self.beta_to_rho
-        self.rate_rank += 0.05
 
         if is_full:
             self.X = X.detach()
@@ -116,7 +115,6 @@ class ADMMSolver():
         idx = int(len(vals) * rate_sparsity)
         return (vals[idx] - eps) * rho * scalar  # in case the same values
 
-
     def PRCA(self,
              X: torch.Tensor, 
              L: torch.Tensor,  
@@ -144,12 +142,18 @@ class ADMMSolver():
             if self.layer_name == 'transformer.wte.weight':
                 print('here')
             L, S, Y, singular_values = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho)
-            nr_rank = get_energy_quantile(singular_values, quantile=energy_quantile)
+            nr_rank = get_energy_quantile(singular_values, quantile=energy_quantile)  # current rank
+            nr_sparsity = torch.count_nonzero(S)
+
             if self.is_adaptive:                
-                self.dalpha = (1 - self.rate_decay)*self.update_alpha(self.rate_rank, singular_values, self.rho)
-                self.dbeta = (1 - self.rate_decay)*self.update_beta(self.rate_sparsity, S, self.rho)
-                self.alpha = self.rate_decay*self.alpha + self.dalpha
-                self.beta = self.rate_decay*self.beta + self.dbeta
+                # self.dalpha = (1 - self.rate_decay)*self.update_alpha(self.rate_rank, singular_values, self.rho)
+                # self.dbeta = (1 - self.rate_decay)*self.update_beta(self.rate_sparsity, S, self.rho)
+                # self.alpha = self.rate_decay*self.alpha + self.dalpha
+                # self.beta = self.rate_decay*self.beta + self.dbeta
+                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) / 40.0  # current rangk - target rank
+                self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 40.0 # current sparsity - target sparsity
+                self.alpha = self.alpha + self.dalpha  # update alpha
+                self.beta = self.beta + self.dbeta  # update beta
             if torch.linalg.norm(X - L - S, 'fro') < tol:
                 break
         return L, S, Y, nr_rank
@@ -181,7 +185,7 @@ class ADMMSolver():
                         'nr_nonzero': int(torch.count_nonzero(self.S)),
                         'nr_total_rank': self.nr_total_rank,
                         'nr_elements': self.nr_elements,
-                        'avg_loss': self.total_loss/self.nr_cals}
+                        'avg_loss': (self.total_loss/self.nr_cals) / (self.rho/2.0)}
 
     def run(self):
         if self.is_cal:

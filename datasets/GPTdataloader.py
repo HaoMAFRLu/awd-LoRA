@@ -39,12 +39,12 @@ class GPTLoader():
                  split: str = 'train',
                  batch_size: int = 64,
                  block_size: int = 256,
+                 dataset: str = 'openwebtext',
                  tokens_per_epoch: Optional[int] = None,
                  steps_per_epoch: Optional[int] = None,
                  seed: int = 1337,
                  pin_memory: bool = False):
         # Basic config
-        dataset = 'openwebtext'
         self.data_dir = os.path.join(root, 'datasets', 'data', dataset)
         self.split = split
         self.batch_size = int(batch_size)
@@ -155,14 +155,22 @@ class GPTLoader():
 
             yield x, y
 
-def get_gpt_dataloader(batch_size=128, 
-                       block_size=1024):
+def get_gpt_dataloader(split: str = 'train',
+                       batch_size: int=128, 
+                       block_size: int=1024,
+                       dataset: str = 'openwebtext',
+                       steps_per_epoch: Optional[int] = None,
+                       tokens_per_epoch: Optional[int] = None) -> tuple:
     """Load GPT train/test dataloaders."""
-    train_loader = GPTLoader(split='train',
-                             batch_size=batch_size,
-                             block_size=block_size,
-                             steps_per_epoch=10)
-    test_loader = GPTLoader(split='val',
-                            batch_size=batch_size,
-                            block_size=block_size)
-    return train_loader, test_loader
+    if split == 'train':
+        return GPTLoader(split='train',
+                         batch_size=batch_size,
+                         block_size=block_size,
+                         dataset=dataset,
+                         steps_per_epoch=steps_per_epoch,
+                         tokens_per_epoch=tokens_per_epoch)
+    elif split == 'val':
+        return  GPTLoader(split='val',
+                          batch_size=batch_size,
+                          block_size=block_size,
+                          dataset=dataset)

@@ -20,8 +20,13 @@ def generate_config(
     num_heads: int=12,
     num_layers: int=12,
     num_embd: int=768,
+    num_epochs: int=6000,
     block_size: int=1024,
     batch_size: int=12,
+    vocab_size: int=50304,  # Common vocabulary size for GPT models
+    steps_per_epoch: int=10,
+    tokens_per_epoch: int=None,
+    dataset: str='openwebtext',  # or 'openwebtext', etc.
     include_embeddings: bool=True,
     output_path: str="config.yaml"
 ):
@@ -37,20 +42,25 @@ def generate_config(
     # Base configuration structure
     cfg = {
         'seed': 42,
+        'num_epochs': num_epochs,
         'model': {
             'name': 'GPT',
             'params': {
                 'n_layer':    num_layers,      # Number of transformer blocks
                 'n_head':     num_heads,  # Number of attention heads
                 'n_embd':     num_embd,    # Embedding dimension
-                'block_size': block_size   # Block size for the model
+                'vocab_size': vocab_size,  # Vocabulary size
+                'block_size': block_size,  # Context window size
             }
         },
-        'training': {
+        'dataloader': {
+            'split': 'train',
             'batch_size': batch_size,
-            'num_epochs': 6000,
             'num_workers': 4,
-            'dataloader': 'train_loader',
+            'block_size': block_size,
+            'steps_per_epoch': steps_per_epoch,
+            'tokens_per_epoch': tokens_per_epoch,
+            'dataset': dataset
         },
         'scheduler': {
             'name': 'StepLR',
@@ -128,21 +138,31 @@ def generate_config(
 
 if __name__ == "__main__":
     # Customize parameters as needed
-    NUM_HEADS = 12
-    NUM_LAYERS = 12
-    NUM_EMBEDDING = 768
-    BLOCK_SIZE = 1024
+    NUM_HEADS = 2
+    NUM_LAYERS = 2
+    NUM_EMBEDDING = 128
+    NUM_EPOCHS = 600000
+    BLOCK_SIZE = 256
     BATCH_SIZE = 12
+    VOCAB_SIZE = 50304  # Common vocabulary size for GPT models
+    STEPS_PER_EPOCH = 10
+    TOKENS_PER_EPOCH = None
+    DATASET = 'shakespeare'  # or 'openwebtext', etc.
     INCLUDE_EMBEDDINGS = False
-    OUTPUT_FILE = "GPT.yaml"
+    OUTPUT_FILE = "GPTshakespeare.yaml"
     OUTPUT_PATH = os.path.join(root, 'lowspa_ddp', 'configs', OUTPUT_FILE)
 
     generate_config(
         num_heads=NUM_HEADS,
         num_layers=NUM_LAYERS,
         num_embd=NUM_EMBEDDING,
+        num_epochs=NUM_EPOCHS,
         block_size=BLOCK_SIZE,
         batch_size=BATCH_SIZE,
+        vocab_size=VOCAB_SIZE,
+        steps_per_epoch=STEPS_PER_EPOCH,
+        tokens_per_epoch=TOKENS_PER_EPOCH,
+        dataset=DATASET,
         include_embeddings=INCLUDE_EMBEDDINGS,
         output_path=OUTPUT_PATH
     )

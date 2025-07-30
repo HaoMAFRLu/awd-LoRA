@@ -17,6 +17,7 @@ def main(path_config: str) -> None:
         cfg = yaml.safe_load(f)
     
     seed = cfg['seed']
+    num_epochs = cfg['num_epochs']
     set_seed(seed)
 
     model_type = cfg['model']['name']
@@ -25,15 +26,13 @@ def main(path_config: str) -> None:
     mkdir(path_folder)
     shutil.copy(path_config, path_folder)
     
-    params = cfg.get('training')
-    num_epochs = params['num_epochs']
 
     # get the data loader
-    model, train_loader, test_loader = get_model_and_dataloader(cfg['model'], cfg['training'])
-    ddp_trainer = LowSpaTrainer(model, model_type, train_loader, cfg)
+    model, data_loader = get_model_and_dataloader(cfg['model'], cfg['dataloader'])
+    ddp_trainer = LowSpaTrainer(model, model_type, data_loader, cfg)
     ddp_trainer.train(num_epochs=num_epochs, path_folder=path_folder)
     
 if __name__ == "__main__":
-    config_version = 'GPT'
+    config_version = 'GPTshakespeare'  # or 'GPTopenwebtext', 'GPTwikitext2', etc.
     path_config = os.path.join(root, 'lowspa_ddp', 'configs', config_version+'.yaml')
     main(path_config)
