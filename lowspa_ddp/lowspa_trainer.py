@@ -213,7 +213,20 @@ class LowSpaTrainer():
                     self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
                     self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
                     self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
- 
+    
+    def get_global_loss(self, log_loss):
+        """
+        Get the global loss across all ranks.
+        Args:
+            loss: local loss tensor
+        Returns:
+            global loss value
+        """
+        with torch.no_grad():
+            dist.all_reduce(log_loss, op=dist.ReduceOp.SUM)
+            log_loss = log_loss / self.world_size
+        return log_loss.item()
+    
     def single_step_train(self, data, target):
         """
         Single training step for the model.
@@ -235,7 +248,10 @@ class LowSpaTrainer():
         loss.backward()
         self.optimizer.step()
 
-        return loss.item(), loss1.item(), loss2.item()
+        global_loss_mean = self.get_global_loss(loss.detach())
+        global_loss_mean1 = self.get_global_loss(loss1.detach())
+        global_loss_mean2 = self.get_global_loss(loss2.detach())
+        return global_loss_mean, global_loss_mean1, global_loss_mean2
     
     def save_results(self, path_folder):
         """

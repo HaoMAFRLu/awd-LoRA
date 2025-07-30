@@ -150,10 +150,10 @@ class ADMMSolver():
                 # self.dbeta = (1 - self.rate_decay)*self.update_beta(self.rate_sparsity, S, self.rho)
                 # self.alpha = self.rate_decay*self.alpha + self.dalpha
                 # self.beta = self.rate_decay*self.beta + self.dbeta
-                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) / 40.0  # current rangk - target rank
-                self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 40.0 # current sparsity - target sparsity
-                self.alpha = self.alpha + self.dalpha  # update alpha
-                self.beta = self.beta + self.dbeta  # update beta
+                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) / 50.0  # current rangk - target rank
+                self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 100.0 # current sparsity - target sparsity
+                self.alpha = max(0.0, self.alpha + self.dalpha)  # update alpha
+                self.beta = max(0.0, self.beta + self.dbeta)  # update beta
             if torch.linalg.norm(X - L - S, 'fro') < tol:
                 break
         return L, S, Y, nr_rank
