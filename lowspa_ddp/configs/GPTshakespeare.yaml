@@ -1,19 +1,19 @@
 seed: 42
-num_epochs: 600000
+num_epochs: 60000
 model:
   name: GPT
   params:
     n_layer: 2
     n_head: 2
-    n_embd: 128
+    n_embd: 768
     vocab_size: 50304
-    block_size: 256
+    block_size: 512
 dataloader:
   split: train
   batch_size: 12
   num_workers: 4
-  block_size: 256
-  steps_per_epoch: 10
+  block_size: 512
+  steps_per_epoch: 100
   tokens_per_epoch: null
   dataset: shakespeare
 scheduler:

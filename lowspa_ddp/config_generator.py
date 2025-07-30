@@ -140,12 +140,12 @@ if __name__ == "__main__":
     # Customize parameters as needed
     NUM_HEADS = 2
     NUM_LAYERS = 2
-    NUM_EMBEDDING = 128
-    NUM_EPOCHS = 600000
-    BLOCK_SIZE = 256
+    NUM_EMBEDDING = 768
+    NUM_EPOCHS = 60000
+    BLOCK_SIZE = 512
     BATCH_SIZE = 12
     VOCAB_SIZE = 50304  # Common vocabulary size for GPT models
-    STEPS_PER_EPOCH = 10
+    STEPS_PER_EPOCH = 100
     TOKENS_PER_EPOCH = None
     DATASET = 'shakespeare'  # or 'openwebtext', etc.
     INCLUDE_EMBEDDINGS = False
