@@ -1,0 +1,92 @@
+seed: 42
+num_epochs: 10
+model:
+  name: GPT
+  params:
+    n_layer: 1
+    n_head: 1
+    n_embd: 32
+    vocab_size: 50304
+    block_size: 16
+dataloader:
+  split: train
+  batch_size: 2
+  num_workers: 4
+  block_size: 16
+  steps_per_epoch: 2
+  tokens_per_epoch: null
+  dataset: shakespeare
+scheduler:
+  name: StepLR
+  params:
+    step_size: 5
+    gamma: 0.85
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.0006
+    weight_decay: 0.1
+    betas:
+    - 0.9
+    - 0.95
+layers:
+- name: transformer.h.0.attn.c_attn.weight
+  params:
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.001
+    rho: 0.001
+    energy: 0.9
+    init_energy: 0.3
+    iter_max: 1
+    tol: 0.001
+    loss_version: v1
+    is_cal: true
+    rate_rank: 0.15
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
+- name: transformer.h.0.attn.c_proj.weight
+  params:
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.001
+    rho: 0.001
+    energy: 0.9
+    init_energy: 0.3
+    iter_max: 1
+    tol: 0.001
+    loss_version: v1
+    is_cal: true
+    rate_rank: 0.15
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
+- name: transformer.h.0.mlp.c_fc.weight
+  params:
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.001
+    rho: 0.001
+    energy: 0.9
+    init_energy: 0.3
+    iter_max: 1
+    tol: 0.001
+    loss_version: v1
+    is_cal: true
+    rate_rank: 0.15
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9
+- name: transformer.h.0.mlp.c_proj.weight
+  params:
+    alpha_to_rho: 0.01
+    beta_to_rho: 0.001
+    rho: 0.001
+    energy: 0.9
+    init_energy: 0.3
+    iter_max: 1
+    tol: 0.001
+    loss_version: v1
+    is_cal: true
+    rate_rank: 0.15
+    rate_sparsity: 0.1
+    is_adaptive: true
+    rate_decay: 0.9

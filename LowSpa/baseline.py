@@ -5,7 +5,7 @@ import shutil
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from lowspa_ddp.utils import *
-from lowspa_ddp.normal_trainer import Trainer
+from lowspa_ddp.baseline_trainer import Trainer
 from lowspa_ddp.model_register import get_model_and_dataloader
 from lowspa_ddp.utils import *
 
@@ -32,6 +32,6 @@ def main(path_config: str) -> None:
     trainer.train(num_epochs=num_epochs, path_folder=path_folder)
 
 if __name__ == "__main__":
-    config_version = 'CNN'  # or 'GPTopenwebtext', 'GPTwikitext2', etc.
+    config_version = 'GPTshakespeare_mini'  # or 'GPTopenwebtext', 'GPTwikitext2', etc.
     path_config = os.path.join(root, 'lowspa_ddp', 'configs', config_version+'.yaml')
     main(path_config)

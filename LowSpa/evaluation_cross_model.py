@@ -83,9 +83,10 @@ def main(model_type: str,
     # with '.weight' suffix
     layers = [entry['name'] for entry in cfg_lowspa['layers']]
 
-    exclude_layers = ['transformer.h.0.mlp.c_fc.weight',
-                     'transformer.h.0.mlp.c_proj.weight']
+    # exclude_layers = ['transformer.h.0.mlp.c_fc.weight',
+    #                  'transformer.h.0.mlp.c_proj.weight']
     
+    exclude_layers = []
     layers = [layer for layer in layers if layer not in exclude_layers]
 
     evaluator = CrossEvaluator(model_type=model_type,
@@ -107,7 +108,7 @@ def main(model_type: str,
 if __name__ == "__main__":
     model_type = 'GPT'
     file_baseline = '20250730_221825'
-    file_lowspa = '20250730_215710'
+    file_lowspa = '20250731_130721'
     main(model_type=model_type, 
          file_baseline=file_baseline, 
          file_lowspa=file_lowspa)

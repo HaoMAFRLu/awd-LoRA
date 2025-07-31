@@ -138,31 +138,48 @@ def generate_config(
 
 if __name__ == "__main__":
     # Customize parameters as needed
-    NUM_HEADS = 2
-    NUM_LAYERS = 2
-    NUM_EMBEDDING = 768
-    NUM_EPOCHS = 60000
-    BLOCK_SIZE = 512
-    BATCH_SIZE = 12
-    VOCAB_SIZE = 50304  # Common vocabulary size for GPT models
-    STEPS_PER_EPOCH = 100
-    TOKENS_PER_EPOCH = None
-    DATASET = 'shakespeare'  # or 'openwebtext', etc.
-    INCLUDE_EMBEDDINGS = False
-    OUTPUT_FILE = "GPTshakespeare.yaml"
-    OUTPUT_PATH = os.path.join(root, 'lowspa_ddp', 'configs', OUTPUT_FILE)
+    # NUM_HEADS = 2
+    # NUM_LAYERS = 2
+    # NUM_EMBEDDING = 768
+    # NUM_EPOCHS = 60000
+    # BLOCK_SIZE = 512
+    # BATCH_SIZE = 12
+    # VOCAB_SIZE = 50304  # Common vocabulary size for GPT models
+    # STEPS_PER_EPOCH = 100
+    # TOKENS_PER_EPOCH = None
+    # DATASET = 'shakespeare'  # or 'openwebtext', etc.
+    # INCLUDE_EMBEDDINGS = False
+    # OUTPUT_FILE = "GPTshakespeare.yaml"
+    # OUTPUT_PATH = os.path.join(root, 'lowspa_ddp', 'configs', OUTPUT_FILE)
 
-    generate_config(
-        num_heads=NUM_HEADS,
-        num_layers=NUM_LAYERS,
-        num_embd=NUM_EMBEDDING,
-        num_epochs=NUM_EPOCHS,
-        block_size=BLOCK_SIZE,
-        batch_size=BATCH_SIZE,
-        vocab_size=VOCAB_SIZE,
-        steps_per_epoch=STEPS_PER_EPOCH,
-        tokens_per_epoch=TOKENS_PER_EPOCH,
-        dataset=DATASET,
-        include_embeddings=INCLUDE_EMBEDDINGS,
-        output_path=OUTPUT_PATH
+    cfg_GPT_shakespeare = dict(
+        num_heads=2,
+        num_layers=2,
+        num_embd=768,
+        num_epochs=60000,
+        block_size=512,
+        batch_size=12,
+        vocab_size=50304,
+        steps_per_epoch=100,
+        tokens_per_epoch=None,
+        dataset='shakespeare',
+        include_embeddings=False,
+        output_path=os.path.join(root, 'lowspa_ddp', 'configs', 'GPTshakespeare.yaml')
     )
+
+    cfg_GPT_shakespeare_mini = dict(
+        num_heads=1,
+        num_layers=1,
+        num_embd=32,
+        num_epochs=10,
+        block_size=16,
+        batch_size=2,
+        vocab_size=50304,
+        steps_per_epoch=2,
+        tokens_per_epoch=None,
+        dataset='shakespeare',
+        include_embeddings=False,
+        output_path=os.path.join(root, 'lowspa_ddp', 'configs', 'GPTshakespeare_mini.yaml')
+    )     
+
+    generate_config(**cfg_GPT_shakespeare_mini)

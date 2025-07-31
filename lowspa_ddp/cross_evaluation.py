@@ -286,18 +286,21 @@ class CrossEvaluator():
         Returns:
             Dictionary with evaluation results.
         """
+        model.eval()
         with torch.no_grad():
             data, target = data.to(self.device), target.to(self.device)
             output = model(data)
-            loss = loss_fn(output, target)
+            loss = loss_fn(output, target)  # [Batch, Length, Vocab]
             if self.model_type == 'GPT':
                 pred = output.argmax(dim=-1)
+                mask = target.ne(-1)
             elif self.model_type == 'CNN':
                 pred = output.argmax(dim=1)
-            correct = pred.eq(target).sum().item()
-        total = target.size(0)
+        
+        correct = (pred[mask] == target[mask]).sum().item()
+        total   = mask.sum().item()
+        accuracy = correct / max(total, 1)
         avg_loss = loss.item()
-        accuracy = correct / total
         return {'loss': avg_loss, 'accuracy': accuracy, 'correct': correct, 'total': total}
     
     # def evaluate(self,
