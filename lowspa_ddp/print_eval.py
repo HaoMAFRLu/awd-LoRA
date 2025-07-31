@@ -115,7 +115,7 @@ def main(model_type: str, files: list) -> None:
     #            f"L", f"LoR(L)", f"L+S", f"LoR(L)+S"]
 
     headers = [f"model", f"dataset", f"metric", 
-               f"baseline", f"X", 
+               f"baseline", f"LoR(baseline)", f"X", 
                f"L", f"LoR(L)", f"L+S", f"LoR(L)+S"]
     
     rows = []
@@ -135,6 +135,7 @@ if __name__ == "__main__":
     #          '20250731_084208',
     #          '20250731_130721']
 
-    files = ['20250731_130721']
+    files = ['20250731_130721',
+             '20250731_170700']
     main(model_type=model_type,
          files=files)

@@ -74,6 +74,10 @@ def main(model_type: str,
         model_lowspa = load_model(os.path.join(path_lowspa, 'model.pth'), cfg_lowspa['model'])
         LL, SS = get_lowspa_layers(os.path.join(path_lowspa, 'results.pkl'))
 
+
+    SS_ = {}
+    for key, value in SS.items():
+        SS_[key] = soft_threshold(value, 1e-4)
     cfg_dataloader = cfg_lowspa['dataloader']
 
     cfg_dataloader['split'] = 'train'
@@ -102,7 +106,7 @@ def main(model_type: str,
                                test_loader=test_loader,
                                layers=layers,
                                LL=LL,
-                               SS=SS,
+                               SS=SS_,
                                rank_quantile=0.2)
     
     # evaluator.test_opts()
