@@ -215,10 +215,10 @@ class CrossEvaluator():
                 SS: dict) -> None:
         """Add sparse components to the model."""
         for layer_name in layers:
-            if layer_name+'.weight' in SS:
+            if layer_name in SS:
                 if hasattr(model, layer_name):
                     layer = getattr(model, layer_name)
-                    layer.weight.data += SS[layer_name+'.weight'].to(self.device)
+                    layer.weight.data += SS[layer_name].to(self.device)
             else:
                 print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
 
@@ -228,10 +228,10 @@ class CrossEvaluator():
                     LL: dict) -> None:
         """Replace the weights of the model with low-rank components."""
         for layer_name in layers:
-            if layer_name+'.weight' in LL:
+            if layer_name in LL:
                 if hasattr(model, layer_name):
                     layer = getattr(model, layer_name)
-                    layer.weight.copy_(LL[layer_name+'.weight'].to(self.device))
+                    layer.weight.copy_(LL[layer_name].to(self.device))
             else:
                 print(f"Warning: Low-rank component for layer {layer_name} not found in LL dictionary.")
 
@@ -241,10 +241,10 @@ class CrossEvaluator():
                    SS: dict) -> None:
         """Remove sparse components from the model."""
         for layer_name in layers:
-            if layer_name+'.weight' in SS:
+            if layer_name in SS:
                 if hasattr(model, layer_name):
                     layer = getattr(model, layer_name)
-                    layer.weight.data -= SS[layer_name+'.weight'].to(self.device)
+                    layer.weight.data -= SS[layer_name].to(self.device)
             else:
                 print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
 
