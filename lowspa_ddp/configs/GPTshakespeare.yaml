@@ -33,7 +33,7 @@ layers:
 - name: transformer.h.0.attn.c_attn.weight
   params:
     alpha_to_rho: 0.01
-    beta_to_rho: 0.005
+    beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -48,7 +48,7 @@ layers:
 - name: transformer.h.0.attn.c_proj.weight
   params:
     alpha_to_rho: 0.01
-    beta_to_rho: 0.005
+    beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -63,7 +63,7 @@ layers:
 - name: transformer.h.0.mlp.c_fc.weight
   params:
     alpha_to_rho: 0.01
-    beta_to_rho: 0.005
+    beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -78,7 +78,7 @@ layers:
 - name: transformer.h.0.mlp.c_proj.weight
   params:
     alpha_to_rho: 0.01
-    beta_to_rho: 0.005
+    beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -93,7 +93,7 @@ layers:
 - name: transformer.h.1.attn.c_attn.weight
   params:
     alpha_to_rho: 0.01
-    beta_to_rho: 0.005
+    beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -108,7 +108,7 @@ layers:
 - name: transformer.h.1.attn.c_proj.weight
   params:
     alpha_to_rho: 0.01
-    beta_to_rho: 0.005
+    beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -123,7 +123,7 @@ layers:
 - name: transformer.h.1.mlp.c_fc.weight
   params:
     alpha_to_rho: 0.01
-    beta_to_rho: 0.005
+    beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
     init_energy: 0.3
@@ -138,7 +138,7 @@ layers:
 - name: transformer.h.1.mlp.c_proj.weight
   params:
     alpha_to_rho: 0.01
-    beta_to_rho: 0.005
+    beta_to_rho: 0.001
     rho: 0.001
     energy: 0.9
     init_energy: 0.3

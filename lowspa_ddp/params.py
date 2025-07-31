@@ -1,6 +1,6 @@
 embedding_wte_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
-    'beta_to_rho':  0.01, # Sparsity parameter
+    'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
@@ -16,7 +16,7 @@ embedding_wte_params = {
 
 embedding_wpe_params = {
     'alpha_to_rho':  0.01,  # Regularization parameter
-    'beta_to_rho':   0.01, # Sparsity parameter
+    'beta_to_rho':   0.001, # Sparsity parameter
     'rho':           0.001,   # Penalty parameter
     'energy':        0.9,     # Energy parameter
     'init_energy':   0.3,     # Initial energy
@@ -32,7 +32,7 @@ embedding_wpe_params = {
 
 lm_head_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
-    'beta_to_rho':  0.005, # Sparsity parameter
+    'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
@@ -48,7 +48,7 @@ lm_head_params = {
 
 attn_c_attn_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
-    'beta_to_rho':  0.005, # Sparsity parameter
+    'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
@@ -64,7 +64,7 @@ attn_c_attn_params = {
 
 attn_c_proj_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
-    'beta_to_rho':  0.005, # Sparsity parameter
+    'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
@@ -80,7 +80,7 @@ attn_c_proj_params = {
 
 mlp_c_fc_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
-    'beta_to_rho':  0.005, # Sparsity parameter
+    'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
@@ -96,7 +96,7 @@ mlp_c_fc_params = {
 
 mlp_c_proj_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
-    'beta_to_rho':  0.005, # Sparsity parameter
+    'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.9,     # Energy parameter
     'init_energy':  0.3,     # Initial energy

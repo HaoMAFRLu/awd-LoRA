@@ -32,7 +32,7 @@ class ADMMSolver():
         # overwrite the hyperparameters
         if self.is_adaptive:
             row, col = X.shape  
-            self.rho = 1.0 / (2 * np.sqrt(nr_layers * max(row, col)))
+            self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
         
         self.alpha = self.rho * self.alpha_to_rho
         self.beta = self.rho * self.beta_to_rho
