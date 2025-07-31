@@ -8,6 +8,7 @@ from pathlib import Path
 import torch.nn.functional as F
 import random
 import numpy as np
+import yaml
 
 class GPTCrossEntropyLoss(nn.Module):
     def __init__(self, ignore_index: int = -1):
@@ -152,3 +153,15 @@ def set_seed(seed: int):
     # 5) CuDNN determinism
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+def read_cfg(cfg_path: str) -> dict:
+    """
+    Read a configuration file and return its contents as a dictionary.
+    Args:
+        cfg_path: Path to the configuration file.
+    Returns:
+        Dictionary containing the configuration parameters.
+    """
+    with open(cfg_path) as f:
+        cfg = yaml.safe_load(f)
+    return cfg

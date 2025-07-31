@@ -22,7 +22,7 @@ def main(path_config: str) -> None:
 
     model_type = cfg['model']['name']
     folder_name = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path_folder = os.path.join(root, 'data', 'normal', model_type, folder_name)
+    path_folder = os.path.join(root, 'data', 'baseline', model_type, folder_name)
     mkdir(path_folder)
     shutil.copy(path_config, path_folder)
     
@@ -32,6 +32,6 @@ def main(path_config: str) -> None:
     trainer.train(num_epochs=num_epochs, path_folder=path_folder)
 
 if __name__ == "__main__":
-    config_version = 'GPTshakespeare'  # or 'GPTopenwebtext', 'GPTwikitext2', etc.
+    config_version = 'CNN'  # or 'GPTopenwebtext', 'GPTwikitext2', etc.
     path_config = os.path.join(root, 'lowspa_ddp', 'configs', config_version+'.yaml')
     main(path_config)
