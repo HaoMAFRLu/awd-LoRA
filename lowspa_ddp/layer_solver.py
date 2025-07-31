@@ -79,8 +79,8 @@ class ADMMSolver():
         self.total_loss = 0.0
         self.nr_cals = 0
 
-    @staticmethod
-    def single_step_PRCA(X: torch.Tensor,
+    def single_step_PRCA(self,
+                         X: torch.Tensor,
                          L: torch.Tensor,
                          S: torch.Tensor,
                          Y: torch.Tensor,
@@ -90,6 +90,7 @@ class ADMMSolver():
         U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
         _s = soft_threshold(s, alpha/rho)
         L = U @ torch.diag(_s) @ Vt
+        beta = self.update_beta(self.rate_sparsity, X - L + Y/rho, rho)
         S = soft_threshold(X - L + Y/rho, beta/rho)
         Y = Y + rho * (X - L - S)
         return L, S, Y, _s
@@ -140,8 +141,6 @@ class ADMMSolver():
             Updated low-rank and sparse components, and dual variable.
         """
         for it in range(iter_max):
-            if self.layer_name == 'transformer.wte.weight':
-                print('here')
             L, S, Y, singular_values = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho)
             nr_rank = get_energy_quantile(singular_values, quantile=energy_quantile)  # current rank
             nr_sparsity = torch.count_nonzero(S)
