@@ -44,7 +44,7 @@ def main(model_type: str, files: list) -> None:
 if __name__ == "__main__":
     model_type = 'GPT'
     files = ['20250730_215710',
-             '20250731_084208'
-             ]
+             '20250731_084208',
+             '20250731_130721']
     main(model_type=model_type,
          files=files)

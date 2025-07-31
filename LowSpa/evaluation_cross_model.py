@@ -75,7 +75,7 @@ def main(model_type: str,
         LL, SS = get_lowspa_layers(os.path.join(path_lowspa, 'results.pkl'))
 
     cfg_dataloader = cfg_lowspa['dataloader']
-    cfg_dataloader['split'] = 'val'
+    cfg_dataloader['split'] = 'train'
     cfg_dataloader['batch_size'] = 100
     data_loader = get_dataloader(cfg_baseline['model']['name'],
                                  cfg_dataloader)
