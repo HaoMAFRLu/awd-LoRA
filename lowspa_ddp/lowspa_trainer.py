@@ -48,7 +48,7 @@ class LowSpaTrainer():
                             config.get('scheduler'))
         
         # get all the names of the model layers
-        self.names_model_layers = self.get_model_layer_names(self.model)
+        self.names_model_layers = get_model_layer_names(self.model)
         # get specified layers in the config
         self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
         # assign layers to different GPUs
@@ -165,15 +165,7 @@ class LowSpaTrainer():
             if idx % world_size == rank
         ]
         return assigned_layers
-
-    @staticmethod
-    def get_model_layer_names(model: torch.nn.Module):
-        """
-        Recursively collect all layer names in the model.
-        Returns a list of parameter names.
-        """
-        return {name for name, _ in model.named_parameters()} 
-
+    
     def _init_distributed(self):
         """Initialize distributed environment"""
         dist.init_process_group(backend='nccl')

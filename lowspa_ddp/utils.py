@@ -165,3 +165,10 @@ def read_cfg(cfg_path: str) -> dict:
     with open(cfg_path) as f:
         cfg = yaml.safe_load(f)
     return cfg
+
+def get_model_layer_names(model: torch.nn.Module):
+    """
+    Recursively collect all layer names in the model.
+    Returns a list of parameter names.
+    """
+    return {name for name, _ in model.named_parameters()} 

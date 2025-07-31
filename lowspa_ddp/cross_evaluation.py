@@ -31,6 +31,8 @@ class CrossEvaluator():
         self.LL = LL if LL is not None else {}
         self.SS = SS if SS is not None else {}
         self.layers = layers if layers is not None else []
+        # with '.weight' suffix
+        self.model_layers = get_model_layer_names(self.lowspa_model) if lowspa_model is not None else []
         self.eval_results = {}
 
         self.loss_fn = get_loss_fn(model_type)
@@ -42,6 +44,29 @@ class CrossEvaluator():
                  data_loader: torch.utils.data.DataLoader) -> None:
         """Fix the data and target for evaluation for only one epoch."""
         self.data, self.target = next(iter(data_loader))
+
+    @torch.no_grad()
+    def test_opts(self) -> None:
+        """
+        Test the optimization options.
+        This is a placeholder for testing optimization options.
+        """
+        self.opt_lowrank(self.baseline,
+                         self.layers,
+                         self.energy_quantile)
+        self.opt_copy(self.lowspa_model_copy,
+                      self.lowspa_model, 
+                      self.layers)
+        self.opt_remove(self.lowspa_model, 
+                        self.layers,
+                        self.SS)
+        self.opt_replace(self.lowspa_model, 
+                         self.layers, 
+                         self.LL)
+        self.opt_add(self.lowspa_model, 
+                     self.layers, 
+                     self.SS)
+        
 
     @torch.no_grad()        
     def eval_baseline(self) -> dict:
@@ -182,9 +207,9 @@ class CrossEvaluator():
                  layers: list) -> None:
         """Copy the weights from source model to target model for specified layers."""
         for layer_name in layers:
-            if hasattr(model_source, layer_name) and hasattr(model_target, layer_name):
-                source_layer = getattr(model_source, layer_name)
-                target_layer = getattr(model_target, layer_name)
+            if layer_name in self.model_layers:
+                source_layer = model_source.get_submodule(layer_name.removesuffix('.weight'))
+                target_layer = model_target.get_submodule(layer_name.removesuffix('.weight'))
                 target_layer.weight.data.copy_(source_layer.weight.data)
             else:
                 print(f"Warning: Layer {layer_name} not found in one of the models.")
@@ -199,8 +224,8 @@ class CrossEvaluator():
             layers: List of layer names to apply low-rank approximation.
         """
         for layer_name in layers:
-            if hasattr(model, layer_name):
-                layer = getattr(model, layer_name)
+            if layer_name in self.model_layers:
+                layer = model.get_submodule(layer_name.removesuffix('.weight'))
                 weight = layer.weight.data
                 U, s, V = torch.linalg.svd(weight, full_matrices=False)
                 nr_singular_values = get_energy_quantile(s, quantile=energy_quantile)
@@ -216,8 +241,8 @@ class CrossEvaluator():
         """Add sparse components to the model."""
         for layer_name in layers:
             if layer_name in SS:
-                if hasattr(model, layer_name):
-                    layer = getattr(model, layer_name)
+                if layer_name in self.model_layers:
+                    layer = model.get_submodule(layer_name.removesuffix('.weight'))
                     layer.weight.data += SS[layer_name].to(self.device)
             else:
                 print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
@@ -229,8 +254,8 @@ class CrossEvaluator():
         """Replace the weights of the model with low-rank components."""
         for layer_name in layers:
             if layer_name in LL:
-                if hasattr(model, layer_name):
-                    layer = getattr(model, layer_name)
+                if layer_name in self.model_layers:
+                    layer = model.get_submodule(layer_name.removesuffix('.weight'))
                     layer.weight.copy_(LL[layer_name].to(self.device))
             else:
                 print(f"Warning: Low-rank component for layer {layer_name} not found in LL dictionary.")
@@ -242,8 +267,8 @@ class CrossEvaluator():
         """Remove sparse components from the model."""
         for layer_name in layers:
             if layer_name in SS:
-                if hasattr(model, layer_name):
-                    layer = getattr(model, layer_name)
+                if layer_name in self.model_layers:
+                    layer = model.get_submodule(layer_name.removesuffix('.weight'))
                     layer.weight.data -= SS[layer_name].to(self.device)
             else:
                 print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")

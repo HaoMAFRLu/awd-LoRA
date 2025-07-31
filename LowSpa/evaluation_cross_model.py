@@ -80,7 +80,8 @@ def main(model_type: str,
     data_loader = get_dataloader(cfg_baseline['model']['name'],
                                  cfg_dataloader)
 
-    layers = [entry['name'].removesuffix('.weight') for entry in cfg_lowspa['layers']]
+    # with '.weight' suffix
+    layers = [entry['name'] for entry in cfg_lowspa['layers']]
     evaluator = CrossEvaluator(model_type=model_type,
                                baseline=model_baseline,
                                lowspa_model=model_lowspa,
@@ -90,6 +91,7 @@ def main(model_type: str,
                                SS=SS,
                                energy_quantile=0.9)
     
+    # evaluator.test_opts()
     evaluator.eval_baseline()
     evaluator.eval_lowspa()
 
