@@ -101,7 +101,7 @@ def main(model_type: str,
 if __name__ == "__main__":
     model_type = 'GPT'
     file_baseline = '20250730_221825'
-    file_lowspa = '20250730_215710'
+    file_lowspa = '20250731_084208'
     main(model_type=model_type, 
          file_baseline=file_baseline, 
          file_lowspa=file_lowspa)
