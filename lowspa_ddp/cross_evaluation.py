@@ -15,35 +15,40 @@ class CrossEvaluator():
                  model_type: str,
                  baseline: nn.modules=None,
                  lowspa_model: nn.modules=None,
-                 data_loader: torch.utils.data.DataLoader=None,
+                 train_loader: torch.utils.data.DataLoader=None,
+                 test_loader: torch.utils.data.DataLoader=None,
                  LL: dict=None,
                  SS: dict=None,
                  layers: list=None,
-                 energy_quantile: float=0.9) -> None:
+                 rank_quantile: float=0.9) -> None:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.model_type = model_type
         self.baseline = baseline.to(self.device) if baseline is not None else None
         self.lowspa_model = lowspa_model.to(self.device) if lowspa_model is not None else None
         self.lowspa_model_copy = copy.deepcopy(lowspa_model) if lowspa_model is not None else None
 
-        self.data_loader = data_loader
-        self.energy_quantile = energy_quantile
+        self.train_loader = train_loader
+        self.test_loader = test_loader
+        self.rank_quantile = rank_quantile
         self.LL = LL if LL is not None else {}
         self.SS = SS if SS is not None else {}
         self.layers = layers if layers is not None else []
         # with '.weight' suffix
         self.model_layers = get_model_layer_names(self.lowspa_model) if lowspa_model is not None else []
-        self.eval_results = {}
+        
+        self.eval_train_results = {}
+        self.eval_test_results = {}
 
         self.loss_fn = get_loss_fn(model_type)
         # Fix the data and target for evaluation
-        if data_loader is not None:
-            self.fix_data(data_loader)
+        if train_loader is not None:
+            self.train_data, self.train_target = self.fix_data(self.train_loader)
+        if test_loader is not None:
+            self.test_data, self.test_target = self.fix_data(self.test_loader)
 
-    def fix_data(self,
-                 data_loader: torch.utils.data.DataLoader) -> None:
+    def fix_data(self, data_loader: torch.utils.data.DataLoader) -> None:
         """Fix the data and target for evaluation for only one epoch."""
-        self.data, self.target = next(iter(data_loader))
+        return next(iter(data_loader))
 
     @torch.no_grad()
     def test_opts(self) -> None:
@@ -53,7 +58,7 @@ class CrossEvaluator():
         """
         self.opt_lowrank(self.baseline,
                          self.layers,
-                         self.energy_quantile)
+                         self.rank_quantile)
         self.opt_copy(self.lowspa_model_copy,
                       self.lowspa_model, 
                       self.layers)
@@ -69,26 +74,28 @@ class CrossEvaluator():
         
 
     @torch.no_grad()        
-    def eval_baseline(self) -> dict:
+    def eval_baseline(self, 
+                      eval_results: dict,
+                      data,
+                      target) -> dict:
         """
         Evaluate the baseline model.
         Returns:
             Dictionary with evaluation results.
         """
         if self.baseline is not None:
-            self.eval_results['baseline'] = self.evaluate_one_step(self.baseline, 
-                                                                   self.data, 
-                                                                   self.target, 
-                                                                   self.loss_fn)
+            eval_results['baseline'] = self.evaluate_one_step(self.baseline, 
+                                                              data, target, 
+                                                              self.loss_fn)
             self.opt_lowrank(self.baseline, 
                              self.layers, 
-                             self.energy_quantile)
-            self.eval_results['baseline_lowrank'] = self.evaluate_one_step(self.baseline, 
-                                                                           self.data, 
-                                                                           self.target, 
-                                                                           self.loss_fn)
-           
-    def _eval_original(self) -> dict:
+                             self.rank_quantile)
+            eval_results['baseline_lowrank'] = self.evaluate_one_step(self.baseline, 
+                                                                      data, target, 
+                                                                      self.loss_fn)
+        return eval_results
+    
+    def _eval_original(self, data, target) -> dict:
         """ Evaluate the original model.
         Returns:
             Dictionary with evaluation results.
@@ -98,11 +105,10 @@ class CrossEvaluator():
                       self.lowspa_model, 
                       self.layers)
         return self.evaluate_one_step(self.lowspa_model, 
-                                      self.data,
-                                      self.target, 
+                                      data, target, 
                                       self.loss_fn)
    
-    def _eval_orginal_without_sparsity(self) -> dict:
+    def _eval_orginal_without_sparsity(self, data, target) -> dict:
         """Evaluate the original model without sparsity."""
         # evaluate the original model, X - S
         self.opt_copy(self.lowspa_model_copy,
@@ -112,11 +118,10 @@ class CrossEvaluator():
                         self.layers,
                         self.SS)
         return self.evaluate_one_step(self.lowspa_model, 
-                                      self.data, 
-                                      self.target, 
+                                      data, target, 
                                       self.loss_fn)
          
-    def _eval_original_lowrank_without_sparsity(self) -> dict:
+    def _eval_original_lowrank_without_sparsity(self, data, target) -> dict:
         """Evaluate the original model with low-rank approximation without sparsity."""
         # evaluate the original model, 90% low-rank approximation of (X - S)
         self.opt_copy(self.lowspa_model_copy,
@@ -127,36 +132,33 @@ class CrossEvaluator():
                         self.SS)
         self.opt_lowrank(self.lowspa_model, 
                          self.layers, 
-                         self.energy_quantile)
+                         self.rank_quantile)
         return self.evaluate_one_step(self.lowspa_model, 
-                                      self.data, 
-                                      self.target, 
+                                      data, target, 
                                       self.loss_fn)
         
-    def _eval_lowrank(self) -> dict:
+    def _eval_lowrank(self, data, target) -> dict:
         """Evaluate the low-rank model."""
         self.opt_replace(self.lowspa_model, 
                          self.layers, 
                          self.LL)
         return self.evaluate_one_step(self.lowspa_model, 
-                                      self.data, 
-                                      self.target, 
+                                      data, target, 
                                       self.loss_fn)
      
-    def _eval_lowrank_lowrank(self) -> dict:
+    def _eval_lowrank_lowrank(self, data, target) -> dict:
         """Evaluate the low-rank model with low-rank approximation."""
         self.opt_replace(self.lowspa_model, 
                          self.layers, 
                          self.LL)
         self.opt_lowrank(self.lowspa_model, 
                          self.layers, 
-                         self.energy_quantile)
+                         self.rank_quantile)
         return self.evaluate_one_step(self.lowspa_model, 
-                                      self.data, 
-                                      self.target, 
+                                      data, target, 
                                       self.loss_fn)
           
-    def _eval_lowrank_sparsity(self) -> dict:
+    def _eval_lowrank_sparsity(self, data, target) -> dict:
         """Evaluate the low-rank model with sparsity."""
         self.opt_replace(self.lowspa_model, 
                          self.layers, 
@@ -165,42 +167,43 @@ class CrossEvaluator():
                      self.layers, 
                      self.SS)
         return self.evaluate_one_step(self.lowspa_model, 
-                                      self.data, 
-                                      self.target, 
+                                      data, target, 
                                       self.loss_fn)
 
-    def _eval_lowrank_lowrank_sparsity(self) -> dict:
+    def _eval_lowrank_lowrank_sparsity(self, data, target) -> dict:
         """Evaluate the low-rank model with low-rank approximation and sparsity."""
         self.opt_replace(self.lowspa_model, 
                          self.layers, 
                          self.LL)
         self.opt_lowrank(self.lowspa_model, 
                          self.layers, 
-                         self.energy_quantile)
+                         self.rank_quantile)
         self.opt_add(self.lowspa_model, 
                      self.layers, 
                      self.SS)
         return self.evaluate_one_step(self.lowspa_model, 
-                                      self.data, 
-                                      self.target, 
+                                      data, target, 
                                       self.loss_fn)
 
     @torch.no_grad()        
-    def eval_lowspa(self) -> dict:
+    def eval_lowspa(self,
+                    eval_results: dict,
+                    data, target) -> dict:
         """
         Evaluate the lowspa model.
         Returns:
             Dictionary with evaluation results.
         """
         if self.lowspa_model is not None:
-            self.eval_results['lowspa'] = self._eval_original()
-            self.eval_results['lowspa_without_sparsity'] = self._eval_orginal_without_sparsity()
-            self.eval_results['lowspa_lowrank_without_sparsity'] = self._eval_original_lowrank_without_sparsity()
-            self.eval_results['lowspa_lowrank'] = self._eval_lowrank()
-            self.eval_results['lowspa_lowrank_lowrank'] = self._eval_lowrank_lowrank()
-            self.eval_results['lowspa_lowrank_sparsity'] = self._eval_lowrank_sparsity()
-            self.eval_results['lowspa_lowrank_lowrank_sparsity'] = self._eval_lowrank_lowrank_sparsity()
-        
+            eval_results['lowspa'] = self._eval_original(data, target)
+            eval_results['lowspa_without_sparsity'] = self._eval_orginal_without_sparsity(data, target)
+            eval_results['lowspa_lowrank_without_sparsity'] = self._eval_original_lowrank_without_sparsity(data, target)
+            eval_results['lowspa_lowrank'] = self._eval_lowrank(data, target)
+            eval_results['lowspa_lowrank_lowrank'] = self._eval_lowrank_lowrank(data, target)
+            eval_results['lowspa_lowrank_sparsity'] = self._eval_lowrank_sparsity(data, target)
+            eval_results['lowspa_lowrank_lowrank_sparsity'] = self._eval_lowrank_lowrank_sparsity(data, target)
+        return eval_results
+    
     def opt_copy(self,
                  model_source: nn.Module,
                  model_target: nn.Module,
@@ -217,7 +220,7 @@ class CrossEvaluator():
     def opt_lowrank(self, 
                     model: nn.Module, 
                     layers: list,
-                    energy_quantile: float) -> None:
+                    rank_quantile: float) -> None:
         """Do low-rank approximation on specified layers of the model.
         Args:
             model: The model to optimize.
@@ -228,7 +231,8 @@ class CrossEvaluator():
                 layer = model.get_submodule(layer_name.removesuffix('.weight'))
                 weight = layer.weight.data
                 U, s, V = torch.linalg.svd(weight, full_matrices=False)
-                nr_singular_values = get_energy_quantile(s, quantile=energy_quantile)
+                # nr_singular_values = get_energy_quantile(s, quantile=rank_quantile)
+                nr_singular_values = int(len(s) * rank_quantile)
                 low_rank_weight = U[:, :nr_singular_values] @ torch.diag(s[:nr_singular_values]) @ V[:nr_singular_values, :]
                 layer.weight.copy_(low_rank_weight.to(self.device))
             else:
@@ -303,33 +307,33 @@ class CrossEvaluator():
         avg_loss = loss.item()
         return {'loss': avg_loss, 'accuracy': accuracy, 'correct': correct, 'total': total}
     
-    # def evaluate(self,
-    #              model: nn.Module,
-    #              data_loader: torch.utils.data.DataLoader,
-    #              loss_fn: nn.Module) -> dict:
-    #     """
-    #     Evaluate the model on the given data loader.
-    #     Args:
-    #         model: The model to evaluate.
-    #         data_loader: DataLoader for the evaluation dataset.
-    #         loss_fn: Loss function to use for evaluation.
-    #     Returns:
-    #         Dictionary with evaluation results.
-    #     """
-    #     model.eval()
-    #     total_loss = 0.0
-    #     correct = 0
-    #     total = 0
-
-    #     for data, target in tqdm(data_loader, desc="Evaluating"):
-    #         loss, correct_batch = self.evaluate_one_step(model, data, target, loss_fn)
-    #         total_loss += loss.item()
-    #         correct += correct_batch
-    #         total += target.size(0)
-
-    #     avg_loss = total_loss / len(data_loader.dataset)
-    #     accuracy = correct / total
-    #     return {'loss': avg_loss, 'accuracy': accuracy}
+    def collect_baseline_results(self):
+        """
+        Collect results from the baseline model.
+        Returns:
+            Dictionary with evaluation results.
+        """
+        if self.baseline is not None:
+            self.eval_train_results = self.eval_baseline(self.eval_train_results, 
+                                                        self.train_data, 
+                                                        self.train_target)
+            self.eval_test_results = self.eval_baseline(self.eval_test_results,
+                                                        self.test_data, 
+                                                        self.test_target)
+    
+    def collect_lowspa_results(self):
+        """
+        Collect results from the lowspa model.
+        Returns:
+            Dictionary with evaluation results.
+        """
+        if self.lowspa_model is not None:
+            self.eval_train_results = self.eval_lowspa(self.eval_train_results, 
+                                                       self.train_data, 
+                                                       self.train_target)  
+            self.eval_test_results = self.eval_lowspa(self.eval_test_results,
+                                                      self.test_data, 
+                                                      self.test_target)
 
 
                  

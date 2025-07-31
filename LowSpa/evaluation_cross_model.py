@@ -75,9 +75,15 @@ def main(model_type: str,
         LL, SS = get_lowspa_layers(os.path.join(path_lowspa, 'results.pkl'))
 
     cfg_dataloader = cfg_lowspa['dataloader']
+
     cfg_dataloader['split'] = 'train'
     cfg_dataloader['batch_size'] = 100
-    data_loader = get_dataloader(cfg_baseline['model']['name'],
+    train_loader = get_dataloader(cfg_baseline['model']['name'],
+                                 cfg_dataloader)
+    
+    cfg_dataloader['split'] = 'val'
+    cfg_dataloader['batch_size'] = 100
+    test_loader = get_dataloader(cfg_baseline['model']['name'],
                                  cfg_dataloader)
 
     # with '.weight' suffix
@@ -92,18 +98,24 @@ def main(model_type: str,
     evaluator = CrossEvaluator(model_type=model_type,
                                baseline=model_baseline,
                                lowspa_model=model_lowspa,
-                               data_loader=data_loader,
+                               train_loader=train_loader,
+                               test_loader=test_loader,
                                layers=layers,
                                LL=LL,
                                SS=SS,
-                               energy_quantile=0.9)
+                               rank_quantile=0.2)
     
     # evaluator.test_opts()
-    evaluator.eval_baseline()
-    evaluator.eval_lowspa()
+    evaluator.collect_baseline_results()
+    evaluator.collect_lowspa_results()
+
+    data = {
+        'eval_train_results': evaluator.eval_train_results,
+        'eval_test_results': evaluator.eval_test_results
+    }
 
     with open(os.path.join(path_lowspa, 'eval_results.pkl'), 'wb') as f:
-        pickle.dump(evaluator.eval_results, f)
+        pickle.dump(data, f)
 
 if __name__ == "__main__":
     model_type = 'GPT'
