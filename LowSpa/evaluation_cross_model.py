@@ -74,12 +74,11 @@ def main(model_type: str,
         model_lowspa = load_model(os.path.join(path_lowspa, 'model.pth'), cfg_lowspa['model'])
         LL, SS = get_lowspa_layers(os.path.join(path_lowspa, 'results.pkl'))
 
+    # SS_ = {}
+    # for key, value in SS.items():
+    #     SS_[key] = soft_threshold(value, 1e-4)
 
-    SS_ = {}
-    for key, value in SS.items():
-        SS_[key] = soft_threshold(value, 1e-4)
     cfg_dataloader = cfg_lowspa['dataloader']
-
     cfg_dataloader['split'] = 'train'
     cfg_dataloader['batch_size'] = 100
     train_loader = get_dataloader(cfg_baseline['model']['name'],
@@ -106,7 +105,7 @@ def main(model_type: str,
                                test_loader=test_loader,
                                layers=layers,
                                LL=LL,
-                               SS=SS_,
+                               SS=SS,
                                rank_quantile=0.2)
     
     # evaluator.test_opts()
@@ -124,7 +123,7 @@ def main(model_type: str,
 if __name__ == "__main__":
     model_type = 'GPT'
     file_baseline = '20250730_221825'
-    file_lowspa = '20250731_170700'
+    file_lowspa = '20250731_214246'
     main(model_type=model_type, 
          file_baseline=file_baseline, 
          file_lowspa=file_lowspa)
