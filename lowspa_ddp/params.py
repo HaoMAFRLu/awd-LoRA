@@ -7,7 +7,7 @@ embedding_wte_params = {
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
-    'is_cal':       True,    # Whether to calculate sparse matrix
+    'is_cal':       False,    # Whether to calculate sparse matrix
     'rate_rank':    0.25,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
@@ -23,7 +23,7 @@ embedding_wpe_params = {
     'iter_max':      1,       # Max ADMM iterations per layer
     'tol':           0.001,   # Convergence tolerance
     'loss_version':  'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
-    'is_cal':        True,    # Whether to calculate sparse matrix
+    'is_cal':        False,    # Whether to calculate sparse matrix
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':   True,  # Whether to use adaptive parameters for the layer
@@ -39,7 +39,7 @@ lm_head_params = {
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
-    'is_cal':       True,    # Whether to calculate sparse matrix
+    'is_cal':       False,    # Whether to calculate sparse matrix
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
@@ -55,7 +55,7 @@ attn_c_attn_params = {
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
-    'is_cal':        True,    # Whether to calculate sparse matrix
+    'is_cal':        False,    # Whether to calculate sparse matrix
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
@@ -71,7 +71,7 @@ attn_c_proj_params = {
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
-    'is_cal':       True,    # Whether to calculate sparse matrix
+    'is_cal':       False,    # Whether to calculate sparse matrix
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
@@ -87,7 +87,7 @@ mlp_c_fc_params = {
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
-    'is_cal':       True,    # Whether to calculate sparse matrix
+    'is_cal':       False,    # Whether to calculate sparse matrix
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
@@ -103,7 +103,7 @@ mlp_c_proj_params = {
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
-    'is_cal':       True,    # Whether to calculate sparse matrix
+    'is_cal':       False,    # Whether to calculate sparse matrix
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer

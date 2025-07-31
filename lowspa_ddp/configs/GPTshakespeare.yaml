@@ -40,7 +40,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_cal: true
+    is_cal: false
     rate_rank: 0.15
     rate_sparsity: 0.1
     is_adaptive: true
@@ -55,7 +55,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_cal: true
+    is_cal: false
     rate_rank: 0.15
     rate_sparsity: 0.1
     is_adaptive: true
@@ -70,7 +70,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_cal: true
+    is_cal: false
     rate_rank: 0.15
     rate_sparsity: 0.1
     is_adaptive: true
@@ -85,7 +85,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_cal: true
+    is_cal: false
     rate_rank: 0.15
     rate_sparsity: 0.1
     is_adaptive: true
@@ -100,7 +100,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_cal: true
+    is_cal: false
     rate_rank: 0.15
     rate_sparsity: 0.1
     is_adaptive: true
@@ -115,7 +115,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_cal: true
+    is_cal: false
     rate_rank: 0.15
     rate_sparsity: 0.1
     is_adaptive: true
@@ -130,7 +130,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_cal: true
+    is_cal: false
     rate_rank: 0.15
     rate_sparsity: 0.1
     is_adaptive: true
@@ -145,7 +145,7 @@ layers:
     iter_max: 1
     tol: 0.001
     loss_version: v1
-    is_cal: true
+    is_cal: false
     rate_rank: 0.15
     rate_sparsity: 0.1
     is_adaptive: true

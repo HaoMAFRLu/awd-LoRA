@@ -182,4 +182,4 @@ if __name__ == "__main__":
         output_path=os.path.join(root, 'lowspa_ddp', 'configs', 'GPTshakespeare_mini.yaml')
     )     
 
-    generate_config(**cfg_GPT_shakespeare_mini)
+    generate_config(**cfg_GPT_shakespeare)

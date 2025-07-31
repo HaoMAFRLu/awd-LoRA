@@ -115,7 +115,8 @@ class ADMMSolver():
         """Update the beta parameter based on the sparsity of the matrix."""
         vals, _ = torch.sort(S.abs().flatten(), descending=True)
         idx = int(len(vals) * rate_sparsity)
-        return (vals[idx] - eps) * rho * scalar  # in case the same values
+        # return (vals[idx] - eps) * rho * scalar  # in case the same values
+        return vals[idx] * rho * scalar  # in case the same values
 
     def PRCA(self,
              X: torch.Tensor, 
