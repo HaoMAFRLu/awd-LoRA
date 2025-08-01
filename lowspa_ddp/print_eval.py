@@ -115,7 +115,7 @@ def main(model_type: str, files: list) -> None:
     #            f"L", f"LoR(L)", f"L+S", f"LoR(L)+S"]
 
     headers = [f"model", f"dataset", f"metric", 
-               f"baseline", f"X", 
+               f"baseline", f"LoR(baseline)", f"X", 
                f"L", f"LoR(L)", f"L+S", f"LoR(L)+S"]
     
     rows = []
