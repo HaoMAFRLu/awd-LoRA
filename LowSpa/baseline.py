@@ -32,6 +32,6 @@ def main(path_config: str) -> None:
     trainer.train(num_epochs=num_epochs, path_folder=path_folder)
 
 if __name__ == "__main__":
-    config_version = 'GPTshakespeare_mini'  # or 'GPTopenwebtext', 'GPTwikitext2', etc.
+    config_version = 'GPTshakespeare'  # or 'GPTopenwebtext', 'GPTwikitext2', etc.
     path_config = os.path.join(root, 'lowspa_ddp', 'configs', config_version+'.yaml')
     main(path_config)
