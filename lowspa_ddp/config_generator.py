@@ -167,6 +167,21 @@ if __name__ == "__main__":
         output_path=os.path.join(root, 'lowspa_ddp', 'configs', 'GPTshakespeare.yaml')
     )
 
+    cfg_GPT_openwebtext = dict(
+        num_heads=12,
+        num_layers=12,
+        num_embd=768,
+        num_epochs=60000,
+        block_size=1024,
+        batch_size=12,
+        vocab_size=50304,
+        steps_per_epoch=100,
+        tokens_per_epoch=None,
+        dataset='openwebtext',
+        include_embeddings=False,
+        output_path=os.path.join(root, 'lowspa_ddp', 'configs', 'GPTopenwebtext.yaml')
+    )
+
     cfg_GPT_shakespeare_mini = dict(
         num_heads=1,
         num_layers=1,
@@ -182,4 +197,4 @@ if __name__ == "__main__":
         output_path=os.path.join(root, 'lowspa_ddp', 'configs', 'GPTshakespeare_mini.yaml')
     )     
 
-    generate_config(**cfg_GPT_shakespeare)
+    generate_config(**cfg_GPT_openwebtext)
