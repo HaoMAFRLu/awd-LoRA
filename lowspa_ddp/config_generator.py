@@ -153,11 +153,11 @@ if __name__ == "__main__":
     # OUTPUT_PATH = os.path.join(root, 'lowspa_ddp', 'configs', OUTPUT_FILE)
 
     cfg_GPT_shakespeare = dict(
-        num_heads=2,
-        num_layers=2,
+        num_heads=6,
+        num_layers=6,
         num_embd=768,
         num_epochs=60000,
-        block_size=512,
+        block_size=1024,
         batch_size=12,
         vocab_size=50304,
         steps_per_epoch=100,
