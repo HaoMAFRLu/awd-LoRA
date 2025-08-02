@@ -66,15 +66,14 @@ def generate_config(
             'name': 'StepLR',
             'params': {
                 'step_size': 5,
-                'gamma': 0.85,
+                'gamma': 0.95,
             }
         },
         'optimizer': {
             'name': 'AdamW',
             'params': {
                 'lr':           0.0006,
-                'weight_decay': 0.1,
-                'betas':       [0.9, 0.95]
+                'weight_decay': 0.0
             }
         },
         'layers': []
