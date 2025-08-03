@@ -63,17 +63,19 @@ def generate_config(
             'dataset': dataset
         },
         'scheduler': {
-            'name': 'StepLR',
+            'name': 'CosineAnnealingLR',
             'params': {
-                'step_size': 5,
-                'gamma': 0.95,
+                "T_max": 600_000 - 2_000,
+                "eta_min": 6e-5  
             }
         },
         'optimizer': {
             'name': 'AdamW',
             'params': {
                 'lr':           0.0006,
-                'weight_decay': 0.0
+                'weight_decay': 0.1,
+                'beta': [0.9, 0.95],
+                'eps': 1e-8
             }
         },
         'layers': []
@@ -170,7 +172,7 @@ if __name__ == "__main__":
         num_heads=12,
         num_layers=12,
         num_embd=768,
-        num_epochs=60000,
+        num_epochs=6000,
         block_size=1024,
         batch_size=12,
         vocab_size=50304,

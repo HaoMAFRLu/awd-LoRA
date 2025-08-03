@@ -5,6 +5,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import os, socket
 import pickle
 from tqdm import tqdm
+from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
 from lowspa_ddp.utils import *
 
@@ -53,7 +54,17 @@ class Trainer():
                        params_scheduler: dict):
         self.loss_fn = get_loss_fn(model_type)
         self.optimizer = get_optimizer(*self.get_name_and_params(params_optimizer), self.ddp_model)
-        self.scheduler = get_scheduler(*self.get_name_and_params(params_scheduler), self.optimizer)
+        # self.scheduler = get_scheduler(*self.get_name_and_params(params_scheduler), self.optimizer)
+        warmup_iters = 2000
+        max_iters    = 600_000
+        self.scheduler = SequentialLR(
+            self.optimizer,
+            schedulers=[
+                LinearLR(self.optimizer, start_factor=1e-8, end_factor=1.0, total_iters=warmup_iters),
+                CosineAnnealingLR(self.optimizer, T_max=max_iters - warmup_iters, eta_min=6e-5),
+            ],
+            milestones=[warmup_iters],
+        )
 
     @staticmethod
     def get_name_and_params(_params: dict):
@@ -159,12 +170,12 @@ class Trainer():
             for data, target in is_main_process():
                 loss = self.single_step_train(data, target)
                 ep_loss += loss
-
+                # update learning rate
+                self.scheduler.step()
             # average losses
             ep_loss /= len(self.data_loader)  
             self.loss_list.append(ep_loss)
             
-            self.scheduler.step()
 
             if self.rank == 0:
                 self.print_info(epoch, num_epochs, self.loss_list[-1], self.scheduler.get_last_lr()[0])

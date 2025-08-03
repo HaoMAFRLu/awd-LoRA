@@ -1,5 +1,5 @@
 seed: 42
-num_epochs: 60000
+num_epochs: 6000
 model:
   name: GPT
   params:
@@ -17,15 +17,19 @@ dataloader:
   tokens_per_epoch: null
   dataset: openwebtext
 scheduler:
-  name: StepLR
+  name: CosineAnnealingLR
   params:
-    step_size: 5
-    gamma: 0.95
+    T_max: 598000
+    eta_min: 0.00006
 optimizer:
   name: AdamW
   params:
     lr: 0.0006
-    weight_decay: !!float '0'
+    weight_decay: 0.1
+    beta:
+    - 0.9
+    - 0.95
+    eps: !!float '0'
 layers:
 - name: transformer.h.0.attn.c_attn.weight
   params:
