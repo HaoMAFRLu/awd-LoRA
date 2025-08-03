@@ -74,7 +74,7 @@ def generate_config(
             'params': {
                 'lr':           0.0006,
                 'weight_decay': 0.1,
-                'beta': [0.9, 0.95],
+                'betas': (0.9, 0.95),
                 'eps': 1e-8
             }
         },

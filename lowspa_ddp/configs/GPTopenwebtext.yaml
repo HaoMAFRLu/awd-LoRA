@@ -26,7 +26,7 @@ optimizer:
   params:
     lr: 0.0006
     weight_decay: 0.1
-    beta:
+    betas:
     - 0.9
     - 0.95
     eps: !!float '0'
