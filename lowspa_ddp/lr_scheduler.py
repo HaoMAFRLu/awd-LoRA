@@ -22,12 +22,11 @@ class GPTScheduler:
             _lr = self.lr * (it / self.warmup_iters)
         elif it > self.lr_decay_iters:
             _lr = self.min_lr
-        
-        decay_ratio = (it - self.warmup_iters) / (self.lr_decay_iters - self.warmup_iters)
-        assert 0 <= decay_ratio <= 1, "Decay ratio must be between 0 and 1"
-        coeff = 0.5 * (1 + math.cos(math.pi * decay_ratio))
-        _lr = self.min_lr + (self.lr - self.min_lr) * coeff
-
+        else:
+            decay_ratio = (it - self.warmup_iters) / (self.lr_decay_iters - self.warmup_iters)
+            assert 0 <= decay_ratio <= 1, "Decay ratio must be between 0 and 1"
+            coeff = 0.5 * (1 + math.cos(math.pi * decay_ratio))
+            _lr = self.min_lr + (self.lr - self.min_lr) * coeff
         self.lr_list.append(_lr)
         return _lr
     
