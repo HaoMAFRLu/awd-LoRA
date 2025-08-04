@@ -8,6 +8,8 @@ from tqdm import tqdm
 from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
 from lowspa_ddp.utils import *
+from lowspa_ddp.lr_scheduler import GPTScheduler
+
 
 class Trainer():
     def __init__(self, 
@@ -55,16 +57,17 @@ class Trainer():
         self.loss_fn = get_loss_fn(model_type)
         self.optimizer = get_optimizer(*self.get_name_and_params(params_optimizer), self.ddp_model)
         # self.scheduler = get_scheduler(*self.get_name_and_params(params_scheduler), self.optimizer)
-        warmup_iters = 2000
-        max_iters    = 600_000
-        self.scheduler = SequentialLR(
-            self.optimizer,
-            schedulers=[
-                LinearLR(self.optimizer, start_factor=1e-8, end_factor=1.0, total_iters=warmup_iters),
-                CosineAnnealingLR(self.optimizer, T_max=max_iters - warmup_iters, eta_min=6e-5),
-            ],
-            milestones=[warmup_iters],
-        )
+        # warmup_iters = 2000
+        # max_iters    = 600_000
+        # self.scheduler = SequentialLR(
+        #     self.optimizer,
+        #     schedulers=[
+        #         LinearLR(self.optimizer, start_factor=1e-8, end_factor=1.0, total_iters=warmup_iters),
+        #         CosineAnnealingLR(self.optimizer, T_max=max_iters - warmup_iters, eta_min=6e-5),
+        #     ],
+        #     milestones=[warmup_iters],
+        # )
+        self.scheduler = GPTScheduler()
 
     @staticmethod
     def get_name_and_params(_params: dict):
@@ -117,6 +120,8 @@ class Trainer():
         
         loss = self.loss_fn(output, target)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=1.0)
+
         self.optimizer.step()
 
         global_loss_mean = self.get_global_loss(loss.detach())
@@ -158,9 +163,10 @@ class Trainer():
                 return tqdm(self.data_loader)
             else:
                 return self.data_loader
-            
+             
         self.ddp_model.train()
-        
+        num_it = 0
+
         for epoch in range(num_epochs):
             ep_loss = 0.0
             # important for DDP randomness
@@ -168,10 +174,15 @@ class Trainer():
                 self.data_loader.set_epoch(epoch)
             # training over data
             for data, target in is_main_process():
+                num_it += 1
+                lr = self.scheduler.get_lr(num_it)
+                for pg in self.optimizer.param_groups:
+                    pg['lr'] = lr
+
                 loss = self.single_step_train(data, target)
                 ep_loss += loss
                 # update learning rate
-                self.scheduler.step()
+                
             # average losses
             ep_loss /= len(self.data_loader)  
             self.loss_list.append(ep_loss)
