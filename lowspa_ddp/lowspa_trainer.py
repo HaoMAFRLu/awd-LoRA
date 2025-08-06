@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 from lowspa_ddp.layer_solver import ADMMSolver
 from lowspa_ddp.utils import *
+from lowspa_ddp.lr_scheduler import GPTScheduler
 
 class LowSpaTrainer():
     def __init__(self, 
@@ -122,7 +123,8 @@ class LowSpaTrainer():
                        params_scheduler: dict):
         self.loss_fn = get_loss_fn(model_type)
         self.optimizer = get_optimizer(*self.get_name_and_params(params_optimizer), self.ddp_model)
-        self.scheduler = get_scheduler(*self.get_name_and_params(params_scheduler), self.optimizer)
+        # self.scheduler = get_scheduler(*self.get_name_and_params(params_scheduler), self.optimizer)
+        self.scheduler = GPTScheduler()
 
     @staticmethod
     def get_weight(model: torch.nn.Module, 
@@ -238,6 +240,8 @@ class LowSpaTrainer():
         loss = loss1 + loss2
 
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=1.0)
+
         self.optimizer.step()
 
         global_loss_mean = self.get_global_loss(loss.detach())
@@ -379,6 +383,7 @@ class LowSpaTrainer():
                 return self.data_loader
             
         self.ddp_model.train()
+        num_it = 0
         
         for epoch in range(num_epochs):
             ep_loss, ep_loss1, ep_loss2 = 0.0, 0.0, 0.0
@@ -389,6 +394,12 @@ class LowSpaTrainer():
                 self.data_loader.set_epoch(epoch)
             # training over data
             for data, target in is_main_process():
+                
+                num_it += 1
+                lr = self.scheduler.get_lr(num_it)
+                for pg in self.optimizer.param_groups:
+                    pg['lr'] = lr
+
                 loss, loss1, loss2 = self.single_step_train(data, target)
                 ep_loss += loss
                 ep_loss1 += loss1
@@ -402,7 +413,7 @@ class LowSpaTrainer():
             self.layer_info['loss1'].append(ep_loss1)
             self.layer_info['loss2'].append(ep_loss2)
             
-            self.scheduler.step()
+            # self.scheduler.step()
             self.run_ADMM_solvers()
             self.sync_results()
             # print and save results
