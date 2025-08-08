@@ -72,7 +72,6 @@ class CrossEvaluator():
                      self.layers, 
                      self.SS)
         
-
     @torch.no_grad()        
     def eval_baseline(self, 
                       eval_results: dict,
