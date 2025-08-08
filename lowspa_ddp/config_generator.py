@@ -70,12 +70,9 @@ def generate_config(
             }
         },
         'optimizer': {
-            'name': 'AdamW',
+            'name': 'SGD',
             'params': {
-                'lr':           0.0006,
-                'weight_decay': 0.1,
-                'betas': (0.9, 0.95),
-                'eps': 1e-8
+                'lr':  0.0006,
             }
         },
         'layers': []
