@@ -33,7 +33,7 @@ class ADMMSolver():
         if self.is_adaptive:
             row, col = X.shape  
             # self.rho = 1.0 / (nr_layers * np.sqrt(max(row, col)))
-            self.rho = 1.0 / (0.01 * np.sqrt(max(row, col)))
+            self.rho = 1.0 / (100 * np.sqrt(max(row, col)))
             # self.rho = 1.0 / (2.0*np.sqrt(max(row, col)))
         
         self.alpha = self.rho * self.alpha_to_rho
