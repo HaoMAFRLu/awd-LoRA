@@ -290,57 +290,62 @@ class CrossEvaluator():
             else:
                 print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
 
-    def evaluate_one_step(self, model: nn.Module, data, target, loss_fn=None, ignore_index: int=-1) -> dict:
+    def evaluate_one_step(self, 
+                      model: nn.Module, 
+                      data,
+                      target,
+                      loss_fn=None) -> dict:
         """
-        Evaluate the model on one batch (data, target).
-        For GPT: computes token-level CE & PPL with proper next-token shift.
-        For CNN: computes top-1 accuracy; PPL is not applicable (nan).
         """
+        IGNORE = -1
         model.eval()
-        with torch.no_grad():
+
+        with torch.inference_mode():
             data   = data.to(self.device)
             target = target.to(self.device)
 
             output = model(data)
 
             if self.model_type == 'GPT':
-                # output: [B, L, V], target: [B, L]  (assumed)
-                # --- next-token shift ---
-                shift_logits = output[:, :-1, :].contiguous()   # predict y_{t+1}
-                shift_labels = target[:, 1:].contiguous()
+                # output: [B, L, V], target: [B, L]
+                # 有效 token mask
+                mask = target.ne(IGNORE)
 
-                mask = shift_labels.ne(ignore_index)
-
+                # 交叉熵（与 PPL 口径一致）：不 shift，忽略 -1
                 ce = F.cross_entropy(
-                    shift_logits.view(-1, shift_logits.size(-1)),
-                    shift_labels.view(-1),
-                    ignore_index=ignore_index,
+                    output.view(-1, output.size(-1)),
+                    target.view(-1),
+                    ignore_index=IGNORE,
                     reduction='mean'
                 )
                 avg_loss = ce.item()
 
-       
-                log_probs = F.log_softmax(shift_logits, dim=-1)
-                gold_logp = log_probs.gather(-1, shift_labels.unsqueeze(-1)).squeeze(-1)  # [B, L-1]
+                # PPL：只在有效 token 上聚合 NLL
+                log_probs = F.log_softmax(output, dim=-1)  # [B, L, V]
+                gold_logp = log_probs.gather(-1, target.unsqueeze(-1)).squeeze(-1)  # [B, L]
                 nll_sum = -(gold_logp[mask]).sum()
                 denom = mask.sum()
                 ppl = math.exp((nll_sum / denom).item()) if denom.item() > 0 else float('nan')
 
-                pred = shift_logits.argmax(dim=-1)
-                correct = (pred[mask] == shift_labels[mask]).sum().item()
+                # Top-1 token accuracy（仅在有效 token 上统计）
+                pred = output.argmax(dim=-1)  # [B, L]
+                correct = (pred[mask] == target[mask]).sum().item()
                 total   = denom.item()
+                accuracy = correct / max(total, 1)
 
             elif self.model_type == 'CNN':
-                pred = output.argmax(dim=1)
-                ppl = float('nan')
-                avg_loss = loss_fn(output, target).item() if loss_fn is not None else float('nan')
+                # 分类：PPL 不适用
+                pred = output.argmax(dim=1)  # [B]
                 correct = (pred == target).sum().item()
                 total   = target.numel()
+                accuracy = correct / max(total, 1)
+                ppl = float('nan')
+                # 如果需要，也可以用传入的 loss_fn 计算 loss
+                avg_loss = loss_fn(output, target).item() if loss_fn is not None else float('nan')
 
             else:
                 raise ValueError(f"Unknown model_type: {self.model_type}")
 
-        accuracy = correct / max(total, 1)
         return {
             'loss': avg_loss,
             'ppl': ppl,
