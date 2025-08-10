@@ -35,7 +35,9 @@ class CrossEvaluator():
         self.model_type = model_type
         self.baseline = baseline.to(self.device) if baseline is not None else None
         self.lowspa_model = lowspa_model.to(self.device) if lowspa_model is not None else None
-        self.lowspa_model_copy = copy.deepcopy(lowspa_model) if lowspa_model is not None else None
+        self.lowspa_sd = (
+            {k: v.detach().cpu().clone() for k, v in self.lowspa_model.state_dict().items()}
+            if self.lowspa_model is not None else None)
 
         self.train_loader = train_loader
         self.test_loader = test_loader
@@ -69,7 +71,7 @@ class CrossEvaluator():
         self.opt_lowrank(self.baseline,
                          self.layers,
                          self.rank_quantile)
-        self.opt_copy(self.lowspa_model_copy,
+        self.opt_copy(self.lowspa_sd,
                       self.lowspa_model, 
                       self.layers)
         self.opt_remove(self.lowspa_model, 
@@ -110,7 +112,7 @@ class CrossEvaluator():
             Dictionary with evaluation results.
         """
         # evaluate the original model, X
-        self.opt_copy(self.lowspa_model_copy,
+        self.opt_copy(self.lowspa_sd,
                       self.lowspa_model, 
                       self.layers)
         return self.evaluate_one_step(self.lowspa_model, 
@@ -120,7 +122,7 @@ class CrossEvaluator():
     def _eval_orginal_without_sparsity(self, data, target) -> dict:
         """Evaluate the original model without sparsity."""
         # evaluate the original model, X - S
-        self.opt_copy(self.lowspa_model_copy,
+        self.opt_copy(self.lowspa_sd,
                       self.lowspa_model, 
                       self.layers)
         self.opt_remove(self.lowspa_model, 
@@ -133,7 +135,7 @@ class CrossEvaluator():
     def _eval_original_lowrank_without_sparsity(self, data, target) -> dict:
         """Evaluate the original model with low-rank approximation without sparsity."""
         # evaluate the original model, 90% low-rank approximation of (X - S)
-        self.opt_copy(self.lowspa_model_copy,
+        self.opt_copy(self.lowspa_sd,
                       self.lowspa_model, 
                       self.layers)
         self.opt_remove(self.lowspa_model, 
@@ -218,13 +220,15 @@ class CrossEvaluator():
                  model_target: nn.Module,
                  layers: list) -> None:
         """Copy the weights from source model to target model for specified layers."""
-        for layer_name in layers:
-            if layer_name in self.model_layers:
-                source_layer = model_source.get_submodule(layer_name.removesuffix('.weight'))
-                target_layer = model_target.get_submodule(layer_name.removesuffix('.weight'))
-                target_layer.weight.data.copy_(source_layer.weight.data)
-            else:
-                print(f"Warning: Layer {layer_name} not found in one of the models.")
+        model_target.load_state_dict(model_source, strict=True)
+
+        # for layer_name in layers:
+        #     if layer_name in self.model_layers:
+        #         source_layer = model_source.get_submodule(layer_name.removesuffix('.weight'))
+        #         target_layer = model_target.get_submodule(layer_name.removesuffix('.weight'))
+        #         target_layer.weight.data.copy_(source_layer.weight.data)
+        #     else:
+        #         print(f"Warning: Layer {layer_name} not found in one of the models.")
                  
     def opt_lowrank(self, 
                     model: nn.Module, 
