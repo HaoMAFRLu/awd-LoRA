@@ -290,45 +290,104 @@ class CrossEvaluator():
             else:
                 print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
 
-    def evaluate_one_step(self, 
-                          model: nn.Module, 
-                          data,
-                          target,
-                          loss_fn) -> dict:
+    def evaluate_one_step(self, model: nn.Module, data, target, loss_fn=None, ignore_index: int = -100) -> dict:
         """
-        Evaluate the model on the given data loader.
-        Args:
-            model: The model to evaluate.
-            data_loader: DataLoader for the evaluation dataset.
-        Returns:
-            Dictionary with evaluation results.
+        Evaluate the model on one batch (data, target).
+        For GPT: computes token-level CE & PPL with proper next-token shift.
+        For CNN: computes top-1 accuracy; PPL is not applicable (nan).
         """
         model.eval()
         with torch.no_grad():
-            data, target = data.to(self.device), target.to(self.device)
+            data   = data.to(self.device)
+            target = target.to(self.device)
+
             output = model(data)
-            loss = loss_fn(output, target)  # [Batch, Length, Vocab]
+
             if self.model_type == 'GPT':
-                pred = output.argmax(dim=-1)
-                mask = target.ne(-1)
-                log_probs = F.log_softmax(output, dim=-1)                    # [B, L, V]
-                gold_logp = log_probs.gather(-1, target.unsqueeze(-1)).squeeze(-1)  # [B, L]
+                # output: [B, L, V], target: [B, L]  (assumed)
+                # --- next-token shift ---
+                shift_logits = output[:, :-1, :].contiguous()   # predict y_{t+1}
+                shift_labels = target[:, 1:].contiguous()
+
+                mask = shift_labels.ne(ignore_index)
+
+                ce = F.cross_entropy(
+                    shift_logits.view(-1, shift_logits.size(-1)),
+                    shift_labels.view(-1),
+                    ignore_index=ignore_index,
+                    reduction='mean'
+                )
+                avg_loss = ce.item()
+
+       
+                log_probs = F.log_softmax(shift_logits, dim=-1)
+                gold_logp = log_probs.gather(-1, shift_labels.unsqueeze(-1)).squeeze(-1)  # [B, L-1]
                 nll_sum = -(gold_logp[mask]).sum()
                 denom = mask.sum()
                 ppl = math.exp((nll_sum / denom).item()) if denom.item() > 0 else float('nan')
+
+                pred = shift_logits.argmax(dim=-1)
+                correct = (pred[mask] == shift_labels[mask]).sum().item()
+                total   = denom.item()
+
             elif self.model_type == 'CNN':
                 pred = output.argmax(dim=1)
                 ppl = float('nan')
-        
-        correct = (pred[mask] == target[mask]).sum().item()
-        total   = mask.sum().item()
+                avg_loss = loss_fn(output, target).item() if loss_fn is not None else float('nan')
+                correct = (pred == target).sum().item()
+                total   = target.numel()
+
+            else:
+                raise ValueError(f"Unknown model_type: {self.model_type}")
+
         accuracy = correct / max(total, 1)
-        avg_loss = loss.item()
-        return {'loss': avg_loss, 
-                'ppl': ppl,
-                'accuracy': accuracy, 
-                'correct': correct, 
-                'total': total}
+        return {
+            'loss': avg_loss,
+            'ppl': ppl,
+            'accuracy': accuracy,
+            'correct': correct,
+            'total': total
+        }
+
+    # def evaluate_one_step(self, 
+    #                       model: nn.Module, 
+    #                       data,
+    #                       target,
+    #                       loss_fn) -> dict:
+    #     """
+    #     Evaluate the model on the given data loader.
+    #     Args:
+    #         model: The model to evaluate.
+    #         data_loader: DataLoader for the evaluation dataset.
+    #     Returns:
+    #         Dictionary with evaluation results.
+    #     """
+    #     model.eval()
+    #     with torch.no_grad():
+    #         data, target = data.to(self.device), target.to(self.device)
+    #         output = model(data)
+    #         loss = loss_fn(output, target)  # [Batch, Length, Vocab]
+    #         if self.model_type == 'GPT':
+    #             pred = output.argmax(dim=-1)
+    #             mask = target.ne(-1)
+    #             log_probs = F.log_softmax(output, dim=-1)                    # [B, L, V]
+    #             gold_logp = log_probs.gather(-1, target.unsqueeze(-1)).squeeze(-1)  # [B, L]
+    #             nll_sum = -(gold_logp[mask]).sum()
+    #             denom = mask.sum()
+    #             ppl = math.exp((nll_sum / denom).item()) if denom.item() > 0 else float('nan')
+    #         elif self.model_type == 'CNN':
+    #             pred = output.argmax(dim=1)
+    #             ppl = float('nan')
+        
+    #     correct = (pred[mask] == target[mask]).sum().item()
+    #     total   = mask.sum().item()
+    #     accuracy = correct / max(total, 1)
+    #     avg_loss = loss.item()
+    #     return {'loss': avg_loss, 
+    #             'ppl': ppl,
+    #             'accuracy': accuracy, 
+    #             'correct': correct, 
+    #             'total': total}
     
     def collect_baseline_results(self):
         """
