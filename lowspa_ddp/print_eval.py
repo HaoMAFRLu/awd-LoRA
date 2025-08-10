@@ -36,18 +36,23 @@ def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) ->
             row.append('N/A')
     return row
 
-    # return [file,
-    #         data_type,
-    #         'loss',
-    #         f"{eval_results['baseline']['loss']:.2f}", 
-    #         f"{eval_results['baseline_lowrank']['loss']:.2f}",
-    #         f"{eval_results['lowspa']['loss']:.2f}", 
-    #         f"{eval_results['lowspa_without_sparsity']['loss']:.2f}",
-    #         f"{eval_results['lowspa_lowrank_without_sparsity']['loss']:.2f}", 
-    #         f"{eval_results['lowspa_lowrank']['loss']:.2f}", 
-    #         f"{eval_results['lowspa_lowrank_lowrank']['loss']:.2f}",
-    #         f"{eval_results['lowspa_lowrank_sparsity']['loss']:.2f}", 
-    #         f"{eval_results['lowspa_lowrank_lowrank_sparsity']['loss']:.2f}"]
+def get_ppl_row(file: str, data_type: str, eval_results: dict, header: list) -> list:
+    """
+    Get a row of perplexity statistics for the model.
+    Args:
+        file: Name of the file containing the statistics.
+        data_type: Type of data (e.g., 'train', 'test').
+        eval_results: Evaluation results dictionary.
+    Returns:
+        A list with perplexity statistics.
+    """
+    row = [file, data_type, 'ppl']
+    for key in header:
+        if key in key_word_map:
+            row.append(f"{eval_results[key_word_map[key]]['ppl']:.2f}")
+        else:
+            row.append('N/A')
+    return row
 
 def get_acc_row(file: str, data_type: str, eval_results: dict, header: list) -> list:
     """
@@ -67,20 +72,6 @@ def get_acc_row(file: str, data_type: str, eval_results: dict, header: list) -> 
             row.append('N/A')
     return row
 
-    # return [file,
-    #         data_type,
-    #         'accuracy',
-    #         f"{eval_results['baseline']['correct']}/{eval_results['baseline']['total']}({100.0*eval_results['baseline']['accuracy']:.1f}%)",
-    #         f"{eval_results['baseline_lowrank']['correct']}/{eval_results['baseline_lowrank']['total']}({100.0*eval_results['baseline_lowrank']['accuracy']:.1f}%)",
-    #         f"{eval_results['lowspa']['correct']}/{eval_results['lowspa']['total']}({100.0*eval_results['lowspa']['accuracy']:.1f}%)",
-    #         f"{eval_results['lowspa_without_sparsity']['correct']}/{eval_results['lowspa_without_sparsity']['total']}({100.0*eval_results['lowspa_without_sparsity']['accuracy']:.1f}%)",
-    #         f"{eval_results['lowspa_lowrank_without_sparsity']['correct']}/{eval_results['lowspa_lowrank_without_sparsity']['total']}({100.0*eval_results['lowspa_lowrank_without_sparsity']['accuracy']:.1f}%)",
-    #         f"{eval_results['lowspa_lowrank']['correct']}/{eval_results['lowspa_lowrank']['total']}({100.0*eval_results['lowspa_lowrank']['accuracy']:.1f}%)",
-    #         f"{eval_results['lowspa_lowrank_lowrank']['correct']}/{eval_results['lowspa_lowrank_lowrank']['total']}({100.0*eval_results['lowspa_lowrank_lowrank']['accuracy']:.1f}%)",
-    #         f"{eval_results['lowspa_lowrank_sparsity']['correct']}/{eval_results['lowspa_lowrank_sparsity']['total']}({100.0*eval_results['lowspa_lowrank_sparsity']['accuracy']:.1f}%)",
-    #         f"{eval_results['lowspa_lowrank_lowrank_sparsity']['correct']}/{eval_results['lowspa_lowrank_lowrank_sparsity']['total']}({100.0*eval_results['lowspa_lowrank_lowrank_sparsity']['accuracy']:.1f}%)"]
-
-
 def get_row(model_type: str, file: str, header: list) -> dict:
     """
     Get a row of statistics for the model from the saved file.
@@ -99,14 +90,21 @@ def get_row(model_type: str, file: str, header: list) -> dict:
 
     row1 = get_loss_row(file, 'train', eval_train_results, header)
     row2 = get_acc_row(file, 'train', eval_train_results, header)
+    row3 = get_ppl_row(file, 'train', eval_train_results, header)
     row2[0] = ''
     row2[1] = ''
-    row3 = get_loss_row(file, 'test', eval_test_results, header)
     row3[0] = ''
-    row4 = get_acc_row(file, 'test', eval_test_results, header)
-    row4[0] = ''
-    row4[1] = ''
-    return (row1, row2, row3, row4)
+    row3[1] = ''
+
+
+    row4 = get_loss_row(file, 'test', eval_test_results, header)
+    row5 = get_acc_row(file, 'test', eval_test_results, header)
+    row6 = get_ppl_row(file, 'test', eval_test_results, header)
+    row5[0] = ''
+    row5[1] = ''
+    row6[0] = ''
+    row6[1] = ''
+    return (row1, row2, row3, row4, row5, row6)
 
 def main(model_type: str, files: list) -> None:
     # headers = [f"model", f"dataset", f"metric", 
@@ -120,11 +118,13 @@ def main(model_type: str, files: list) -> None:
     
     rows = []
     for file in files:
-        r1, r2, r3, r4 = get_row(model_type, file, headers[3:])
+        r1, r2, r3, r4, r5, r6 = get_row(model_type, file, headers[3:])
         rows.append(r1)
         rows.append(r2)
         rows.append(r3)
         rows.append(r4)
+        rows.append(r5)
+        rows.append(r6)
     
     print(tabulate(rows, headers=headers, tablefmt="grid"))
 

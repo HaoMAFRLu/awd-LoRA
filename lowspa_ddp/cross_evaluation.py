@@ -23,6 +23,15 @@ class CrossEvaluator():
                  layers: list=None,
                  rank_quantile: float=0.9) -> None:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        # print device info
+        dev_idx = torch.cuda.current_device() if torch.cuda.is_available() else -1
+        props   = torch.cuda.get_device_properties(dev_idx) if torch.cuda.is_available() else None
+        if props:
+            print(f"[Rank {dev_idx}] using {props.name}, {props.total_memory / (1024 ** 3):.2f} GiB")
+        else:
+            print("[Rank -1] using CPU")
+
         self.model_type = model_type
         self.baseline = baseline.to(self.device) if baseline is not None else None
         self.lowspa_model = lowspa_model.to(self.device) if lowspa_model is not None else None
