@@ -80,12 +80,12 @@ def main(model_type: str,
 
     cfg_dataloader = cfg_lowspa['dataloader']
     cfg_dataloader['split'] = 'train'
-    cfg_dataloader['batch_size'] = 100
+    cfg_dataloader['batch_size'] = 50
     train_loader = get_dataloader(cfg_baseline['model']['name'],
                                  cfg_dataloader)
     
     cfg_dataloader['split'] = 'val'
-    cfg_dataloader['batch_size'] = 100
+    cfg_dataloader['batch_size'] = 50
     test_loader = get_dataloader(cfg_baseline['model']['name'],
                                  cfg_dataloader)
 
