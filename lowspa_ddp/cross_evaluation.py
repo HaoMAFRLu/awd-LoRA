@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 import copy
+import math
 
 from lowspa_ddp.utils import *
 
@@ -297,14 +298,24 @@ class CrossEvaluator():
             if self.model_type == 'GPT':
                 pred = output.argmax(dim=-1)
                 mask = target.ne(-1)
+                log_probs = F.log_softmax(output, dim=-1)                    # [B, L, V]
+                gold_logp = log_probs.gather(-1, target.unsqueeze(-1)).squeeze(-1)  # [B, L]
+                nll_sum = -(gold_logp[mask]).sum()
+                denom = mask.sum()
+                ppl = math.exp((nll_sum / denom).item()) if denom.item() > 0 else float('nan')
             elif self.model_type == 'CNN':
                 pred = output.argmax(dim=1)
+                ppl = float('nan')
         
         correct = (pred[mask] == target[mask]).sum().item()
         total   = mask.sum().item()
         accuracy = correct / max(total, 1)
         avg_loss = loss.item()
-        return {'loss': avg_loss, 'accuracy': accuracy, 'correct': correct, 'total': total}
+        return {'loss': avg_loss, 
+                'ppl': ppl,
+                'accuracy': accuracy, 
+                'correct': correct, 
+                'total': total}
     
     def collect_baseline_results(self):
         """
