@@ -290,7 +290,7 @@ class CrossEvaluator():
             else:
                 print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
 
-    def evaluate_one_step(self, model: nn.Module, data, target, loss_fn=None, ignore_index: int = -100) -> dict:
+    def evaluate_one_step(self, model: nn.Module, data, target, loss_fn=None, ignore_index: int=-1) -> dict:
         """
         Evaluate the model on one batch (data, target).
         For GPT: computes token-level CE & PPL with proper next-token shift.
