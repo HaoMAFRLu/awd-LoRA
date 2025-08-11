@@ -28,33 +28,39 @@ def get_GPT(gpt_conf: GPTConfig):
     """
     return GPT(gpt_conf)
 
-def get_model(cfg: dict):
+def get_model(init_from: str,
+              cfg: dict):
     """
     Get the model based on the configuration.
     """
     if cfg['name'] == 'CNN':
         return get_CNN()
     elif cfg['name'] == 'GPT':
-        params = cfg.get('params', {})
-        n_layer    = params.get('n_layer', 12)
-        n_head     = params.get('n_head', 12)
-        n_embd     = params.get('n_embd', 768)
-        block_size = params.get('block_size', 1024)
-        vocab_size = params.get('vocab_size', 1024)
+        if init_from == 'scratch':  # Initialize from scratch
+            params = cfg.get('params', {})
+            n_layer    = params.get('n_layer', 12)
+            n_head     = params.get('n_head', 12)
+            n_embd     = params.get('n_embd', 768)
+            block_size = params.get('block_size', 1024)
+            vocab_size = params.get('vocab_size', 1024)
 
-        dropout    = 0.0     
-        bias       = False   
+            dropout    = 0.0     
+            bias       = False   
 
-        gpt_conf = GPTConfig(
-            n_layer    = n_layer,
-            n_head     = n_head,
-            n_embd     = n_embd,
-            block_size = block_size,
-            vocab_size = vocab_size,
-            dropout    = dropout,
-            bias       = bias,
-        )
-        return get_GPT(gpt_conf)
+            gpt_conf = GPTConfig(
+                n_layer    = n_layer,
+                n_head     = n_head,
+                n_embd     = n_embd,
+                block_size = block_size,
+                vocab_size = vocab_size,
+                dropout    = dropout,
+                bias       = bias,
+            )
+            return get_GPT(gpt_conf)
+        elif init_from.startswith('gpt2'):
+            # Initialize from a pre-trained GPT-2 model
+            override_args = dict(dropout=0.0)
+            return GPT.from_pretrained(init_from, override_args)
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
 

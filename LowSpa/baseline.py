@@ -6,7 +6,7 @@ import shutil
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from lowspa_ddp.utils import *
 from lowspa_ddp.baseline_trainer import Trainer
-from lowspa_ddp.model_register import get_model_and_dataloader
+from lowspa_ddp.model_register import get_model, get_dataloader
 from lowspa_ddp.utils import *
 
 root = get_parent_path(lvl=1)
@@ -27,7 +27,9 @@ def main(path_config: str) -> None:
     shutil.copy(path_config, path_folder)
     
     # get the data loader
-    model, data_loader = get_model_and_dataloader(cfg['model'], cfg['dataloader'])
+    model = get_model(cfg['init_from'], cfg['model'])
+    data_loader = get_dataloader(cfg['dataloader'])
+
     trainer = Trainer(model, model_type, data_loader, cfg)
     trainer.train(num_epochs=num_epochs, path_folder=path_folder)
 

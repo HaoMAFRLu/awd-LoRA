@@ -17,6 +17,7 @@ proj = projection()
 
 
 def generate_config(
+    init_from: str='gpt2',
     num_heads: int=12,
     num_layers: int=12,
     num_embd: int=768,
@@ -42,6 +43,7 @@ def generate_config(
     # Base configuration structure
     cfg = {
         'seed': 42,
+        'init_from': init_from,
         'num_epochs': num_epochs,
         'model': {
             'name': 'GPT',
@@ -169,12 +171,13 @@ if __name__ == "__main__":
     )
 
     cfg_GPT_openwebtext = dict(
+        init_from='gpt2',
         num_heads=12,
         num_layers=12,
         num_embd=768,
         num_epochs=6000,
         block_size=1024,
-        batch_size=32,
+        batch_size=12,
         vocab_size=50304,
         steps_per_epoch=100,
         tokens_per_epoch=None,
