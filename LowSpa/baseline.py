@@ -28,7 +28,7 @@ def main(path_config: str) -> None:
     
     # get the data loader
     model = get_model(cfg['init_from'], cfg['model'])
-    data_loader = get_dataloader(cfg['dataloader'])
+    data_loader = get_dataloader(model_type, cfg['dataloader'])
 
     trainer = Trainer(model, model_type, data_loader, cfg)
     trainer.train(num_epochs=num_epochs, path_folder=path_folder)
