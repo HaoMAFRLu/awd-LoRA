@@ -32,7 +32,7 @@ def load_model(pth: dict, cfg: dict) -> torch.nn.Module:
     Returns:
         nn.Module: The loaded model.
     """
-    model = get_model(cfg)
+    model = get_model('scratch', cfg)
     
     ckpt = torch.load(pth, map_location="cpu")
     state_dict = ckpt.get("state_dict", ckpt.get("model", ckpt))
