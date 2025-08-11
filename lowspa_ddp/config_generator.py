@@ -174,7 +174,7 @@ if __name__ == "__main__":
         num_embd=768,
         num_epochs=6000,
         block_size=1024,
-        batch_size=64,
+        batch_size=32,
         vocab_size=50304,
         steps_per_epoch=100,
         tokens_per_epoch=None,
