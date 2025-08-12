@@ -1,5 +1,5 @@
 executable = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
-arguments = -u LowSpa/evaluation_cross_model.py
+arguments = -u scripts/evaluation.py
 initialdir = /lustre/home/hma2/projects/awd-LoRA
 error  = jobs_eval/task$(Process).err
 output = jobs_eval/task$(Process).out
