@@ -117,7 +117,7 @@ def main(cfg_version: str,
         pickle.dump(data, f)
 
 if __name__ == "__main__":
-    cfg_version = 'llama_9m'
+    cfg_version = 'llama_60m'
     file = '20250812_172415'
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder)
