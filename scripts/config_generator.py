@@ -94,7 +94,7 @@ def generate_config(
         'optimizer': {
             'name': 'AdamW',
             'params': {
-                'lr':  0.0006,
+                'lr':  0.03,
                 'betas': (0.9, 0.95),
                 'eps':  1e-8,
                 'weight_decay': 0.0,
@@ -162,6 +162,20 @@ def generate_config(
 if __name__ == "__main__":
     # Customize parameters as needed
     cfg_llama_60m = dict(
+        name='llama_60m',
+        seed=42,
+        num_freq=50,
+        seed_for_shuffle=42,
+        num_total_iters=200000,
+        batch_size=256,
+        max_length=256,
+        warmup_steps=1100,
+        num_workers=4,
+        scheduler_type='cosine',
+        min_lr_ratio=0.1,
+        include_embeddings=False,
+        include_head=False,
+        is_clip=1.0,
         bos_token_id=0,
         eos_token_id=1,
         hidden_act='silu',
@@ -170,15 +184,13 @@ if __name__ == "__main__":
         initializer_range=0.02,
         max_sequence_length=1024,
         model_type="llama",
-        num_attention_heads=8,
-        num_hidden_layers=8,
+        num_attention_heads=4,
+        num_hidden_layers=4,
         pad_token_id=-1,
         rms_norm_eps=1e-06,
         transformers_version="4.28.1",
         use_cache=True,
-        vocab_size=32000,
-        output_path=os.path.join(root, 'scripts', 'configs', 'llama_60m.yaml')
-    )
+        vocab_size=32000)
 
     cfg_llama_9m = dict(
         name='llama_9m',
@@ -211,4 +223,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_9m)
+    generate_config(**cfg_llama_60m)
