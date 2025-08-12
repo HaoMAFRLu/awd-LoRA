@@ -35,6 +35,7 @@ class SALAD():
             # self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
             self.rho = 1.0 / ( np.sqrt(nr_layers * row * col))
             # self.rho = 1.0 / (np.sqrt(max(row, col)))
+            # self.rho = 0.1
             # self.rho = 1.0 / (2.0*np.sqrt(max(row, col)))
         
         self.alpha = self.rho * self.alpha_to_rho
@@ -155,7 +156,7 @@ class SALAD():
                 # self.dbeta = (1 - self.rate_decay)*self.update_beta(self.rate_sparsity, S, self.rho)
                 # self.alpha = self.rate_decay*self.alpha + self.dalpha
                 # self.beta = self.rate_decay*self.beta + self.dbeta
-                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) / 50.0  # current rangk - target rank
+                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) / self.rate_decay  # current rangk - target rank
                 self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 500.0 # current sparsity - target sparsity
                 self.alpha = self.alpha + self.dalpha  # update alpha
                 self.beta = self.beta + self.dbeta  # update beta

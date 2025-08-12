@@ -106,7 +106,8 @@ def main(model_type: str,
                                layers=layers,
                                LL=LL,
                                SS=SS,
-                               rank_quantile=0.25)
+                               rank_quantile=0.25,
+                               batch_size=10)
     
     # evaluator.test_opts()
     evaluator.collect_baseline_results()

@@ -26,8 +26,8 @@ def get_tokenizer(max_length: int = 1024):
     """
     return AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
 
-def get_data(seed_for_shuffle: int = 42):
-    data = datasets.load_dataset("allenai/c4", "en", split='train', streaming=True)
+def get_data(seed_for_shuffle: int = 42, split: str = 'train'):
+    data = datasets.load_dataset("allenai/c4", "en", split=split, streaming=True)
     data: datasets.Dataset = data.shuffle(seed=seed_for_shuffle)
     return data
 

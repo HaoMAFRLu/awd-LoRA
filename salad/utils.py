@@ -44,15 +44,6 @@ def get_optimizer(name: str, params: dict, model: nn.Module):
     OptClass = getattr(optim, name, None)
     return OptClass(model.parameters(), **{k: v for k, v in params.items() if v is not None})
 
-# def get_scheduler(name: str, params: dict,
-#                     optimizer: optim.Optimizer):
-#     """
-#     Get the learning rate scheduler based on the provided parameters.
-#     """
-#     SchedClass = getattr(optim.lr_scheduler, name, None)
-#     return SchedClass(optimizer, 
-#                       **{k: v for k, v in params.items() if v is not None})
-
 def get_energy_quantile(s, quantile=0.9) -> int:
     """
     Calculate the index of the energy quantile in the singular values.
@@ -167,7 +158,7 @@ def grad_norm_by_layer(model):
             continue
         g = p.grad.detach().float()
         gn2 = g.norm().item() ** 2
-        mobj = re.search(r"model\.layers\.(\d+)\.", name)  # 你的命名若不同，改这里
+        mobj = re.search(r"model\.layers\.(\d+)\.", name)  
         if mobj:
             idx = int(mobj.group(1))
             buckets[idx] = buckets.get(idx, 0.0) + gn2
@@ -183,3 +174,31 @@ def find_group_of_param(optimizer, param):
         if param in g["params"]:
             return g
     return None
+
+def preprocess_batched(batch, tokenizer, max_length: int=256):
+    batch = tokenizer(
+        batch["text"],
+        max_length=max_length,
+        truncation=True,
+        padding="max_length",
+        return_tensors="pt",
+    )
+    return batch
+
+def collate_fn(batch_list):
+    batch = {
+        "input_ids": torch.stack([torch.Tensor(example["input_ids"]).long() for example in batch_list]),
+        "attention_mask": torch.stack([torch.Tensor(example["attention_mask"]).long() for example in batch_list]),
+    }
+    return batch
+
+def batch_fn(dataset, batch_size):
+    batch = []
+    for example in dataset:
+        batch.append(example)
+        if len(batch) == batch_size:
+            batch = collate_fn(batch)
+            yield batch
+            batch = []
+    if len(batch) > 0:
+        yield batch
