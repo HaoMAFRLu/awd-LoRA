@@ -18,7 +18,7 @@ from awave.transform2d import DWT2d
 from awave.utils.warmstart import warm_start
 
 from models.cnn import CNN
-from datasets.dataloader import get_mnist
+from dataloaders.dataloader import get_mnist
 from utils.general import *
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

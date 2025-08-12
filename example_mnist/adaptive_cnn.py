@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from awave.transform2d import DWT2d
 
 from models.cnn import CNN
-from datasets.dataloader import get_mnist
+from dataloaders.dataloader import get_mnist
 from utils.general import *
 from models.wave_cnn import Wave_CNN
 

@@ -14,7 +14,7 @@
 /**/__pycache__
 
 # ignore the language dataset
-/datasets/data
+/dataloaders/data
 
 # ignore tests
 /test
@@ -28,3 +28,8 @@
 # ignore the nanoGPT
 /nanoGPT
 
+# ignore the SLtrain
+/splora
+/sparse-lora
+/peft_pretraining
+/RoSA

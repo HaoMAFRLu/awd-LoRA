@@ -7,8 +7,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from models.cnn import CNN
 from models.nanoGPT import GPT, GPTConfig
 from lowspa_ddp.utils import count_parameters
-from datasets.dataloader import get_mnist
-from datasets.GPTdataloader import get_gpt_dataloader
+from dataloaders.dataloader import get_mnist
+from dataloaders.GPTdataloader import get_gpt_dataloader
 
 def get_CNN():
     """

@@ -11,7 +11,7 @@ from awave.transform2d import DWT2d
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models.resnet import ResNet18
-from datasets.dataloader import get_cifar10
+from dataloaders.dataloader import get_cifar10
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

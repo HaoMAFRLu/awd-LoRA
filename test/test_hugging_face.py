@@ -6,7 +6,7 @@ import torch
 import sys, os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from datasets.dataloader import get_cifar10
+from dataloaders.dataloader import get_cifar10
 from utils.metrics import evaluate
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

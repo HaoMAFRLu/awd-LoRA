@@ -11,7 +11,7 @@ import torch.optim as optim
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models.cnn import CNN
-from datasets.dataloader import get_mnist
+from dataloaders.dataloader import get_mnist
 from utils.general import *
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
