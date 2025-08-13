@@ -198,7 +198,7 @@ if __name__ == "__main__":
         num_freq=10,
         seed_for_shuffle=42,
         num_total_iters=200000,
-        batch_size=2,
+        batch_size=16,
         max_length=256,
         warmup_steps=1000,
         num_workers=2,
@@ -223,4 +223,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_60m)
+    generate_config(**cfg_llama_9m)
