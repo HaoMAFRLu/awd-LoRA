@@ -11,9 +11,9 @@ initialdir      = /lustre/home/hma2/projects/awd-LoRA
 
 environment     = "HF_HOME=/lustre/home/hma2/hf;HF_HUB_CACHE=/lustre/home/hma2/hf/hub;TRANSFORMERS_CACHE=/lustre/home/hma2/hf/transformers;OMP_NUM_THREADS=1;PYTHONUNBUFFERED=1"
 
-log             = jobs1/task$(Process).log
-error           = jobs1/task$(Process).err
-output          = jobs1/task$(Process).out
+log             = jobs/task$(Process).log
+error           = jobs/task$(Process).err
+output          = jobs/task$(Process).out
 
 request_cpus    = 5
 request_memory  = 65536

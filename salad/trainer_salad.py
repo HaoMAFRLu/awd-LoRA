@@ -267,6 +267,7 @@ class SALADTrainer():
             'LL': self.LL,
             'SS': self.SS,
             'YY': self.YY,
+            'num_tokens': self.num_tokens,
             'layer_info': self.layer_info,
         }
         with open(os.path.join(path_folder, 'results.pkl'), 'wb') as f:
@@ -352,6 +353,7 @@ class SALADTrainer():
     def print_info(self,
                    epoch: int,
                    total_epochs: int,
+                    num_tokens: int,
                    layer_info: dict,
                    lr: float):
         """
@@ -377,7 +379,7 @@ class SALADTrainer():
                         'total_rank': layer_info[entry['name']]['total_rank'][-1],
                         'total_elements': layer_info[entry['name']]['total_elements'][-1]} for entry in self.cfg_layers]
         
-        print_epoch(epoch, total_epochs, lr, losses, layer_stats)
+        print_epoch(epoch, total_epochs, lr, num_tokens, losses, layer_stats)
 
     def train(self, path_folder: str=None):            
         self.ddp_model.train()
@@ -385,6 +387,7 @@ class SALADTrainer():
         num_epochs = self.num_total_iters // self.num_freq
         epoch = 0
         ep_loss, ep_loss1, ep_loss2 = 0.0, 0.0, 0.0
+        self.num_tokens = 0
 
         for batch_idx, batch in enumerate(self.dataloader):
             num_it += 1
@@ -398,6 +401,7 @@ class SALADTrainer():
             labels[labels == self.pad_idx] = -100     
             loss, loss1, loss2 = self.single_step_train(batch, labels=labels)
             
+            self.num_tokens += batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()
             ep_loss += loss
             ep_loss1 += loss1
             ep_loss2 += loss2
@@ -420,7 +424,7 @@ class SALADTrainer():
             
                 # print and save results
                 if self.rank == 0:
-                    self.print_info(epoch, num_epochs, self.layer_info, self.lr_scheduler.get_last_lr()[0])
+                    self.print_info(epoch, num_epochs, self.num_tokens, self.layer_info, self.lr_scheduler.get_last_lr()[0])
                     if path_folder is not None:
                         self.save_results(path_folder)
                 

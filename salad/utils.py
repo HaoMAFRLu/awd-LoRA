@@ -63,11 +63,13 @@ def get_energy_quantile(s, quantile=0.9) -> int:
 def print_epoch(epoch: int, 
                 total_epochs: int, 
                 lr: float,
+                num_tokens: int,
                 losses: dict, 
                 layer_stats: list):
 
     header = (f"Epoch {epoch}/{total_epochs} | "
               f"Lr: {lr:.6f} | "
+              f"Tokens: {num_tokens / 1000000:.3f}M | "
               f"Loss: {losses['loss']:.6f} | "
               f"Loss1: {losses['loss1']:.6f} | "
               f"Loss2: {losses['loss2']:.6f}")

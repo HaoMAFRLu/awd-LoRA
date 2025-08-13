@@ -107,7 +107,7 @@ mlp_gate_proj_params = {
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     30  # Rate of decay for the adaptive parameters
+    'rate_decay':     10  # Rate of decay for the adaptive parameters
 }
 
 mlp_down_proj_params = {
@@ -123,7 +123,7 @@ mlp_down_proj_params = {
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     30  # Rate of decay for the adaptive parameters
+    'rate_decay':     10  # Rate of decay for the adaptive parameters
 }
 
 mlp_up_proj_params = {
@@ -139,7 +139,7 @@ mlp_up_proj_params = {
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     30  # Rate of decay for the adaptive parameters
+    'rate_decay':     10  # Rate of decay for the adaptive parameters
 }
 
 def projection():
