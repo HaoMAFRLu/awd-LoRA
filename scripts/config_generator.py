@@ -170,7 +170,7 @@ if __name__ == "__main__":
         batch_size=256,
         max_length=256,
         warmup_steps=1100,
-        num_workers=2,
+        num_workers=0,
         scheduler_type='cosine',
         min_lr_ratio=0.1,
         include_embeddings=False,
