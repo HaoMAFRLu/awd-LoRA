@@ -164,7 +164,7 @@ if __name__ == "__main__":
     cfg_llama_60m = dict(
         name='llama_60m',
         seed=42,
-        num_freq=10,
+        num_freq=50,
         seed_for_shuffle=42,
         num_total_iters=200000,
         batch_size=256,
