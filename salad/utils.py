@@ -291,3 +291,7 @@ def print_setting(cfg: dict, lvl=0) -> None:
                 logger.info(f"{' ' * lvl}{key}: {', '.join(map(str, value))}")
             else:
                 logger.info(f"{' ' * lvl}{key}: {value}")
+
+def get_weight(model: torch.nn.Module, layer_name: str) -> torch.Tensor:
+    sub = model.get_submodule(layer_name)
+    return sub.weight

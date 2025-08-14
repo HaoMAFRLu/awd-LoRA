@@ -100,11 +100,6 @@ def get_row(model_type: str, file: str, header: list) -> dict:
     return (row1, row2, row3, row4)
 
 def main(model_type: str, files: list) -> None:
-    # headers = [f"model", f"dataset", f"metric", 
-    #            f"baseline", f"LoR(baseline)", 
-    #            f"X", f"X-S", f"LoR(X-S)", 
-    #            f"L", f"LoR(L)", f"L+S", f"LoR(L)+S"]
-
     headers = [f"model", f"dataset", f"metric", 
                f"X", f"X-S", f"LoR(X-S)",
                f"L", f"LoR(L)", f"L+S", f"LoR(L)+S"]
@@ -122,6 +117,6 @@ def main(model_type: str, files: list) -> None:
 
 if __name__ == "__main__":
     model_type = 'llama_60m'
-    files = ['20250813_141204']
+    files = ['20250814_092029']
     main(model_type=model_type,
          files=files)
