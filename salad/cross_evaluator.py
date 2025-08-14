@@ -187,7 +187,7 @@ class CrossEvaluator():
     def evaluate_one_step(self,
                           model: nn.Module,
                           dataloader,
-                          target_eval_tokens: int=1000000,
+                          target_eval_tokens: int=10_000_000,
                           pad_idx: int=-1) -> dict:
         """
         """

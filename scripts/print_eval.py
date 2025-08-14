@@ -117,6 +117,7 @@ def main(model_type: str, files: list) -> None:
 
 if __name__ == "__main__":
     model_type = 'llama_60m'
-    files = ['20250814_092029']
+    files = ['20250814_092029',
+             '20250814_105649']
     main(model_type=model_type,
          files=files)
