@@ -64,11 +64,30 @@ def get_eval_data(split: str,
     _data_mapped.batch = lambda batch_size: batch_fn(_data_mapped, batch_size)
     return _data_mapped
 
+def read_results(path_results: str):
+    """
+    Read the evaluation results from the given path.
+    
+    Args:
+        path_results (str): Path to the results file.
+    
+    Returns:
+        dict: The evaluation results.
+    """
+    with open(path_results, 'rb') as f:
+        data = pickle.load(f)
+    
+    return layer_names, 
+
 def main(cfg_version: str,
          path_folder: str) -> None:
     # load the config
-    path_cfg = os.path.join(path_folder, cfg_version+'.yaml')
-    path_cfg_model = os.path.join(path_folder, cfg_version+'_model.json')
+    path_results = os.path.join(path_folder, 'results.pkl')
+    path_fig = os.path.join(path_folder, 'figures')
+    mkdir(path_fig)
+
+    read_results(path_results)
+
 
     with open(path_cfg) as f:
         cfg = yaml.safe_load(f)
@@ -118,7 +137,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250813_221917'
+    file = '20250813_141204'
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder)
     

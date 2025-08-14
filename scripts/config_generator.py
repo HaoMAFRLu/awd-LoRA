@@ -166,7 +166,7 @@ if __name__ == "__main__":
         seed=42,
         num_freq=20,
         seed_for_shuffle=42,
-        num_total_iters=200000,
+        num_total_iters=20000,
         batch_size=256,
         max_length=256,
         warmup_steps=1100,
