@@ -1,40 +1,15 @@
 """Evaluate the models trained with Salad on the validation set.
 """
 import os, sys
-import yaml
 import pickle
 import io
 import torch
-import transformers
-from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
+import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from salad.utils import *
-from salad.register import get_model, get_data
-from salad.cross_evaluator import CrossEvaluator
 
 root = get_parent_path(lvl=1)
-
-def load_model(model: torch.nn.Module, pth: str) -> torch.nn.Module:
-    """
-    Load the model from the given path.
-    
-    Args:
-        model (torch.nn.Module): The model to load.
-        pth (str): Path to the model checkpoint.
-    
-    Returns:
-        torch.nn.Module: The loaded model.
-    """
-    ckpt = torch.load(pth, map_location="cpu")
-    state_dict = ckpt.get("state_dict", ckpt.get("model", ckpt))
-    clean_sd = {}
-    for k, v in state_dict.items():
-        while k.startswith("module."):
-            k = k[len("module."):]
-        clean_sd[k] = v
-
-    model.load_state_dict(clean_sd, strict=True)
 
 def get_lowspa_layers(pth: str) -> tuple:
     """Load data from the files"""
@@ -49,95 +24,82 @@ def get_lowspa_layers(pth: str) -> tuple:
         torch.storage._load_from_bytes = orig
     return obj['LL'], obj['SS']
 
-def get_eval_data(split: str, 
-                  seed_for_shuffle: int = 42, 
-                  tokenizer=None, 
-                  max_length=1024,
-                  batch_size: int = 32):
-    _data = get_data(seed_for_shuffle, split=split)
-    _data_mapped = _data.map(
-        preprocess_batched,
-        batched=True,
-        remove_columns=["text", "timestamp", "url"],
-        fn_kwargs={"tokenizer": tokenizer, "max_length": max_length}
-    )
-    _data_mapped.batch = lambda batch_size: batch_fn(_data_mapped, batch_size)
-    return _data_mapped
+def read_layer_info(pth: str) -> list:
+    """Load data from the files"""
+    orig = torch.storage._load_from_bytes
+    try:
+        torch.storage._load_from_bytes = lambda b: torch.load(
+            io.BytesIO(b), map_location='cpu', weights_only=False
+        )
+        with open(pth, 'rb') as f:
+            obj = pickle.load(f) 
+    finally:
+        torch.storage._load_from_bytes = orig
 
-def read_results(path_results: str):
-    """
-    Read the evaluation results from the given path.
-    
-    Args:
-        path_results (str): Path to the results file.
-    
-    Returns:
-        dict: The evaluation results.
-    """
-    with open(path_results, 'rb') as f:
-        data = pickle.load(f)
-    
-    return layer_names, 
+    ex_list = ['loss', 'loss1', 'loss2', 'num_tokens']
+    layer_names = []
+    for key in obj.keys():
+        if key not in ex_list:
+            layer_names.append(key)
+    loss = obj['loss']
+    loss1 = obj['loss1']
+    loss2 = obj['loss2']
+    num_tokens = obj['num_tokens']
+    return layer_names, loss, loss1, loss2, num_tokens, obj
+
+def plot_loss(loss, loss1, loss2, num_tokens, path_fig):
+    fig, ax = plt.subplots(2, 1, figsize=(10, 6))
+    set_axes_format(ax[0], r'Iterations', r'Loss')
+    ax[0].plot(loss, label='Loss')
+    ax[0].plot(loss1, label='Loss1')
+    ax[0].plot(loss2, label='Loss2')
+    ax[0].grid(True)
+    ax[0].legend()
+
+    set_axes_format(ax[1], r'Iterations', r'Number of Tokens')
+    ax[1].plot(num_tokens, label='Number of Tokens')
+    ax[1].grid(True) 
+    ax[1].legend()
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(path_fig, 'loss.png'))
+
+def plot_layer(layer_info, path_layer):
+    fig, ax = plt.subplots(3, 1, figsize=(10, 12))
+    set_axes_format(ax[0], r'Iterations', r'Loss')
+    ax[0].plot(layer_info['loss'], label='Loss')
+    ax[0].grid(True)
+    ax[0].legend()  
+
+    set_axes_format(ax[1], r'Iterations', r'rank')
+    ax[1].plot(layer_info['rank'], label='Rank')
+    ax[1].grid(True)
+    ax[1].legend()
+
+    set_axes_format(ax[2], r'Iterations', r'alpha')
+    ax[2].plot(layer_info['alpha'], label='Alpha')
+    ax[2].grid(True)
+    ax[2].legend()
+    plt.tight_layout()
+    plt.savefig(os.path.join(path_layer, 'layer.png'))
 
 def main(cfg_version: str,
          path_folder: str) -> None:
     # load the config
-    path_results = os.path.join(path_folder, 'results.pkl')
     path_fig = os.path.join(path_folder, 'figures')
     mkdir(path_fig)
 
-    read_results(path_results)
-
-
-    with open(path_cfg) as f:
-        cfg = yaml.safe_load(f)
-
-    seed = cfg['seed']
-    max_length = cfg['max_length']
-    batch_size = cfg['batch_size']
-    set_seed(seed)
-
-    # get the model and load the checkpoint
-    model = get_model(path_cfg_model)
-    load_model(model, os.path.join(path_folder, 'model.pth'))
-    LL, SS = get_lowspa_layers(os.path.join(path_folder, 'results.pkl'))
-    # get the tokenizer
-    tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
-    # get the data loader
-    val_loader = get_eval_data('validation', seed_for_shuffle=cfg['seed_for_shuffle'],
-                             tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
-    train_loader = get_eval_data('train', seed_for_shuffle=cfg['seed_for_shuffle'],
-                              tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
+    layer_names, loss, loss1, loss2, num_tokens, obj = read_layer_info(os.path.join(path_folder, 'layer_info.pkl'))
+    plot_loss(loss, loss1, loss2, num_tokens, path_fig)
     
-    layers = [entry['name'] for entry in cfg['layers']]
-
-    # exclude_layers = ['transformer.h.0.mlp.c_fc.weight',
-    #                  'transformer.h.0.mlp.c_proj.weight']
-    
-    exclude_layers = []
-    layers = [layer for layer in layers if layer not in exclude_layers]
-
-    evaluator = CrossEvaluator(model_type=cfg_version,
-                               model=model,
-                               train_loader=train_loader,
-                               test_loader=val_loader,
-                               layers=layers,
-                               LL=LL,
-                               SS=SS,
-                               rank_quantile=0.25,
-                               batch_size=10)
-    
-    evaluator.collect_results()
-    data = {
-        'eval_train_results': evaluator.eval_train_results,
-        'eval_test_results': evaluator.eval_test_results
-    }
-    with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
-        pickle.dump(data, f)
+    for name in layer_names:
+        path_layer = os.path.join(path_fig, name)
+        mkdir(path_layer) 
+        plot_layer(obj[name], path_layer)
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250813_141204'
+    file = '20250814_092029'
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder)
     

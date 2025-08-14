@@ -27,6 +27,8 @@ class SALADTrainer():
                 - gpu_map: optional mapping layer_name -> gpu id
                 - training: dict with optimizer, lr, num_epochs
         """
+
+
         self.model = model
         self.config = config
 
@@ -40,6 +42,8 @@ class SALADTrainer():
         self.rank, self.world_size = self._init_distributed()
         torch.cuda.set_device(self.rank % torch.cuda.device_count())
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
+        if self.rank == 0:
+            print_setting(config)
 
         # print device info
         dev_idx = torch.cuda.current_device()
@@ -402,7 +406,7 @@ class SALADTrainer():
             labels = batch["input_ids"].clone()
             labels[labels == self.pad_idx] = -100     
             loss, loss1, loss2 = self.single_step_train(batch, labels=labels)
-            num_tokens += batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()
+            num_tokens = batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()
             self.layer_info['loss'].append(loss)
             self.layer_info['loss1'].append(loss1)
             self.layer_info['loss2'].append(loss2)
