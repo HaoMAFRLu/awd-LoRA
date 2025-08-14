@@ -113,6 +113,7 @@ def main(cfg_version: str,
     LL, SS = get_lowspa_layers(os.path.join(path_folder, 'matrix.pkl'))
     # get the tokenizer
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
+    pad_idx = tokenizer.pad_token_id
     # get the data loader
     val_loader = get_eval_data('validation', seed_for_shuffle=cfg['seed_for_shuffle'],
                              tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
@@ -132,6 +133,7 @@ def main(cfg_version: str,
                                train_loader=train_loader,
                                test_loader=val_loader,
                                layers=layers,
+                               pad_idx=pad_idx,
                                LL=LL,
                                SS=SS,
                                rank_quantile=0.25,

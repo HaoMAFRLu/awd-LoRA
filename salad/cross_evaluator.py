@@ -196,6 +196,7 @@ class CrossEvaluator():
         evaluated_on_tokens = 0
         total_loss = 0.0
         total_batches = 0
+        loss_list = []
         with torch.inference_mode():
             for batch in dataloader.batch(batch_size=self.batch_size):
                 
@@ -208,12 +209,11 @@ class CrossEvaluator():
                 labels[labels == self.pad_idx] = -100
                 loss = model(**batch, labels=labels).loss
                 total_loss += loss.item()
-
                 evaluated_on_tokens += (batch["input_ids"] != self.pad_idx).sum().item()
 
-            avg_loss = total_loss / total_batches
-            return {'avg_loss': avg_loss, 
-                    'ppl': np.exp(avg_loss)}  # Return average loss and perplexity
+                loss_list.append(total_loss / total_batches)
+            return {'avg_loss': loss_list, 
+                    'ppl': np.exp(loss_list[-1])}  # Return average loss and perplexity
 
     
     def collect_results(self):
