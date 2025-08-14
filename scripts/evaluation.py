@@ -37,8 +37,8 @@ root = get_parent_path(lvl=1)
 #     model.load_state_dict(clean_sd, strict=True)
 
 def load_model(model, pth):
-    names = get_linear_layers_name(model)
-    p = get_weight(model, names[0]).clone()
+    # names = get_linear_layers_name(model)
+    # p = get_weight(model, names[0]).clone()
 
     ckpt = torch.load(pth, map_location="cpu")
     sd = ckpt.get("state_dict", ckpt.get("model", ckpt))
@@ -61,7 +61,7 @@ def load_model(model, pth):
         print("[load_model] missing:", missing)
         print("[load_model] unexpected:", unexpected)
 
-    pp = get_weight(model, names[0]).clone()
+    # pp = get_weight(model, names[0]).clone()
 
     return model
 

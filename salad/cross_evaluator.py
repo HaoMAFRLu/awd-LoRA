@@ -20,6 +20,7 @@ class CrossEvaluator():
                  LL: dict=None,
                  SS: dict=None,
                  layers: list=None,
+                 pad_idx: int=0,
                  rank_quantile: float=0.9,
                  batch_size: int=10) -> None:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -32,6 +33,7 @@ class CrossEvaluator():
         else:
             print("[Rank -1] using CPU")
 
+        self.pad_idx = pad_idx
         self.model_type = model_type
         self.batch_size = batch_size
         self.model = model.to(self.device) if model is not None else None
@@ -187,8 +189,7 @@ class CrossEvaluator():
     def evaluate_one_step(self,
                           model: nn.Module,
                           dataloader,
-                          target_eval_tokens: int=10_000_000,
-                          pad_idx: int=-1) -> dict:
+                          target_eval_tokens: int=1_000_000) -> dict:
         """
         """
         model.eval()
@@ -204,11 +205,11 @@ class CrossEvaluator():
 
                 batch = {k: v.to(self.device) for k, v in batch.items()}
                 labels = batch["input_ids"].clone()
-                labels[labels == pad_idx] = -100
+                labels[labels == self.pad_idx] = -100
                 loss = model(**batch, labels=labels).loss
                 total_loss += loss.item()
 
-                evaluated_on_tokens += (batch["input_ids"] != pad_idx).sum().item()
+                evaluated_on_tokens += (batch["input_ids"] != self.pad_idx).sum().item()
 
             avg_loss = total_loss / total_batches
             return {'avg_loss': avg_loss, 
