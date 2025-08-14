@@ -109,7 +109,7 @@ def main(cfg_version: str,
 
     # get the model and load the checkpoint
     model = get_model(path_cfg_model)
-    # load_model(model, os.path.join(path_folder, 'model.pth'))
+    load_model(model, os.path.join(path_folder, 'model.pth'))
     LL, SS = get_lowspa_layers(os.path.join(path_folder, 'matrix.pkl'))
     # get the tokenizer
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
@@ -147,7 +147,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250814_092029'
+    file = '20250814_105649'
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder)
     
