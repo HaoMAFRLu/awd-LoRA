@@ -90,6 +90,7 @@ class SALADTrainer():
         self.layer_info['loss'] = []
         self.layer_info['loss1'] = []
         self.layer_info['loss2'] = []
+        self.layer_info['num_tokens'] = []
 
         # print assinged layers and model names
         # if self.rank == 0:
@@ -257,21 +258,18 @@ class SALADTrainer():
         return global_loss_mean, global_loss_mean1, global_loss_mean2
     
     def save_results(self, path_folder):
-        """
-        Save the results of the training.
-        Args:
-            path_folder: Path to save the results
-        """
-        torch.save(self.ddp_model.state_dict(), os.path.join(path_folder, 'model.pth'))
-        data = {
-            'LL': self.LL,
-            'SS': self.SS,
-            'YY': self.YY,
-            'num_tokens': self.num_tokens,
-            'layer_info': self.layer_info,
+        os.makedirs(path_folder, exist_ok=True)
+
+        # 1) save the model
+        state = getattr(self.ddp_model, "module", self.ddp_model).state_dict()
+        atomic_torch_save(state, os.path.join(path_folder, "model.pth"))
+
+        # save the data
+        MATRIX = {
+            'LL': self.LL, 'SS': self.SS, 'YY': self.YY
         }
-        with open(os.path.join(path_folder, 'results.pkl'), 'wb') as f:
-            pickle.dump(data, f)
+        atomic_pickle_dump(MATRIX, os.path.join(path_folder, "matrix.pkl"))
+        atomic_pickle_dump(self.layer_info, os.path.join(path_folder, "layer_info.pkl"))
     
     def get_local_weights(self):
         """
@@ -353,7 +351,10 @@ class SALADTrainer():
     def print_info(self,
                    epoch: int,
                    total_epochs: int,
-                    num_tokens: int,
+                   loss: float,
+                   loss1: float,
+                   loss2: float,
+                   acc_num_tokens: int,
                    layer_info: dict,
                    lr: float):
         """
@@ -363,9 +364,9 @@ class SALADTrainer():
             total_epochs: Total number of epochs
             layer_info: Dictionary containing layer statistics
         """
-        losses = {'loss': layer_info['loss'][-1],
-                  'loss1': layer_info['loss1'][-1],
-                  'loss2': layer_info['loss2'][-1]}
+        losses = {'loss': loss,
+                  'loss1': loss1,
+                  'loss2': loss2}
         
         layer_stats = [{'name': entry['name'],
                         'loss': layer_info[entry['name']]['loss'][-1],
@@ -379,7 +380,7 @@ class SALADTrainer():
                         'total_rank': layer_info[entry['name']]['total_rank'][-1],
                         'total_elements': layer_info[entry['name']]['total_elements'][-1]} for entry in self.cfg_layers]
         
-        print_epoch(epoch, total_epochs, lr, num_tokens, losses, layer_stats)
+        print_epoch(epoch, total_epochs, lr, acc_num_tokens, losses, layer_stats)
 
     def train(self, path_folder: str=None):            
         self.ddp_model.train()
@@ -387,7 +388,8 @@ class SALADTrainer():
         num_epochs = self.num_total_iters // self.num_freq
         epoch = 0
         ep_loss, ep_loss1, ep_loss2 = 0.0, 0.0, 0.0
-        self.num_tokens = 0
+        num_tokens = 0
+        acc_num_tokens = 0
 
         for batch_idx, batch in enumerate(self.dataloader):
             num_it += 1
@@ -400,11 +402,16 @@ class SALADTrainer():
             labels = batch["input_ids"].clone()
             labels[labels == self.pad_idx] = -100     
             loss, loss1, loss2 = self.single_step_train(batch, labels=labels)
+            num_tokens += batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()
+            self.layer_info['loss'].append(loss)
+            self.layer_info['loss1'].append(loss1)
+            self.layer_info['loss2'].append(loss2)
+            self.layer_info['num_tokens'].append(num_tokens)
             
-            self.num_tokens += batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()
             ep_loss += loss
             ep_loss1 += loss1
             ep_loss2 += loss2
+            acc_num_tokens += num_tokens
 
             if num_it % self.num_freq == 0:
                 # run admm solvers
@@ -418,13 +425,17 @@ class SALADTrainer():
                 ep_loss /= self.num_freq
                 ep_loss1 /= self.num_freq
                 ep_loss2 /= self.num_freq    
-                self.layer_info['loss'].append(ep_loss)
-                self.layer_info['loss1'].append(ep_loss1)
-                self.layer_info['loss2'].append(ep_loss2)
-            
+                
                 # print and save results
                 if self.rank == 0:
-                    self.print_info(epoch, num_epochs, self.num_tokens, self.layer_info, self.lr_scheduler.get_last_lr()[0])
+                    self.print_info(epoch, 
+                                    num_epochs,
+                                    ep_loss,
+                                    ep_loss1,
+                                    ep_loss2, 
+                                    acc_num_tokens, 
+                                    self.layer_info, 
+                                    self.lr_scheduler.get_last_lr()[0])
                     if path_folder is not None:
                         self.save_results(path_folder)
                 

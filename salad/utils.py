@@ -5,11 +5,12 @@ import torch.optim as optim
 from tabulate import tabulate
 import os
 from pathlib import Path
-import torch.nn.functional as F
 import random
 import numpy as np
 import yaml
 import re, math
+import tempfile
+import pickle
 
 def mkdir(path: Path) -> None:
     """Check if the folder exists and create it if it does not."""
@@ -204,3 +205,47 @@ def batch_fn(dataset, batch_size):
             batch = []
     if len(batch) > 0:
         yield batch
+
+def atomic_pickle_dump(obj, path):
+    """Save an object to a file atomically."""
+    d = os.path.dirname(path) or "."
+    os.makedirs(d, exist_ok=True)
+    fd, tmppath = tempfile.mkstemp(prefix=".tmp_", dir=d)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
+            f.flush()
+            os.fsync(f.fileno()) 
+        os.replace(tmppath, path)
+        try:
+            dirfd = os.open(d, os.O_DIRECTORY)
+            try: os.fsync(dirfd)
+            finally: os.close(dirfd)
+        except Exception:
+            pass
+    except Exception:
+        try: os.remove(tmppath)
+        except OSError: pass
+        raise
+
+def atomic_torch_save(state_dict, path):
+    """Save a PyTorch state_dict to a file atomically."""
+    d = os.path.dirname(path) or "."
+    os.makedirs(d, exist_ok=True)
+    fd, tmppath = tempfile.mkstemp(prefix=".tmp_", dir=d)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            torch.save(state_dict, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmppath, path)
+        try:
+            dirfd = os.open(d, os.O_DIRECTORY)
+            try: os.fsync(dirfd)
+            finally: os.close(dirfd)
+        except Exception:
+            pass
+    except Exception:
+        try: os.remove(tmppath)
+        except OSError: pass
+        raise
