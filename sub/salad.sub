@@ -5,7 +5,7 @@ arguments       = \
     --nnodes=1 \
     --rdzv_backend=c10d \
     --rdzv_endpoint=127.0.0.1:29500 \
-    scripts/quick_test.py
+    scripts/train_salad.py
 
 initialdir      = /lustre/home/hma2/projects/awd-LoRA
 
