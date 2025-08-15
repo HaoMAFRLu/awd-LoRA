@@ -26,13 +26,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -41,13 +41,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -56,13 +56,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -71,13 +71,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -86,13 +86,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -101,13 +101,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -116,13 +116,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -131,13 +131,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -146,13 +146,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -161,13 +161,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -176,13 +176,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -191,13 +191,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -206,13 +206,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -221,13 +221,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -236,13 +236,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -251,13 +251,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -266,13 +266,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -281,13 +281,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -296,13 +296,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -311,13 +311,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -326,13 +326,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -341,13 +341,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -356,13 +356,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -371,13 +371,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -386,13 +386,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -401,13 +401,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -416,13 +416,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -431,13 +431,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -446,13 +446,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -461,13 +461,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -476,13 +476,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -491,13 +491,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -506,13 +506,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -521,13 +521,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -536,13 +536,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -551,13 +551,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -566,13 +566,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -581,13 +581,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -596,13 +596,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -611,13 +611,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -626,13 +626,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -641,13 +641,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -656,13 +656,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -671,13 +671,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -686,13 +686,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -701,13 +701,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -716,13 +716,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -731,13 +731,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -746,13 +746,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -761,13 +761,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -776,13 +776,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -791,13 +791,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
@@ -806,13 +806,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
@@ -821,13 +821,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -836,13 +836,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -851,13 +851,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.98
+    energy: 0.99
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.15
+    rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10

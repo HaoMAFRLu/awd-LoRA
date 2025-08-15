@@ -397,7 +397,7 @@ class SALADTrainer():
         num_tokens = 0
         acc_num_tokens = 0
 
-        for batch_idx, batch in enumerate(self.dataloader):
+        for batch_idx, batch in resilient_enumerate(self.dataloader):
             num_it += 1
             if num_it > self.num_total_iters:
                 logger.info(f"Reached max number of update steps (f{self.num_total_iters}). Stopping training.")
@@ -408,6 +408,7 @@ class SALADTrainer():
             labels = batch["input_ids"].clone()
             labels[labels == self.pad_idx] = -100     
             loss, loss1, loss2 = self.single_step_train(batch, labels=labels)
+
             num_tokens = (batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()) * self.world_size
             self.layer_info['loss'].append(loss)
             self.layer_info['loss1'].append(loss1)
