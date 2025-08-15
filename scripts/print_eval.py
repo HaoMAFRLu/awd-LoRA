@@ -1,6 +1,8 @@
 import pickle
 import os, sys
 import torch
+import matplotlib.pyplot as plt
+
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from salad.utils import *
@@ -29,7 +31,7 @@ def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) ->
     row = [file, data_type, 'loss']
     for key in header:
         if key in key_word_map:
-            row.append(f"{eval_results[key_word_map[key]]['avg_loss']:.2f}")
+            row.append(f"{eval_results[key_word_map[key]]['avg_loss'][-1]:.2f}")
         else:
             row.append('N/A')
     return row
@@ -70,14 +72,15 @@ def get_acc_row(file: str, data_type: str, eval_results: dict, header: list) -> 
             row.append('N/A')
     return row
 
-def get_row(model_type: str, file: str, header: list) -> dict:
+def get_results(model_type: str, file: str, data_type: str) -> dict:
     """
-    Get a row of statistics for the model from the saved file.
+    Get evaluation results for the model.
     Args:
         model_type: Type of the model (e.g., 'CNN', 'GPT').
         file: Name of the file containing the statistics.
+        data_type: Type of data (e.g., 'train', 'test').
     Returns:
-        A dictionary with statistics for the model.
+        A dictionary with evaluation results.
     """
     path = os.path.join(root, 'data', 'salad', model_type, file)
     with open(os.path.join(path, 'eval_results.pkl'), 'rb') as f:
@@ -86,6 +89,17 @@ def get_row(model_type: str, file: str, header: list) -> dict:
     eval_train_results = stats['eval_train_results']
     eval_test_results = stats['eval_test_results']
 
+    return eval_train_results, eval_test_results
+
+def get_row(eval_train_results, eval_test_results, file: str, header: list) -> dict:
+    """
+    Get a row of statistics for the model from the saved file.
+    Args:
+        model_type: Type of the model (e.g., 'CNN', 'GPT').
+        file: Name of the file containing the statistics.
+    Returns:
+        A dictionary with statistics for the model.
+    """
     row1 = get_loss_row(file, 'train', eval_train_results, header)
     row2 = get_ppl_row(file, 'train', eval_train_results, header)
     row2[0] = ''
@@ -99,6 +113,25 @@ def get_row(model_type: str, file: str, header: list) -> dict:
     row4[1] = ''
     return (row1, row2, row3, row4)
 
+def plot_loss(eval_train_results, eval_test_results, header: list, pth_fig: str) -> None:
+    nr_heads = len(header)
+    fig, ax = plt.subplots(nr_heads, 1, figsize=(10, 6*nr_heads))
+    for i, key in enumerate(header):
+        if key in key_word_map:
+            set_axes_format(ax[i], r'Iterations', r'Loss')
+            ax[i].plot(eval_train_results[key_word_map[key]]['avg_loss'], label='Train Loss')
+            ax[i].plot(eval_test_results[key_word_map[key]]['avg_loss'], label='Test Loss')
+            ax[i].set_title(f"{key} Loss")
+            ax[i].set_xlabel('Iterations')
+            ax[i].set_ylabel('Loss')
+            ax[i].legend()
+            ax[i].grid(True)
+        else:
+            ax[i].axis('off')
+    plt.tight_layout()
+    plt.savefig(os.path.join(pth_fig, 'loss.png'))
+
+
 def main(model_type: str, files: list) -> None:
     headers = [f"model", f"dataset", f"metric", 
                f"X", f"X-S", f"LoR(X-S)",
@@ -106,11 +139,16 @@ def main(model_type: str, files: list) -> None:
     
     rows = []
     for file in files:
-        r1, r2, r3, r4 = get_row(model_type, file, headers[3:])
+        eval_train_results, eval_test_resutls = get_results(model_type, file, 'train')
+        r1, r2, r3, r4 = get_row(eval_train_results, eval_test_resutls, file, headers[3:])
         rows.append(r1)
         rows.append(r2)
         rows.append(r3)
         rows.append(r4)
+
+        pth_fig = os.path.join(root, 'data', 'salad', model_type, file, 'figures', 'eval')
+        mkdir(pth_fig)
+        plot_loss(eval_train_results, eval_test_resutls, headers[3:], pth_fig)
     
     print(tabulate(rows, headers=headers, tablefmt="grid"))
 
