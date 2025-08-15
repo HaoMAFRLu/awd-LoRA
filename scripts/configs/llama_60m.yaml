@@ -1,5 +1,5 @@
 seed: 42
-num_total_iters: 20000
+num_total_iters: 22000
 num_freq: 20
 is_clip: !!float '1'
 max_length: 256
@@ -26,14 +26,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.0.self_attn.q_proj
@@ -41,14 +41,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.0.self_attn.k_proj
@@ -56,14 +56,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.0.self_attn.v_proj
@@ -71,14 +71,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.0.mlp.gate_proj
@@ -86,14 +86,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.0.mlp.down_proj
@@ -101,14 +101,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.0.mlp.up_proj
@@ -116,14 +116,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.1.self_attn.o_proj
@@ -131,14 +131,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.1.self_attn.q_proj
@@ -146,14 +146,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.1.self_attn.k_proj
@@ -161,14 +161,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.1.self_attn.v_proj
@@ -176,14 +176,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.1.mlp.gate_proj
@@ -191,14 +191,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.1.mlp.down_proj
@@ -206,14 +206,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.1.mlp.up_proj
@@ -221,14 +221,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.2.self_attn.o_proj
@@ -236,14 +236,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.2.self_attn.q_proj
@@ -251,14 +251,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.2.self_attn.k_proj
@@ -266,14 +266,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.2.self_attn.v_proj
@@ -281,14 +281,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.2.mlp.gate_proj
@@ -296,14 +296,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.2.mlp.down_proj
@@ -311,14 +311,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.2.mlp.up_proj
@@ -326,14 +326,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.3.self_attn.o_proj
@@ -341,14 +341,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.3.self_attn.q_proj
@@ -356,14 +356,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.3.self_attn.k_proj
@@ -371,14 +371,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.3.self_attn.v_proj
@@ -386,14 +386,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.3.mlp.gate_proj
@@ -401,14 +401,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.3.mlp.down_proj
@@ -416,14 +416,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.3.mlp.up_proj
@@ -431,14 +431,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.4.self_attn.o_proj
@@ -446,14 +446,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.4.self_attn.q_proj
@@ -461,14 +461,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.4.self_attn.k_proj
@@ -476,14 +476,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.4.self_attn.v_proj
@@ -491,14 +491,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.4.mlp.gate_proj
@@ -506,14 +506,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.4.mlp.down_proj
@@ -521,14 +521,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.4.mlp.up_proj
@@ -536,14 +536,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.5.self_attn.o_proj
@@ -551,14 +551,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.5.self_attn.q_proj
@@ -566,14 +566,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.5.self_attn.k_proj
@@ -581,14 +581,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.5.self_attn.v_proj
@@ -596,14 +596,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.5.mlp.gate_proj
@@ -611,14 +611,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.5.mlp.down_proj
@@ -626,14 +626,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.5.mlp.up_proj
@@ -641,14 +641,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.6.self_attn.o_proj
@@ -656,14 +656,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.6.self_attn.q_proj
@@ -671,14 +671,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.6.self_attn.k_proj
@@ -686,14 +686,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.6.self_attn.v_proj
@@ -701,14 +701,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.6.mlp.gate_proj
@@ -716,14 +716,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.6.mlp.down_proj
@@ -731,14 +731,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.6.mlp.up_proj
@@ -746,14 +746,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.7.self_attn.o_proj
@@ -761,14 +761,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.7.self_attn.q_proj
@@ -776,14 +776,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.7.self_attn.k_proj
@@ -791,14 +791,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 80
 - name: layers.7.self_attn.v_proj
@@ -806,14 +806,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 25
 - name: layers.7.mlp.gate_proj
@@ -821,14 +821,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.7.mlp.down_proj
@@ -836,14 +836,14 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
 - name: layers.7.mlp.up_proj
@@ -851,13 +851,13 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.9
+    energy: 0.98
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
     loss_version: v1
     is_cal: false
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10

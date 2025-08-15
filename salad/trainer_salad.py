@@ -37,13 +37,15 @@ class SALADTrainer():
         self.is_clip = config.get('is_clip', 1.0)
         self.max_length = config.get('max_length', 256)
         self.num_workers = config.get('num_workers', 4)
-        self.batch_size = config.get('batch_size', 32)
 
         self.rank, self.world_size = self._init_distributed()
         torch.cuda.set_device(self.rank % torch.cuda.device_count())
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
         if self.rank == 0:
             print_setting(config)
+
+        # self.batch_size = config.get('batch_size', 32)
+        self.batch_size = int(config.get('batch_size', 32)/self.world_size) + 1
 
         # print device info
         dev_idx = torch.cuda.current_device()
@@ -406,7 +408,7 @@ class SALADTrainer():
             labels = batch["input_ids"].clone()
             labels[labels == self.pad_idx] = -100     
             loss, loss1, loss2 = self.single_step_train(batch, labels=labels)
-            num_tokens = batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()
+            num_tokens = (batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()) * self.world_size
             self.layer_info['loss'].append(loss)
             self.layer_info['loss1'].append(loss1)
             self.layer_info['loss2'].append(loss2)
