@@ -16,6 +16,7 @@ key_word_map = {
     'L': 'L',
     'LoR(L)': 'lowrank_L',
     'L+S': 'L_with_S',
+    'par L+S': 'par_L_with_S',
     'LoR(L)+S': 'lowrank_L_with_S',
     'par LoR(L)+S': 'par_lowrank_L_with_S'
 }
@@ -144,7 +145,8 @@ def plot_loss(eval_train_results, eval_test_results, header: list, pth_fig: str)
 def main(model_type: str, files: list) -> None:
     headers = [f"model", f"dataset", f"metric", 
                f"X", f"X-S", f"LoR(X-S)",
-               f"L", f"LoR(L)", f"L+S", f"LoR(L)+S", f'par LoR(L)+S']
+               f"L", f"LoR(L)", f"L+S", 
+               f"LoR(L)+S", f"par LoR(L)+S"]
     
     rows = []
     for file in files:
