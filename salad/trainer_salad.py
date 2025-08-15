@@ -2,9 +2,7 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
-import functools
 import os
-import pickle
 import datasets
 import datasets.distributed
 from loguru import logger
@@ -12,18 +10,6 @@ from loguru import logger
 from salad.salad_solver import SALAD
 from salad.utils import *
 from salad.register import *
-
-# def hf_login_once():
-#     os.environ.setdefault("HF_HOME", "/lustre/home/hma2/hf")
-#     os.environ.setdefault("HF_HUB_CACHE", os.path.join(os.environ["HF_HOME"], "hub"))
-#     os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(os.environ["HF_HOME"], "transformers"))
-
-#     if not os.environ.get("HF_TOKEN"):
-#         try:
-#             with open(os.path.join(os.environ["HF_HOME"], "token"), "r") as f:
-#                 os.environ["HF_TOKEN"] = f.read().strip()
-#         except FileNotFoundError:
-#             pass
 
 class SALADTrainer():
     def __init__(self, 
@@ -39,7 +25,6 @@ class SALADTrainer():
                 - gpu_map: optional mapping layer_name -> gpu id
                 - training: dict with optimizer, lr, num_epochs
         """
-
 
         self.model = model
         self.config = config
@@ -145,6 +130,18 @@ class SALADTrainer():
         
         self.sync_weights()
 
+    def hf_login_once(self):
+        os.environ.setdefault("HF_HOME", "/lustre/home/hma2/hf")
+        os.environ.setdefault("HF_HUB_CACHE", os.path.join(os.environ["HF_HOME"], "hub"))
+        os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(os.environ["HF_HOME"], "transformers"))
+
+        if not os.environ.get("HF_TOKEN"):
+            try:
+                with open(os.path.join(os.environ["HF_HOME"], "token"), "r") as f:
+                    os.environ["HF_TOKEN"] = f.read().strip()
+            except FileNotFoundError:
+                pass
+            
     @staticmethod
     def get_name_and_params(_params: dict):
         """
