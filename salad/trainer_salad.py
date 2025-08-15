@@ -38,7 +38,7 @@ class SALADTrainer():
         self.rank, self.world_size = self._init_distributed()
 
         # fk the error 429!!!!!!
-        # hf_login_once()
+        self.hf_login_once()
 
         torch.cuda.set_device(self.rank % torch.cuda.device_count())
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
