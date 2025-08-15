@@ -14,20 +14,16 @@ from salad.utils import *
 from salad.register import *
 
 def hf_login_once():
-    if not dist.is_initialized() or dist.get_rank() == 0:
-        os.environ.setdefault("HF_HOME", "/lustre/home/hma2/hf")
-        os.environ.setdefault("HF_HUB_CACHE", os.path.join(os.environ["HF_HOME"], "hub"))
-        os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(os.environ["HF_HOME"], "transformers"))
+    os.environ.setdefault("HF_HOME", "/lustre/home/hma2/hf")
+    os.environ.setdefault("HF_HUB_CACHE", os.path.join(os.environ["HF_HOME"], "hub"))
+    os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(os.environ["HF_HOME"], "transformers"))
 
-        if not os.environ.get("HF_TOKEN"):
-            try:
-                with open(os.path.join(os.environ["HF_HOME"], "token"), "r") as f:
-                    os.environ["HF_TOKEN"] = f.read().strip()
-            except FileNotFoundError:
-                pass
-
-    if dist.is_initialized():
-        dist.barrier()
+    if not os.environ.get("HF_TOKEN"):
+        try:
+            with open(os.path.join(os.environ["HF_HOME"], "token"), "r") as f:
+                os.environ["HF_TOKEN"] = f.read().strip()
+        except FileNotFoundError:
+            pass
 
 class SALADTrainer():
     def __init__(self, 
