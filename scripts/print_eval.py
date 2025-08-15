@@ -35,7 +35,7 @@ def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) ->
         if key in key_word_map:
             value = eval_results[key_word_map[key]]['avg_loss'][-1]
             if isinstance(value, float):
-                row.append(f"{value:.2f}")
+                row.append(f"{value:.4f}")
             elif isinstance(value, str):   # Handle case where value is 'N/A'
                 row.append(value)
         else:
@@ -57,7 +57,7 @@ def get_ppl_row(file: str, data_type: str, eval_results: dict, header: list) -> 
         if key in key_word_map:
             value = eval_results[key_word_map[key]]['ppl']
             if isinstance(value, float):
-                row.append(f"{value:.2f}")
+                row.append(f"{value:.4f}")
             elif isinstance(value, str):   # Handle case where value is 'N/A'
                 row.append(value)
         else:
