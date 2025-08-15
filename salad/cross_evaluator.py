@@ -20,6 +20,7 @@ class CrossEvaluator():
                  LL: dict=None,
                  SS: dict=None,
                  layers: list=None,
+                 ex_layers: list=[],
                  pad_idx: int=0,
                  rank_quantile: float=0.9,
                  batch_size: int=10) -> None:
@@ -47,7 +48,14 @@ class CrossEvaluator():
         self.LL = LL if LL is not None else {}
         self.SS = SS if SS is not None else {}
         self.layers = layers if layers is not None else []
-        # with '.weight' suffix
+        
+        if len(ex_layers) > 0:
+            self.is_partial = True
+            self.partial_layers = [layer for layer in self.layers if layer not in ex_layers]
+        elif len(self.layers) == 0:
+            self.is_partial = False
+            self.partial_layers = []
+
         self.model_layers = get_linear_layers_name(self.model) if model is not None else []
         
         self.eval_train_results = {}
@@ -101,6 +109,14 @@ class CrossEvaluator():
         self.opt_add(self.model, self.layers, self.SS)
         return self.evaluate_one_step(self.model, dataloader)
 
+    def _eval_par_lowrank_lowrank_sparsity(self, dataloader) -> dict:
+        """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
+        self.opt_copy(self.model_sd, self.model, self.layers)
+        self.opt_replace(self.model, self.partial_layers, self.LL)
+        self.opt_lowrank(self.model, self.partial_layers, self.rank_quantile)
+        self.opt_add(self.model, self.partial_layers, self.SS)
+        return self.evaluate_one_step(self.model, dataloader)
+
     @torch.no_grad()        
     def eval_model(self,
                    eval_results: dict,
@@ -117,6 +133,7 @@ class CrossEvaluator():
         eval_results['lowrank_L'] = self._eval_lowrank_lowrank(dataloader)
         eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)
         eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader)
+        eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
         return eval_results
     
     def opt_copy(self,

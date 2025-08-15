@@ -94,7 +94,8 @@ def get_eval_data(split: str,
     return _data_mapped
 
 def main(cfg_version: str,
-         path_folder: str) -> None:
+         path_folder: str,
+         ex_layers: list=[]) -> None:
     # load the config
     path_cfg = os.path.join(path_folder, cfg_version+'.yaml')
     path_cfg_model = os.path.join(path_folder, cfg_version+'_model.json')
@@ -122,21 +123,16 @@ def main(cfg_version: str,
     
     layers = [entry['name'] for entry in cfg['layers']]
 
-    # exclude_layers = ['transformer.h.0.mlp.c_fc.weight',
-    #                  'transformer.h.0.mlp.c_proj.weight']
-    
-    exclude_layers = []
-    layers = [layer for layer in layers if layer not in exclude_layers]
-
     evaluator = CrossEvaluator(model_type=cfg_version,
                                model=model,
                                train_loader=train_loader,
                                test_loader=val_loader,
                                layers=layers,
+                               ex_layers=ex_layers,
                                pad_idx=pad_idx,
                                LL=LL,
                                SS=SS,
-                               rank_quantile=0.25,
+                               rank_quantile=0.20,
                                batch_size=10)
     
     evaluator.collect_results()
@@ -150,6 +146,9 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
     file = '20250814_150324'
+    ex_layers = ['layers.6.mlp.gate_proj',
+                  'layers.6.mlp.down_proj',
+                  'layers.6.mlp.up_proj']
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
-    main(cfg_version, path_folder)
+    main(cfg_version, path_folder, ex_layers=ex_layers)
     
