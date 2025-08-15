@@ -118,9 +118,8 @@ class CrossEvaluator():
 
     def _eval_par_lowrank_lowrank_sparsity(self, dataloader) -> dict:
         """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
-        self.opt_copy(self.model_sd, self.model, self.layers)
-        self.opt_replace(self.model, self.partial_layers, self.LL)
-        self.opt_lowrank(self.model, self.partial_layers, self.rank_quantile)
+        self.opt_replace(self.model, self.layers, self.LL)  # replace all layers with full low-rank matrices L
+        self.opt_lowrank(self.model, self.partial_layers, self.rank_quantile)  #  apply low-rank approximation to partial layers
         self.opt_add(self.model, self.partial_layers, self.SS)
         return self.evaluate_one_step(self.model, dataloader)
 
@@ -139,7 +138,7 @@ class CrossEvaluator():
         eval_results['L'] = self._eval_lowrank(dataloader)
         eval_results['lowrank_L'] = self._eval_lowrank_lowrank(dataloader)
         eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)
-        eval_results['par_L_with_S'] = self._eval_par_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
+        # eval_results['par_L_with_S'] = self._eval_par_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
         eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader)
         eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
         return eval_results
