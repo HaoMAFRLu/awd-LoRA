@@ -17,6 +17,7 @@ key_word_map = {
     'LoR(L)': 'lowrank_L',
     'L+S': 'L_with_S',
     'LoR(L)+S': 'lowrank_L_with_S',
+    'par LoR(L)+S': 'par_lowrank_L_with_S'
 }
 
 def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) -> list:
@@ -31,7 +32,11 @@ def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) ->
     row = [file, data_type, 'loss']
     for key in header:
         if key in key_word_map:
-            row.append(f"{eval_results[key_word_map[key]]['avg_loss'][-1]:.2f}")
+            value = eval_results[key_word_map[key]]['avg_loss'][-1]
+            if isinstance(value, float):
+                row.append(f"{value:.2f}")
+            elif isinstance(value, str):   # Handle case where value is 'N/A'
+                row.append(value)
         else:
             row.append('N/A')
     return row
@@ -49,7 +54,11 @@ def get_ppl_row(file: str, data_type: str, eval_results: dict, header: list) -> 
     row = [file, data_type, 'ppl']
     for key in header:
         if key in key_word_map:
-            row.append(f"{eval_results[key_word_map[key]]['ppl']:.2f}")
+            value = eval_results[key_word_map[key]]['ppl']
+            if isinstance(value, float):
+                row.append(f"{value:.2f}")
+            elif isinstance(value, str):   # Handle case where value is 'N/A'
+                row.append(value)
         else:
             row.append('N/A')
     return row
@@ -117,7 +126,7 @@ def plot_loss(eval_train_results, eval_test_results, header: list, pth_fig: str)
     nr_heads = len(header)
     fig, ax = plt.subplots(nr_heads, 1, figsize=(10, 6*nr_heads))
     for i, key in enumerate(header):
-        if key in key_word_map:
+        if key in key_word_map and isinstance(eval_train_results[key_word_map[key]]['avg_loss'][-1], float):
             set_axes_format(ax[i], r'Iterations', r'Loss')
             ax[i].plot(eval_train_results[key_word_map[key]]['avg_loss'], label='Train Loss')
             ax[i].plot(eval_test_results[key_word_map[key]]['avg_loss'], label='Test Loss')
@@ -135,7 +144,7 @@ def plot_loss(eval_train_results, eval_test_results, header: list, pth_fig: str)
 def main(model_type: str, files: list) -> None:
     headers = [f"model", f"dataset", f"metric", 
                f"X", f"X-S", f"LoR(X-S)",
-               f"L", f"LoR(L)", f"L+S", f"LoR(L)+S"]
+               f"L", f"LoR(L)", f"L+S", f"LoR(L)+S", f'par LoR(L)+S']
     
     rows = []
     for file in files:
