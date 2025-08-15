@@ -145,7 +145,7 @@ def plot_loss(eval_train_results, eval_test_results, header: list, pth_fig: str)
 def main(model_type: str, files: list) -> None:
     headers = [f"model", f"dataset", f"metric", 
                f"X", f"X-S", f"LoR(X-S)",
-               f"L", f"LoR(L)", f"L+S", 
+               f"L", f"LoR(L)", f"L+S", f"par L+S",
                f"LoR(L)+S", f"par LoR(L)+S"]
     
     rows = []
