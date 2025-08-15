@@ -17,6 +17,6 @@ if not os.environ.get("HF_TOKEN"):
 from huggingface_hub import HfApi
 try:
     who = HfApi().whoami() 
-    logger.info(f"HF login OK. user: {who["name"]}", )
+    logger.info(f"HF login OK. user: {who['name']}", )
 except Exception as e:
     logger.info(f"HF whoami failed: {e}")
