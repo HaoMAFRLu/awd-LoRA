@@ -13,6 +13,22 @@ from salad.salad_solver import SALAD
 from salad.utils import *
 from salad.register import *
 
+def hf_login_once():
+    if not dist.is_initialized() or dist.get_rank() == 0:
+        os.environ.setdefault("HF_HOME", "/lustre/home/hma2/hf")
+        os.environ.setdefault("HF_HUB_CACHE", os.path.join(os.environ["HF_HOME"], "hub"))
+        os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(os.environ["HF_HOME"], "transformers"))
+
+        if not os.environ.get("HF_TOKEN"):
+            try:
+                with open(os.path.join(os.environ["HF_HOME"], "token"), "r") as f:
+                    os.environ["HF_TOKEN"] = f.read().strip()
+            except FileNotFoundError:
+                pass
+
+    if dist.is_initialized():
+        dist.barrier()
+
 class SALADTrainer():
     def __init__(self, 
                  model: nn.Module,
@@ -39,6 +55,10 @@ class SALADTrainer():
         self.num_workers = config.get('num_workers', 4)
 
         self.rank, self.world_size = self._init_distributed()
+
+        # fk the error 429!!!!!!
+        hf_login_once()
+
         torch.cuda.set_device(self.rank % torch.cuda.device_count())
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
         if self.rank == 0:
