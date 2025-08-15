@@ -397,7 +397,7 @@ class SALADTrainer():
         num_tokens = 0
         acc_num_tokens = 0
 
-        for batch_idx, batch in resilient_enumerate(self.dataloader):
+        for batch_idx, batch in enumerate(self.dataloader):
             num_it += 1
             if num_it > self.num_total_iters:
                 logger.info(f"Reached max number of update steps (f{self.num_total_iters}). Stopping training.")
