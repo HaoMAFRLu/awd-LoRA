@@ -177,7 +177,7 @@ if __name__ == "__main__":
         min_lr_ratio=0.1,
         include_embeddings=False,
         include_head=False,
-        is_clip=0.0,
+        is_clip=1.0,
         bos_token_id=0,
         eos_token_id=1,
         hidden_act='silu',
