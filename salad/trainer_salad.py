@@ -370,6 +370,7 @@ class SALADTrainer():
     def print_info(self,
                    epoch: int,
                    total_epochs: int,
+                   num_freq: int,
                    loss: float,
                    loss1: float,
                    loss2: float,
@@ -399,7 +400,7 @@ class SALADTrainer():
                         'total_rank': layer_info[entry['name']]['total_rank'][-1],
                         'total_elements': layer_info[entry['name']]['total_elements'][-1]} for entry in self.cfg_layers]
         
-        print_epoch(epoch, total_epochs, lr, acc_num_tokens, losses, layer_stats)
+        print_epoch(epoch, total_epochs, num_freq, lr, acc_num_tokens, losses, layer_stats)
 
     def train(self, path_folder: str=None):            
         self.ddp_model.train()
@@ -450,6 +451,7 @@ class SALADTrainer():
                 if self.rank == 0:
                     self.print_info(epoch, 
                                     num_epochs,
+                                    self.num_freq,
                                     ep_loss,
                                     ep_loss1,
                                     ep_loss2, 
