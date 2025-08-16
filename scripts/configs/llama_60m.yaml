@@ -1,6 +1,6 @@
 seed: 42
 num_total_iters: 22000
-num_freq: 20
+num_freq: 50
 is_clip: !!float '1'
 max_length: 256
 seed_for_shuffle: 42
@@ -14,7 +14,7 @@ scheduler:
 optimizer:
   name: AdamW
   params:
-    lr: 0.008
+    lr: 0.003
     betas:
     - 0.9
     - 0.95
@@ -26,7 +26,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -41,7 +41,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -56,7 +56,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -71,7 +71,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -86,7 +86,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -101,7 +101,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -116,7 +116,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -131,7 +131,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -146,7 +146,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -161,7 +161,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -176,7 +176,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -191,7 +191,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -206,7 +206,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -221,7 +221,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -236,7 +236,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -251,7 +251,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -266,7 +266,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -281,7 +281,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -296,7 +296,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -311,7 +311,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -326,7 +326,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -341,7 +341,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -356,7 +356,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -371,7 +371,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -386,7 +386,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -401,7 +401,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -416,7 +416,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -431,7 +431,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -446,7 +446,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -461,7 +461,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -476,7 +476,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -491,7 +491,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -506,7 +506,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -521,7 +521,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -536,7 +536,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -551,7 +551,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -566,7 +566,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -581,7 +581,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -596,7 +596,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -611,7 +611,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -626,7 +626,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -641,7 +641,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -656,7 +656,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -671,7 +671,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -686,7 +686,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -701,7 +701,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -716,7 +716,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -731,7 +731,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -746,7 +746,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -761,7 +761,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -776,7 +776,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -791,7 +791,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -806,7 +806,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -821,7 +821,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -836,7 +836,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001
@@ -851,7 +851,7 @@ layers:
     alpha_to_rho: 0.01
     beta_to_rho: 0.001
     rho: 0.001
-    energy: 0.99
+    energy: 0.999
     init_energy: 0.3
     iter_max: 1
     tol: 0.001

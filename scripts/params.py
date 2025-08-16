@@ -2,7 +2,7 @@ embed_params = {
     'alpha_to_rho':  0.01,  # Regularization parameter
     'beta_to_rho':   0.001, # Sparsity parameter
     'rho':           0.001, # Penalty parameter
-    'energy':        0.99,   # Energy parameter
+    'energy':        0.999,   # Energy parameter
     'init_energy':   0.3,   # Initial energy
     'iter_max':      1,     # Max ADMM iterations per layer
     'tol':           0.001, # Convergence tolerance
@@ -18,7 +18,7 @@ lm_head_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
-    'energy':       0.99,     # Energy parameter
+    'energy':       0.999,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
@@ -34,7 +34,7 @@ attn_o_proj_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
-    'energy':       0.99,     # Energy parameter
+    'energy':       0.999,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
@@ -50,7 +50,7 @@ attn_q_proj_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
-    'energy':       0.99,     # Energy parameter
+    'energy':       0.999,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
@@ -66,7 +66,7 @@ attn_k_proj_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
-    'energy':       0.99,     # Energy parameter
+    'energy':       0.999,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
@@ -82,7 +82,7 @@ attn_v_proj_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
-    'energy':       0.99,     # Energy parameter
+    'energy':       0.999,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
@@ -98,7 +98,7 @@ mlp_gate_proj_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
-    'energy':       0.99,     # Energy parameter
+    'energy':       0.999,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
@@ -114,7 +114,7 @@ mlp_down_proj_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
-    'energy':       0.99,     # Energy parameter
+    'energy':       0.999,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
@@ -130,7 +130,7 @@ mlp_up_proj_params = {
     'alpha_to_rho': 0.01,  # Regularization parameter
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
-    'energy':       0.99,     # Energy parameter
+    'energy':       0.999,     # Energy parameter
     'init_energy':  0.3,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
