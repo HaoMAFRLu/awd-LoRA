@@ -18,6 +18,7 @@ proj = projection()
 def generate_config(
     name: str = 'llama_9m',
     seed: int = 42,
+    lr: float = 0.008,
     num_freq: int = 1000,
     seed_for_shuffle: int = 42,
     is_clip: float = 1.0,
@@ -94,7 +95,7 @@ def generate_config(
         'optimizer': {
             'name': 'AdamW',
             'params': {
-                'lr':  0.008,
+                'lr':  lr,
                 'betas': (0.9, 0.95),
                 'eps':  1e-8,
                 'weight_decay': 0.0,
@@ -164,7 +165,8 @@ if __name__ == "__main__":
     cfg_llama_60m = dict(
         name='llama_60m',
         seed=42,
-        num_freq=20,
+        lr=0.003,
+        num_freq=50,
         seed_for_shuffle=42,
         num_total_iters=22000,
         batch_size=256,
@@ -195,6 +197,7 @@ if __name__ == "__main__":
     cfg_llama_9m = dict(
         name='llama_9m',
         seed=42,
+        lr=0.008,
         num_freq=10,
         seed_for_shuffle=42,
         num_total_iters=200000,
