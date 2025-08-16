@@ -145,10 +145,8 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250814_150324'
-    ex_layers = ['layers.6.mlp.gate_proj',
-                  'layers.6.mlp.down_proj',
-                  'layers.6.mlp.up_proj']
+    file = '20250816_004617'
+    ex_layers = ['layers.0.self_attn.o_proj', ]
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder, ex_layers=ex_layers)
     
