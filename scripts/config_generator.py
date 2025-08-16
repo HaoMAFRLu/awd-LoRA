@@ -166,7 +166,7 @@ if __name__ == "__main__":
         name='llama_60m',
         seed=42,
         lr=0.006,
-        num_freq=20,
+        num_freq=10,
         seed_for_shuffle=42,
         num_total_iters=11000,
         batch_size=512,

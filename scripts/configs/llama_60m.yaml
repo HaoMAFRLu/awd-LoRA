@@ -1,7 +1,7 @@
 seed: 42
 num_total_iters: 11000
-num_freq: 20
-is_clip: !!float '0'
+num_freq: 10
+is_clip: !!float '1'
 max_length: 256
 seed_for_shuffle: 42
 batch_size: 512
