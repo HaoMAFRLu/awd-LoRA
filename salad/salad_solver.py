@@ -41,12 +41,12 @@ class SALAD():
         
         self.alpha = self.rho * self.alpha_to_rho
         self.beta = self.rho * self.beta_to_rho
-
+        self.nr_elements = X.numel()
+        
         if is_full:
             self.X = X.detach()
             _, s, _ = torch.linalg.svd(X, full_matrices=False)
             self.nr_total_rank = len(s)
-            self.nr_elements = X.numel()
             # Initialize SVD factors
             self.initialization()
         
