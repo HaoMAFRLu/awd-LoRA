@@ -168,6 +168,7 @@ if __name__ == "__main__":
     model_type = 'llama_60m'
     files = ['20250814_150324',
              '20250816_004617',
-             '20250816_205604',]
+             '20250816_205604',
+             '20250817_140155',]
     main(model_type=model_type,
          files=files)
