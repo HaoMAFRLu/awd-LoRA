@@ -30,6 +30,7 @@ def main(cfg_version: str,
     folder_name = datetime.now().strftime("%Y%m%d_%H%M%S")
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, folder_name)
     mkdir(path_folder)
+    shutil.copytree(os.path.join(root, 'salad'), path_folder, copy_function=shutil.copy2) 
     shutil.copy(path_cfg, path_folder)
     shutil.copy(path_cfg_model, path_folder)
     
