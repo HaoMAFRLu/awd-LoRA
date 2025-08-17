@@ -42,7 +42,7 @@ class SALAD():
         self.alpha = self.rho * self.alpha_to_rho
         self.beta = self.rho * self.beta_to_rho
         self.nr_elements = X.numel()
-        
+
         if is_full:
             self.X = X.detach()
             _, s, _ = torch.linalg.svd(X, full_matrices=False)
@@ -62,7 +62,7 @@ class SALAD():
             loss = self.rho/2 * torch.norm(self.X_with_grad - L, p='fro') ** 2
         
         self.nr_cals += 1
-        self.total_loss += (loss.item() / self.nr_elements)
+        self.total_loss += np.sqrt(loss.item() / self.nr_elements)
         return loss
     
     def reset(self):
