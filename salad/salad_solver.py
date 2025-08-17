@@ -62,7 +62,7 @@ class SALAD():
             loss = self.rho/2 * torch.norm(self.X_with_grad - L, p='fro') ** 2
         
         self.nr_cals += 1
-        self.total_loss += np.sqrt(loss.item() / self.nr_elements)
+        self.total_loss += np.sqrt(loss.item() / (self.nr_elements * self.rho/2))
         return loss
     
     def reset(self):
@@ -179,7 +179,7 @@ class SALAD():
                         'nr_nonzero': int(torch.count_nonzero(self.S)),
                         'nr_total_rank': self.nr_total_rank,
                         'nr_elements': self.nr_elements,
-                        'avg_loss': (self.total_loss/self.nr_cals) / (self.rho/2.0)}
+                        'avg_loss': (self.total_loss/self.nr_cals)}
 
     def run(self):
         if self.is_cal:
