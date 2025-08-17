@@ -34,6 +34,9 @@ class CrossEvaluator():
         else:
             print("[Rank -1] using CPU")
 
+        # fk the error 429!!!!!!
+        hf_login_once()
+
         self.pad_idx = pad_idx
         self.model_type = model_type
         self.batch_size = batch_size

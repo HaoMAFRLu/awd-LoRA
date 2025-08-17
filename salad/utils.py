@@ -299,46 +299,14 @@ def get_weight(model: torch.nn.Module, layer_name: str) -> torch.Tensor:
     sub = model.get_submodule(layer_name)
     return sub.weight
 
-def _is_429(err):
-    # datasets/hf common 429
-    code = getattr(getattr(err, "response", None), "status_code", None)
-    return code == 429 or "Too Many Requests" in str(err)
+def hf_login_once():
+    os.environ.setdefault("HF_HOME", "/lustre/home/hma2/hf")
+    os.environ.setdefault("HF_HUB_CACHE", os.path.join(os.environ["HF_HOME"], "hub"))
+    os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(os.environ["HF_HOME"], "transformers"))
 
-def _backoff_sleep(attempt, base=0.5, cap=30.0, jitter=True):
-    delay = min(cap, base * (2 ** attempt))
-    if jitter:
-        delay = random.uniform(0.0, delay)
-    time.sleep(delay)
-
-def resilient_enumerate(loader, start=0, max_retries=10, base=0.5, cap=30.0):
-    it = iter(loader)
-    idx = start
-    while True:
+    if not os.environ.get("HF_TOKEN"):
         try:
-            batch = next(it)
-            yield idx, batch
-            idx += 1
-        except StopIteration:
-            return
-        except Exception as e:
-            if not _is_429(e) or max_retries <= 0:
-                raise
-            retry_after = None
-            if getattr(e, "response", None) is not None:
-                retry_after = e.response.headers.get("Retry-After")
-            for attempt in range(max_retries):
-                if retry_after:
-                    time.sleep(float(retry_after))
-                else:
-                    _backoff_sleep(attempt, base=base, cap=cap, jitter=True)
-                try:
-                    batch = next(it)
-                    yield idx, batch
-                    idx += 1
-                    break
-                except StopIteration:
-                    return
-                except Exception as e2:
-                    if attempt == max_retries - 1 or not _is_429(e2):
-                        raise
-                    continue
+            with open(os.path.join(os.environ["HF_HOME"], "token"), "r") as f:
+                os.environ["HF_TOKEN"] = f.read().strip()
+        except FileNotFoundError:
+            pass

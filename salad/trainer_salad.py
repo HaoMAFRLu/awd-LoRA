@@ -38,7 +38,7 @@ class SALADTrainer():
         self.rank, self.world_size = self._init_distributed()
 
         # fk the error 429!!!!!!
-        self.hf_login_once()
+        hf_login_once()
 
         torch.cuda.set_device(self.rank % torch.cuda.device_count())
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
@@ -129,19 +129,7 @@ class SALADTrainer():
         self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.model.'+entry['name']), device='cpu') for entry in self.cfg_layers}
         
         self.sync_weights()
-
-    def hf_login_once(self):
-        os.environ.setdefault("HF_HOME", "/lustre/home/hma2/hf")
-        os.environ.setdefault("HF_HUB_CACHE", os.path.join(os.environ["HF_HOME"], "hub"))
-        os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(os.environ["HF_HOME"], "transformers"))
-
-        if not os.environ.get("HF_TOKEN"):
-            try:
-                with open(os.path.join(os.environ["HF_HOME"], "token"), "r") as f:
-                    os.environ["HF_TOKEN"] = f.read().strip()
-            except FileNotFoundError:
-                pass
-            
+   
     @staticmethod
     def get_name_and_params(_params: dict):
         """
