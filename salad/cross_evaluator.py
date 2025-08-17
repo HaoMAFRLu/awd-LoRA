@@ -52,7 +52,7 @@ class CrossEvaluator():
         if len(ex_layers) > 0:
             self.is_partial = True
             self.partial_layers = [layer for layer in self.layers if layer not in ex_layers]
-        elif len(self.layers) == 0:
+        else:
             self.is_partial = False
             self.partial_layers = []
 
@@ -140,7 +140,7 @@ class CrossEvaluator():
         eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)
         # eval_results['par_L_with_S'] = self._eval_par_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
         eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader)
-        eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
+        eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader) if self.is_partial else eval_results['lowrank_L_with_S']
         return eval_results
     
     def opt_copy(self,
