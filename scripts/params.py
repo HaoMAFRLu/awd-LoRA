@@ -43,7 +43,7 @@ attn_o_proj_params = {
     'rate_rank':    0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.02  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.5  # Rate of decay for the adaptive parameters
 }
 
 attn_q_proj_params = {
@@ -59,7 +59,7 @@ attn_q_proj_params = {
     'rate_rank':    0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.01  # Rate of decay for the adaptive parameters
+    'rate_decay':     1.0  # Rate of decay for the adaptive parameters
 }
 
 attn_k_proj_params = {
@@ -75,7 +75,7 @@ attn_k_proj_params = {
     'rate_rank':    0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.01  # Rate of decay for the adaptive parameters
+    'rate_decay':     1.0  # Rate of decay for the adaptive parameters
 }
 
 attn_v_proj_params = {
@@ -91,7 +91,7 @@ attn_v_proj_params = {
     'rate_rank':    0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.02  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.5  # Rate of decay for the adaptive parameters
 }
 
 mlp_gate_proj_params = {
@@ -107,7 +107,7 @@ mlp_gate_proj_params = {
     'rate_rank':    0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.04  # Rate of decay for the adaptive parameters
+    'rate_decay':     2.0  # Rate of decay for the adaptive parameters
 }
 
 mlp_down_proj_params = {
@@ -123,7 +123,7 @@ mlp_down_proj_params = {
     'rate_rank':    0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.04  # Rate of decay for the adaptive parameters
+    'rate_decay':     2.0  # Rate of decay for the adaptive parameters
 }
 
 mlp_up_proj_params = {
@@ -139,7 +139,7 @@ mlp_up_proj_params = {
     'rate_rank':    0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.04  # Rate of decay for the adaptive parameters
+    'rate_decay':     2.0  # Rate of decay for the adaptive parameters
 }
 
 def projection():
