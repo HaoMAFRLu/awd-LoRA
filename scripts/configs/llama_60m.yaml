@@ -32,7 +32,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -77,7 +77,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -137,7 +137,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -182,7 +182,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -242,7 +242,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -287,7 +287,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -347,7 +347,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -392,7 +392,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -452,7 +452,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -497,7 +497,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -557,7 +557,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -602,7 +602,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -662,7 +662,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -707,7 +707,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -767,7 +767,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
@@ -812,7 +812,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.2
+    rate_rank: 0.25
     rate_sparsity: 0.05
     is_adaptive: true
     rate_decay: 10
