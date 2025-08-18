@@ -219,6 +219,7 @@ class SALADTrainer():
                     self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
                     self.layer_info[layer_name]['dbeta'].append(data['dbeta'])
                     self.layer_info[layer_name]['rho'].append(data['rho'])
+                    self.layer_info[layer_name]['min_value'].append(data['min_value'])
                     self.layer_info[layer_name]['loss'].append(data['avg_loss'])
                     self.layer_info[layer_name]['rank'].append(data['nr_rank'])
                     self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
