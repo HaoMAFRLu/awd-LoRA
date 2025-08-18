@@ -29,7 +29,8 @@ class SALADTrainer():
         self.model = model
         self.config = config
 
-        self.num_total_iters = config.get('num_total_iters', 1000)
+        self.num_warmup_steps = 40
+        self.num_total_iters = config.get('num_total_iters', 1000) - self.num_warmup_steps
         self.num_freq = config.get('num_freq', 1)
         self.is_clip = config.get('is_clip', 1.0)
         self.max_length = config.get('max_length', 256)
@@ -74,6 +75,8 @@ class SALADTrainer():
                                         num_training_steps=self.num_total_iters,
                                         warmup_steps=config['scheduler']['params'].get('warmup_steps', 0),
                                         min_lr_ratio=config['scheduler']['params'].get('min_lr_ratio', 0.0))
+        # warmup the model
+        self.warmup(self.num_warmup_steps)
         
         # get all the names of the model layers
         self.names_model_layers = get_linear_layers_name(self.model)
@@ -98,17 +101,6 @@ class SALADTrainer():
         self.layer_info['loss1'] = []
         self.layer_info['loss2'] = []
         self.layer_info['num_tokens'] = []
-
-        # print assinged layers and model names
-        # if self.rank == 0:
-        #     for name in self.names_model_layers:
-        #         print(f"Layer: {name}")
-        #     print('=' * 50)
-        #     for name in list(XX.keys()):
-        #         print(f"Layer: {name}")
-        #     print('=' * 50)
-        #     for entry in self.cfg_layers:
-        #         print(f"Layer: {entry['name']}")
 
         # initialize the ADMM solvers
         self.ADMM_solvers = []
@@ -390,6 +382,33 @@ class SALADTrainer():
         
         print_epoch(epoch, total_epochs, num_freq, lr, acc_num_tokens, losses, layer_stats)
 
+    def warmup(self, num_warmup_steps: int = 30):
+        """
+        Perform a warmup step to initialize the model and solvers.
+        This is useful for distributed training to ensure all processes are synchronized.
+        """
+        num_step = 0
+        self.ddp_model.train()
+        for batch in self.dataloader:
+            num_step += 1
+            if num_step > num_warmup_steps:
+                break
+            
+            batch = {k: v.to(self.device) for k, v in batch.items()}
+            labels = batch["input_ids"].clone()
+            labels[labels == self.pad_idx] = -100
+            self.optimizer.zero_grad()
+            loss = self.ddp_model(**batch, labels=labels).loss2
+            loss.backward()
+
+            if self.is_clip > 0:
+                # Clip gradients to avoid exploding gradients
+                # This is a common practice in training large models
+                torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=self.is_clip)
+
+            self.optimizer.step()
+            self.lr_scheduler.step()
+
     def train(self, path_folder: str=None):            
         self.ddp_model.train()
         num_it = 0
@@ -401,6 +420,7 @@ class SALADTrainer():
 
         for batch_idx, batch in enumerate(self.dataloader):
             num_it += 1
+
             if num_it > self.num_total_iters:
                 logger.info(f"Reached max number of update steps (f{self.num_total_iters}). Stopping training.")
                 print(f"Rank {self.rank} stopping training.")

@@ -27,7 +27,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -42,7 +42,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -57,7 +57,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -72,7 +72,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -87,7 +87,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -102,7 +102,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -117,7 +117,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -132,7 +132,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -147,7 +147,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -162,7 +162,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -177,7 +177,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -192,7 +192,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -207,7 +207,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -222,7 +222,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -237,7 +237,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -252,7 +252,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -267,7 +267,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -282,7 +282,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -297,7 +297,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -312,7 +312,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -327,7 +327,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -342,7 +342,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -357,7 +357,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -372,7 +372,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -387,7 +387,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -402,7 +402,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -417,7 +417,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -432,7 +432,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -447,7 +447,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -462,7 +462,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -477,7 +477,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -492,7 +492,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -507,7 +507,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -522,7 +522,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -537,7 +537,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -552,7 +552,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -567,7 +567,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -582,7 +582,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -597,7 +597,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -612,7 +612,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -627,7 +627,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -642,7 +642,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -657,7 +657,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -672,7 +672,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -687,7 +687,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -702,7 +702,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -717,7 +717,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -732,7 +732,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -747,7 +747,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -762,7 +762,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -777,7 +777,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -792,7 +792,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -807,7 +807,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -822,7 +822,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -837,7 +837,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
@@ -852,7 +852,7 @@ layers:
     beta_to_rho: 0.001
     rho: 0.001
     energy: 0.999
-    init_energy: 0.25
+    init_energy: 0.45
     iter_max: 1
     tol: 0.001
     loss_version: v1
