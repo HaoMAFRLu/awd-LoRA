@@ -1,4 +1,5 @@
 import torch
+import math
 
 from lowspa_ddp.utils import *
 
@@ -47,6 +48,8 @@ class SALAD():
             self.X = X.detach()
             _, s, _ = torch.linalg.svd(X, full_matrices=False)
             self.nr_total_rank = len(s)
+            k = math.ceil(self.nr_total_rank * self.init_energy)
+            self.alpha = float(s[k] * self.rho)
             # Initialize SVD factors
             self.initialization()
         
@@ -175,6 +178,7 @@ class SALAD():
                         'dalpha': self.dalpha,
                         'dbeta': self.dbeta,
                         'rho': self.rho,
+                        'min_value': (self.alpha / self.rho),
                         'nr_rank': self.nr_rank,
                         'nr_nonzero': int(torch.count_nonzero(self.S)),
                         'nr_total_rank': self.nr_total_rank,

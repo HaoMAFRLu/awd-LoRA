@@ -383,6 +383,7 @@ class SALADTrainer():
                         'dalpha': layer_info[entry['name']]['dalpha'][-1],
                         'dbeta': layer_info[entry['name']]['dbeta'][-1],
                         'rho': layer_info[entry['name']]['rho'][-1],
+                        'min_value': layer_info[entry['name']]['min_value'][-1],
                         'non_zero': layer_info[entry['name']]['nonzero'][-1],
                         'rank': layer_info[entry['name']]['rank'][-1],
                         'total_rank': layer_info[entry['name']]['total_rank'][-1],
