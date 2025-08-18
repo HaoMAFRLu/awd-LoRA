@@ -178,7 +178,6 @@ class SALAD():
                         'dalpha': self.dalpha,
                         'dbeta': self.dbeta,
                         'rho': self.rho,
-                        'min_value': (self.alpha / self.rho),
                         'nr_rank': self.nr_rank,
                         'nr_nonzero': int(torch.count_nonzero(self.S)),
                         'nr_total_rank': self.nr_total_rank,
