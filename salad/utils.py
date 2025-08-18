@@ -87,11 +87,11 @@ def print_epoch(epoch: int,
          f"{s['loss']:.6f}", 
          f"{s['non_zero']}/{s['total_elements']} ({100. * s['non_zero']/s['total_elements']:.2f}%)", 
          f"{s['rank']}/{s['total_rank']} ({100. * s['rank']/s['total_rank']:.2f}%)",
-         f"{s['alpha']:.8f}", 
-         f"{s['dalpha']:.8f}",
+         f"{s['alpha']:.12f}", 
+         f"{s['dalpha']:.12f}",
          f"{s['beta']:.8f}",
          f"{s['dbeta']:.8f}",
-         f"{s['rho']:.8f}"]
+         f"{s['rho']:.12f}"]
         for s in layer_stats
     ]
 
