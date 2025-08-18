@@ -3,7 +3,7 @@ embed_params = {
     'beta_to_rho':   0.001, # Sparsity parameter
     'rho':           0.001, # Penalty parameter
     'energy':        0.999,   # Energy parameter
-    'init_energy':   0.45,   # Initial energy
+    'init_energy':   0.25,   # Initial energy
     'iter_max':      1,     # Max ADMM iterations per layer
     'tol':           0.001, # Convergence tolerance
     'loss_version':  'v1',  # Loss version (v1: X-L-S-Y/rho, v2: X-L)
@@ -19,7 +19,7 @@ lm_head_params = {
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.999,     # Energy parameter
-    'init_energy':  0.45,     # Initial energy
+    'init_energy':  0.25,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
@@ -35,7 +35,7 @@ attn_o_proj_params = {
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.999,     # Energy parameter
-    'init_energy':  0.45,     # Initial energy
+    'init_energy':  0.25,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
@@ -51,7 +51,7 @@ attn_q_proj_params = {
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.999,     # Energy parameter
-    'init_energy':  0.45,     # Initial energy
+    'init_energy':  0.25,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
@@ -67,7 +67,7 @@ attn_k_proj_params = {
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.999,     # Energy parameter
-    'init_energy':  0.45,     # Initial energy
+    'init_energy':  0.25,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
@@ -83,7 +83,7 @@ attn_v_proj_params = {
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.999,     # Energy parameter
-    'init_energy':  0.45,     # Initial energy
+    'init_energy':  0.25,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
@@ -99,7 +99,7 @@ mlp_gate_proj_params = {
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.999,     # Energy parameter
-    'init_energy':  0.45,     # Initial energy
+    'init_energy':  0.25,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
@@ -115,7 +115,7 @@ mlp_down_proj_params = {
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.999,     # Energy parameter
-    'init_energy':  0.45,     # Initial energy
+    'init_energy':  0.25,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
@@ -131,7 +131,7 @@ mlp_up_proj_params = {
     'beta_to_rho':  0.001, # Sparsity parameter
     'rho':          0.001,   # Penalty parameter
     'energy':       0.999,     # Energy parameter
-    'init_energy':  0.45,     # Initial energy
+    'init_energy':  0.25,     # Initial energy
     'iter_max':     1,       # Max ADMM iterations per layer
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
