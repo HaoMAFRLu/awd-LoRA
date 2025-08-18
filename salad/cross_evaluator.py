@@ -119,11 +119,19 @@ class CrossEvaluator():
         self.opt_add(self.model, self.layers, self.SS)
         return self.evaluate_one_step(self.model, dataloader)
 
+    # def _eval_par_lowrank_lowrank_sparsity(self, dataloader) -> dict:
+    #     """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
+    #     self.opt_replace(self.model, self.layers, self.LL)  # replace all layers with full low-rank matrices L
+    #     self.opt_lowrank(self.model, self.partial_layers, self.rank_quantile)  #  apply low-rank approximation to partial layers
+    #     self.opt_add(self.model, self.layers, self.SS)
+    #     return self.evaluate_one_step(self.model, dataloader)
+
     def _eval_par_lowrank_lowrank_sparsity(self, dataloader) -> dict:
         """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
-        self.opt_replace(self.model, self.layers, self.LL)  # replace all layers with full low-rank matrices L
-        self.opt_lowrank(self.model, self.partial_layers, self.rank_quantile)  #  apply low-rank approximation to partial layers
-        self.opt_add(self.model, self.layers, self.SS)
+        self.opt_copy(self.model_sd, self.model, self.layers)  # copy the original model
+        self.opt_replace(self.model, self.partial_layers, self.LL)  # replace partial layers with low-rank matrices L
+        self.opt_lowrank(self.model, self.partial_layers, self.rank_quantile)
+        self.opt_add(self.model, self.partial_layers, self.SS)  # add sparse components S
         return self.evaluate_one_step(self.model, dataloader)
 
     @torch.no_grad()        
