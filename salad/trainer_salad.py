@@ -398,7 +398,7 @@ class SALADTrainer():
             labels = batch["input_ids"].clone()
             labels[labels == self.pad_idx] = -100
             self.optimizer.zero_grad()
-            loss = self.ddp_model(**batch, labels=labels).loss2
+            loss = self.ddp_model(**batch, labels=labels).loss
             loss.backward()
 
             if self.is_clip > 0:
