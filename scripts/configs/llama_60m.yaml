@@ -50,7 +50,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.0.self_attn.k_proj
   params:
     alpha_to_rho: 0.01
@@ -65,7 +65,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.0.self_attn.v_proj
   params:
     alpha_to_rho: 0.01
@@ -155,7 +155,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.1.self_attn.k_proj
   params:
     alpha_to_rho: 0.01
@@ -170,7 +170,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.1.self_attn.v_proj
   params:
     alpha_to_rho: 0.01
@@ -260,7 +260,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.2.self_attn.k_proj
   params:
     alpha_to_rho: 0.01
@@ -275,7 +275,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.2.self_attn.v_proj
   params:
     alpha_to_rho: 0.01
@@ -365,7 +365,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.3.self_attn.k_proj
   params:
     alpha_to_rho: 0.01
@@ -380,7 +380,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.3.self_attn.v_proj
   params:
     alpha_to_rho: 0.01
@@ -470,7 +470,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.4.self_attn.k_proj
   params:
     alpha_to_rho: 0.01
@@ -485,7 +485,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.4.self_attn.v_proj
   params:
     alpha_to_rho: 0.01
@@ -575,7 +575,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.5.self_attn.k_proj
   params:
     alpha_to_rho: 0.01
@@ -590,7 +590,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.5.self_attn.v_proj
   params:
     alpha_to_rho: 0.01
@@ -680,7 +680,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.6.self_attn.k_proj
   params:
     alpha_to_rho: 0.01
@@ -695,7 +695,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.6.self_attn.v_proj
   params:
     alpha_to_rho: 0.01
@@ -785,7 +785,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.7.self_attn.k_proj
   params:
     alpha_to_rho: 0.01
@@ -800,7 +800,7 @@ layers:
     rate_rank: 0.2
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: 0.4
+    rate_decay: 0.2
 - name: layers.7.self_attn.v_proj
   params:
     alpha_to_rho: 0.01

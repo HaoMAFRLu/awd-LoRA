@@ -59,7 +59,7 @@ attn_q_proj_params = {
     'rate_rank':    0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.4  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.2  # Rate of decay for the adaptive parameters
 }
 
 attn_k_proj_params = {
@@ -75,7 +75,7 @@ attn_k_proj_params = {
     'rate_rank':    0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.4  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.2  # Rate of decay for the adaptive parameters
 }
 
 attn_v_proj_params = {
