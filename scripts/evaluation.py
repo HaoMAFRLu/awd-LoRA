@@ -132,7 +132,7 @@ def main(cfg_version: str,
                                pad_idx=pad_idx,
                                LL=LL,
                                SS=SS,
-                               rank_quantile=0.45,
+                               rank_quantile=0.25,
                                batch_size=10)
     
     evaluator.collect_results()
