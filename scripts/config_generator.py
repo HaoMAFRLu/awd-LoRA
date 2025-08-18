@@ -98,7 +98,7 @@ def generate_config(
                 'lr':  lr,
                 'betas': (0.9, 0.95),
                 'eps':  1e-8,
-                'weight_decay': 0.0,
+                'weight_decay': 0.1,
             }
         },
         'layers': []
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         num_total_iters=22000,
         batch_size=512,
         max_length=256,
-        warmup_steps=1100,
+        warmup_steps=2200,
         num_workers=0,
         scheduler_type='cosine',
         min_lr_ratio=0.1,
