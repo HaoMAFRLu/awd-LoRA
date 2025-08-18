@@ -30,7 +30,7 @@ class SALADTrainer():
         self.config = config
 
         self.num_warmup_steps = 40
-        self.num_total_iters = config.get('num_total_iters', 1000) - self.num_warmup_steps
+        self.num_total_iters = config.get('num_total_iters', 1000)
         self.num_freq = config.get('num_freq', 1)
         self.is_clip = config.get('is_clip', 1.0)
         self.max_length = config.get('max_length', 256)
@@ -76,7 +76,7 @@ class SALADTrainer():
                                         warmup_steps=config['scheduler']['params'].get('warmup_steps', 0),
                                         min_lr_ratio=config['scheduler']['params'].get('min_lr_ratio', 0.0))
         # warmup the model
-        self.warmup(self.num_warmup_steps)
+        # self.warmup(self.num_warmup_steps)
         
         # get all the names of the model layers
         self.names_model_layers = get_linear_layers_name(self.model)

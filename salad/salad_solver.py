@@ -49,8 +49,11 @@ class SALAD():
             self.X = X.detach()
             _, s, _ = torch.linalg.svd(X, full_matrices=False)
             self.nr_total_rank = len(s)
-            k = math.ceil(self.nr_total_rank * self.init_energy)
-            self.alpha = float(s[k] * self.rho)
+            
+            # k = math.ceil(self.nr_total_rank * self.init_energy)
+            # self.alpha = float(s[k] * self.rho)
+
+            self.alpha = 8.5e-6
             # Initialize SVD factors
             self.initialization()
         
