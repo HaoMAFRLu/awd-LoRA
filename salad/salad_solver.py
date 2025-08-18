@@ -34,8 +34,8 @@ class SALAD():
         if self.is_adaptive:
             row, col = X.shape  
             # self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
-            # self.rho = 1.0 / (nr_layers * np.sqrt(row * col))
-            self.rho = 1.0 / (nr_layers * row * col)
+            self.rho = 1.0 / (5 * nr_layers * np.sqrt(row * col))
+            # self.rho = 1.0 / (nr_layers * row * col)
             # self.rho = 1.0 / (np.sqrt(max(row, col)))
             # self.rho = 0.1
             # self.rho = 1.0 / (2.0*np.sqrt(max(row, col)))
