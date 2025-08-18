@@ -145,7 +145,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250817_225824'
+    file = '20250817_174154'
     ex_layers = []
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder, ex_layers=ex_layers)
