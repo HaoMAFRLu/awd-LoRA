@@ -53,7 +53,7 @@ class SALAD():
             # k = math.ceil(self.nr_total_rank * self.init_energy)
             # self.alpha = float(s[k] * self.rho)
 
-            self.alpha = 8.5e-6
+            self.alpha = 1.0e-5
             # Initialize SVD factors
             self.initialization()
         
