@@ -154,7 +154,7 @@ def get_linear_layers_name(model):
     return [name for name, module in model.named_modules() if isinstance(module, torch.nn.Linear)]
 
 def unwrap(m):
-        return m.module if hasattr(m, "module") else m
+    return m.module if hasattr(m, "module") else m
 
 def grad_norm_by_layer(model):
     m = unwrap(model)

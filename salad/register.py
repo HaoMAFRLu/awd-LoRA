@@ -187,3 +187,14 @@ def _get_cosine_schedule_with_multiple_warmups_lambda(
     cosine_decay = 0.5 * (1.0 + math.cos(math.pi * progress))
 
     return min_lr_ratio + (1.0 - min_lr_ratio) * cosine_decay
+
+
+# def get_alpha_scheduler(current_step: int=1, 
+#                         total_steps: int=1000, 
+#                         min_lr_ratio: float=0.2):
+#     assert 0 < min_lr_ratio <= 1.0, "min_lr_ratio must be in (0,1]"
+
+#     progress = float(current_step) / float(max(1, cycle_length - num_warmup_steps))
+#     cosine_decay = 0.5 * (1.0 + math.cos(math.pi * progress))
+    
+#     return min_lr_ratio + (1.0 - min_lr_ratio) * cosine_decay
