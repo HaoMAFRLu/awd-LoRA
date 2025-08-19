@@ -113,7 +113,7 @@ mlp_gate_proj_params = {
     'rate_rank':    0.35,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.0,  # Rate of decay for the adaptive parameters
+    'rate_decay':     2.0,  # Rate of decay for the adaptive parameters
     'rho':           5e-6,  # Penalty parameter
 }
 
@@ -130,7 +130,7 @@ mlp_down_proj_params = {
     'rate_rank':      0.35,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.0,  # Rate of decay for the adaptive parameters
+    'rate_decay':     2.0,  # Rate of decay for the adaptive parameters
     'rho':           5e-6,  # Penalty parameter
 }
 
@@ -144,10 +144,10 @@ mlp_up_proj_params = {
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
     'is_cal':        False,    # Whether to calculate sparse matrix
-    'rate_rank':     0.35,  # Rate of rank reduction for the layer
+    'rate_rank':     0.40,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.0,  # Rate of decay for the adaptive parameters
+    'rate_decay':     2.0,  # Rate of decay for the adaptive parameters
     'rho':           5e-6,  # Penalty parameter
 }
 

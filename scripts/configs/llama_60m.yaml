@@ -95,7 +95,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.0.mlp.down_proj
   params:
     alpha_to_rho: 0.0001
@@ -110,7 +110,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.0.mlp.up_proj
   params:
     alpha_to_rho: 0.0001
@@ -122,10 +122,10 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.35
+    rate_rank: 0.4
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.1.self_attn.o_proj
   params:
     alpha_to_rho: 0.01
@@ -200,7 +200,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.1.mlp.down_proj
   params:
     alpha_to_rho: 0.0001
@@ -215,7 +215,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.1.mlp.up_proj
   params:
     alpha_to_rho: 0.0001
@@ -227,10 +227,10 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.35
+    rate_rank: 0.4
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.2.self_attn.o_proj
   params:
     alpha_to_rho: 0.01
@@ -305,7 +305,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.2.mlp.down_proj
   params:
     alpha_to_rho: 0.0001
@@ -320,7 +320,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.2.mlp.up_proj
   params:
     alpha_to_rho: 0.0001
@@ -332,10 +332,10 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.35
+    rate_rank: 0.4
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.3.self_attn.o_proj
   params:
     alpha_to_rho: 0.01
@@ -410,7 +410,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.3.mlp.down_proj
   params:
     alpha_to_rho: 0.0001
@@ -425,7 +425,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.3.mlp.up_proj
   params:
     alpha_to_rho: 0.0001
@@ -437,10 +437,10 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.35
+    rate_rank: 0.4
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.4.self_attn.o_proj
   params:
     alpha_to_rho: 0.01
@@ -515,7 +515,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.4.mlp.down_proj
   params:
     alpha_to_rho: 0.0001
@@ -530,7 +530,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.4.mlp.up_proj
   params:
     alpha_to_rho: 0.0001
@@ -542,10 +542,10 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.35
+    rate_rank: 0.4
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.5.self_attn.o_proj
   params:
     alpha_to_rho: 0.01
@@ -620,7 +620,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.5.mlp.down_proj
   params:
     alpha_to_rho: 0.0001
@@ -635,7 +635,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.5.mlp.up_proj
   params:
     alpha_to_rho: 0.0001
@@ -647,10 +647,10 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.35
+    rate_rank: 0.4
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.6.self_attn.o_proj
   params:
     alpha_to_rho: 0.01
@@ -725,7 +725,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.6.mlp.down_proj
   params:
     alpha_to_rho: 0.0001
@@ -740,7 +740,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.6.mlp.up_proj
   params:
     alpha_to_rho: 0.0001
@@ -752,10 +752,10 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.35
+    rate_rank: 0.4
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.7.self_attn.o_proj
   params:
     alpha_to_rho: 0.01
@@ -830,7 +830,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.7.mlp.down_proj
   params:
     alpha_to_rho: 0.0001
@@ -845,7 +845,7 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'
 - name: layers.7.mlp.up_proj
   params:
     alpha_to_rho: 0.0001
@@ -857,7 +857,7 @@ layers:
     tol: 0.001
     loss_version: v1
     is_cal: false
-    rate_rank: 0.35
+    rate_rank: 0.4
     rate_sparsity: 0.05
     is_adaptive: true
-    rate_decay: !!float '0'
+    rate_decay: !!float '2'

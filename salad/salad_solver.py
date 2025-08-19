@@ -35,7 +35,7 @@ class SALAD():
             row, col = X.shape  
             # self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
             # self.rho = 1.0 / (5 * nr_layers * np.sqrt(row * col))
-            self.rho = 1.0 / (25 * nr_layers * np.sqrt(row * col))
+            # self.rho = 1.0 / (25 * nr_layers * np.sqrt(row * col))
             # self.rho = 1.0 / (nr_layers * row * col)
             # self.rho = 1.0 / (np.sqrt(max(row, col)))
             # self.rho = 0.1
