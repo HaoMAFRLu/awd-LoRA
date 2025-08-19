@@ -145,7 +145,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250818_230711'
+    file = '20250818_203958'
     ex_layers = ['layers.0.mlp.down_proj',
                  'layers.0.mlp.up_proj',
                  'layers.2.mlp.down_proj',
