@@ -22,7 +22,7 @@ class CrossEvaluator():
                  layers: list=None,
                  ex_layers: list=[],
                  pad_idx: int=0,
-                 rank_quantile: float=0.9,
+                 rank_quantile: list=None,
                  batch_size: int=10) -> None:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -176,7 +176,7 @@ class CrossEvaluator():
                 weight = layer.weight.data
                 U, s, V = torch.linalg.svd(weight, full_matrices=False)
                 # nr_singular_values = get_energy_quantile(s, quantile=rank_quantile)
-                nr_singular_values = int(len(s) * rank_quantile)
+                nr_singular_values = int(len(s) * rank_quantile['layer_name'])
                 low_rank_weight = U[:, :nr_singular_values] @ torch.diag(s[:nr_singular_values]) @ V[:nr_singular_values, :]
                 layer.weight.copy_(low_rank_weight.to(self.device))
             else:
