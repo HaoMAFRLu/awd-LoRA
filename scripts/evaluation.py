@@ -122,7 +122,7 @@ def main(cfg_version: str,
                               tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
     
     layers = [entry['name'] for entry in cfg['layers']]
-    rank_quantile = {entry['name']: entry['rate_rank'] + 0.02 for entry in cfg['layers']}
+    rank_quantile = {entry['name']: entry['params']['rate_rank'] + 0.02 for entry in cfg['layers']}
 
     evaluator = CrossEvaluator(model_type=cfg_version,
                                model=model,
