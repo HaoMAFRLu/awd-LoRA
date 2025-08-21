@@ -46,7 +46,7 @@ attn_o_proj_params = {
     'rate_sparsity':  0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
-    'rho':            1e-5,   # Penalty parameter
+    'rho':            1e-4,   # Penalty parameter
 }
 
 attn_q_proj_params = {
@@ -63,7 +63,7 @@ attn_q_proj_params = {
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
-    'rho':            1e-5,   # Penalty parameter
+    'rho':            1e-4,   # Penalty parameter
 }
 
 attn_k_proj_params = {
@@ -80,7 +80,7 @@ attn_k_proj_params = {
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
-    'rho':            1e-5,   # Penalty parameter
+    'rho':            1e-4,   # Penalty parameter
 }
 
 attn_v_proj_params = {
@@ -97,7 +97,7 @@ attn_v_proj_params = {
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
-    'rho':            1e-5,   # Penalty parameter
+    'rho':            1e-4,   # Penalty parameter
 }
 
 mlp_gate_proj_params = {
@@ -114,7 +114,7 @@ mlp_gate_proj_params = {
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
-    'rho':           1e-5,  # Penalty parameter
+    'rho':           1e-4,  # Penalty parameter
 }
 
 mlp_down_proj_params = {
@@ -131,7 +131,7 @@ mlp_down_proj_params = {
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
-    'rho':           1e-5,  # Penalty parameter
+    'rho':           1e-4,  # Penalty parameter
 }
 
 mlp_up_proj_params = {
@@ -148,7 +148,7 @@ mlp_up_proj_params = {
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
-    'rho':           1e-5,  # Penalty parameter
+    'rho':           1e-4,  # Penalty parameter
 }
 
 def projection():
