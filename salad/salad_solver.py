@@ -1,7 +1,7 @@
 import torch
 import math
 
-from lowspa_ddp.utils import *
+from salad.utils import *
 
 class SALAD():
     """
@@ -29,6 +29,7 @@ class SALAD():
 
         self.dalpha = 0.0
         self.dbeta = 0.0
+        self.nr_epoch = 0
 
         # overwrite the hyperparameters
         if self.is_adaptive:
@@ -192,6 +193,10 @@ class SALAD():
         if self.is_cal:
             # calibration the sparse matrix
             self.S = self.X - self.L
+
+        self.nr_epoch += 1
+        self.rho = tanh_ramp(self.nr_epoch)
+
         self.L, self.S, self.Y, self.nr_rank = self.PRCA(self.X.clone(),
                                                         self.L.clone(),
                                                         self.S.clone(),

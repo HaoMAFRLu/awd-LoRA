@@ -310,3 +310,14 @@ def hf_login_once():
                 os.environ["HF_TOKEN"] = f.read().strip()
         except FileNotFoundError:
             pass
+
+def tanh_ramp(epoch, total_epochs=1100, a=1e-6, b=1e-4, alpha=3.0):
+    """
+    """
+    if total_epochs <= 1:
+        return float(b)
+    e = max(0, min(int(epoch), total_epochs - 1))
+    x = 2.0 * e / (total_epochs - 1) - 1.0
+    ta = math.tanh(alpha)
+    s = (math.tanh(alpha * x) + ta) / (2.0 * ta)
+    return a + (b - a) * s

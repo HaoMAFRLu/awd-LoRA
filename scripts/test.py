@@ -1,24 +1,25 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
-def tanh_schedule(k, n, a, b, alpha=3.0):
-    if n <= 1:  # 边界情形
+def tanh_ramp(epoch, total_epochs, a, b, alpha=3.0):
+    """
+    """
+    if total_epochs <= 1:
         return float(b)
-    x = 2.0*(np.asarray(k, dtype=float)-1.0)/(n-1.0) - 1.0
-    ta = np.tanh(alpha)
-    s = (np.tanh(alpha*x) + ta) / (2.0*ta)
+    e = max(0, min(int(epoch), total_epochs - 1))
+    x = 2.0 * e / (total_epochs - 1) - 1.0
+    ta = math.tanh(alpha)
+    s = (math.tanh(alpha * x) + ta) / (2.0 * ta)
     return a + (b - a) * s
 
 if __name__ == "__main__":
+    y = []
     n = 1100
-    k = np.arange(1, n+1)
-    a = 1e-6
-    b = 1e-4
-    alpha = 10.0
+    for k in range(n-1):
+        y.append(tanh_ramp(k+1, n, 1e-6, 1e-4, alpha=3.0))
 
-    y = tanh_schedule(k, n, a, b, alpha)
-
-    plt.plot(k, y)
+    plt.plot(y)
     plt.title('Tanh Schedule')
     plt.xlabel('k')
     plt.ylabel('Value')
