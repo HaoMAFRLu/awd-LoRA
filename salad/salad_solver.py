@@ -194,8 +194,8 @@ class SALAD():
             # calibration the sparse matrix
             self.S = self.X - self.L
 
-        self.nr_epoch += 1
-        self.rho = tanh_ramp(self.nr_epoch)
+        # self.nr_epoch += 1
+        # self.rho = tanh_ramp(self.nr_epoch)
 
         self.L, self.S, self.Y, self.nr_rank = self.PRCA(self.X.clone(),
                                                         self.L.clone(),
