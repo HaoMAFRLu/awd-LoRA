@@ -87,11 +87,11 @@ class SALAD():
                          alpha: float,
                          beta: float,
                          rho: float) -> tuple:
+        S = soft_threshold(X - L + Y/rho, beta/rho)
         U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
         _s = soft_threshold(s, alpha/rho)
         L = U @ torch.diag(_s) @ Vt
         beta = self.update_beta(self.rate_sparsity, X - L + Y/rho, rho)
-        S = soft_threshold(X - L + Y/rho, beta/rho)
         Y = Y + rho * (X - L - S)
         return L, S, Y, _s
 
