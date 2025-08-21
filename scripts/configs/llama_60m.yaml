@@ -10,11 +10,11 @@ scheduler:
   name: cosine
   params:
     warmup_steps: 2200
-    min_lr_ratio: 0.1
+    min_lr_ratio: 0.01
 optimizer:
   name: AdamW
   params:
-    lr: 0.003
+    lr: 0.01
     betas:
     - 0.9
     - 0.95
