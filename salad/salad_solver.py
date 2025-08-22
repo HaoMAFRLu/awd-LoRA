@@ -80,6 +80,13 @@ class SALAD():
         self.total_loss = 0.0
         self.nr_cals = 0
 
+    def update_alpha(self, rate_rank: float, s: torch.Tensor, rho: float) -> float:
+        """Return rate_rank-th value of s, then times rho."""
+        total_rank = len(s)
+        idx = int(total_rank * rate_rank)
+        # find idx maximum singular value
+        return max(s[idx], 0.0) * rho
+
     def single_step_PRCA(self,
                          X: torch.Tensor,
                          L: torch.Tensor,
@@ -91,6 +98,10 @@ class SALAD():
         beta = self.update_beta(self.rate_sparsity, X - L + Y/rho, rho)
         S = soft_threshold(X - L + Y/rho, beta/rho)
         U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
+        
+        self.alpha = self.update_alpha(self.rate_rank, s, rho)
+        alpha = self.alpha
+        
         _s = soft_threshold(s, alpha/rho)
         L = U @ torch.diag(_s) @ Vt
         Y = Y + rho * (X - L - S)
