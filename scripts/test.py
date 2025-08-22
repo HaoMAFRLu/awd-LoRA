@@ -17,7 +17,7 @@ if __name__ == "__main__":
     y = []
     n = 1100
     for k in range(n-1):
-        y.append(tanh_ramp(k+1, n, 1e-6, 1e-4, alpha=3.0))
+        y.append(tanh_ramp(k+1, n, 0.02, 0.2, alpha=3.0))
 
     plt.plot(y)
     plt.title('Tanh Schedule')
