@@ -81,7 +81,7 @@ def print_epoch(epoch: int,
               f"Loss2: {losses['loss2']:.6f}")
     print(header)
 
-    headers = ["name", "layer loss", "non-zero", "rank", "alpha", "dalpha", "beta", "dbeta", "rho"]
+    headers = ["name", "layer loss", "non-zero", "rank", "alpha", "dalpha", "beta", "dbeta", "rho", "rate_decay"]
     rows = [
         [s["name"], 
          f"{s['loss']:.6f}", 
@@ -91,7 +91,9 @@ def print_epoch(epoch: int,
          f"{s['dalpha']:.12f}",
          f"{s['beta']:.8f}",
          f"{s['dbeta']:.8f}",
-         f"{s['rho']:.12f}"]
+         f"{s['rho']:.12f}",
+         f"{s['rate_decay']:.6f}"
+        ]
         for s in layer_stats
     ]
 

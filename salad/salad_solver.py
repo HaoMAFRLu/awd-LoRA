@@ -159,12 +159,9 @@ class SALAD():
             nr_sparsity = torch.count_nonzero(S)
 
             if self.is_adaptive:                
-                # self.dalpha = (1 - self.rate_decay)*self.update_alpha(self.rate_rank, singular_values, self.rho)
-                # self.dbeta = (1 - self.rate_decay)*self.update_beta(self.rate_sparsity, S, self.rho)
-                # self.alpha = self.rate_decay*self.alpha + self.dalpha
-                # self.beta = self.rate_decay*self.beta + self.dbeta
                 # self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * self.rate_decay  # current rangk - target rank
-                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * tanh_ramp(epoch=self.nr_epoch, a=self.rate_decay/250.0, b=self.rate_decay)  # current rangk - target rank
+                self._rate_decay = tanh_ramp(epoch=self.nr_epoch, a=self.rate_decay/250.0, b=self.rate_decay)
+                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * self._rate_decay  # current rangk - target rank
                 self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 500.0 # current sparsity - target sparsity
                 self.alpha = self.alpha + self.dalpha  # update alpha
                 self.beta = self.beta + self.dbeta  # update beta
@@ -195,6 +192,7 @@ class SALAD():
                         'dalpha': self.dalpha,
                         'dbeta': self.dbeta,
                         'rho': self.rho,
+                        'rate_decay': self._rate_decay,
                         'nr_rank': self.nr_rank,
                         'nr_nonzero': int(torch.count_nonzero(self.S)),
                         'nr_total_rank': self.nr_total_rank,

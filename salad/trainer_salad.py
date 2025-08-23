@@ -93,6 +93,7 @@ class SALADTrainer():
             'beta': [],
             'dbeta': [],
             'rho': [],
+            'rate_decay': [],
             'nonzero': [],
             'total_rank': [],
             'total_elements': []
@@ -211,6 +212,7 @@ class SALADTrainer():
                     self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
                     self.layer_info[layer_name]['dbeta'].append(data['dbeta'])
                     self.layer_info[layer_name]['rho'].append(data['rho'])
+                    self.layer_info[layer_name]['rate_decay'].append(data['rate_decay'])
                     self.layer_info[layer_name]['loss'].append(data['avg_loss'])
                     self.layer_info[layer_name]['rank'].append(data['nr_rank'])
                     self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
@@ -375,6 +377,7 @@ class SALADTrainer():
                         'dalpha': layer_info[entry['name']]['dalpha'][-1],
                         'dbeta': layer_info[entry['name']]['dbeta'][-1],
                         'rho': layer_info[entry['name']]['rho'][-1],
+                        'rate_decay': layer_info[entry['name']]['rate_decay'][-1],
                         'non_zero': layer_info[entry['name']]['nonzero'][-1],
                         'rank': layer_info[entry['name']]['rank'][-1],
                         'total_rank': layer_info[entry['name']]['total_rank'][-1],
