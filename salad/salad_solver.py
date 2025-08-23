@@ -160,7 +160,7 @@ class SALAD():
 
             if self.is_adaptive:                
                 # self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * self.rate_decay  # current rangk - target rank
-                self._rate_decay = tanh_ramp(epoch=self.nr_epoch, a=self.rate_decay/250.0, b=self.rate_decay)
+                self._rate_decay = tanh_ramp(epoch=self.nr_epoch, a=self.rate_decay/10.0, b=self.rate_decay)
                 self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * self._rate_decay  # current rangk - target rank
                 self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 500.0 # current sparsity - target sparsity
                 self.alpha = self.alpha + self.dalpha  # update alpha
@@ -208,7 +208,7 @@ class SALAD():
         self.rho = tanh_ramp(self.nr_epoch, 
                              total_epochs=1100,
                              a=1e-7, 
-                             b=1e-5,
+                             b=5e-5,
                              alpha=3.0)
 
         self.L, self.S, self.Y, self.nr_rank = self.PRCA(self.X.clone(),
