@@ -99,8 +99,8 @@ class SALAD():
         S = soft_threshold(X - L + Y/rho, beta/rho)
         U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
         
-        # self.alpha = self.update_alpha(self.rate_rank, s, rho)
-        # alpha = self.alpha
+        self.alpha = self.update_alpha(self.rate_rank, s, rho)
+        alpha = self.alpha
         
         _s = soft_threshold(s, alpha/rho)
         L = U @ torch.diag(_s) @ Vt
@@ -205,7 +205,11 @@ class SALAD():
             self.S = self.X - self.L
 
         self.nr_epoch += 1
-        # self.rho = tanh_ramp(self.nr_epoch)
+        self.rho = tanh_ramp(self.nr_epoch, 
+                             total_epochs=1100,
+                             a=1e-7, 
+                             b=1e-5,
+                             alpha=3.0)
 
         self.L, self.S, self.Y, self.nr_rank = self.PRCA(self.X.clone(),
                                                         self.L.clone(),
