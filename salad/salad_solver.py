@@ -164,7 +164,7 @@ class SALAD():
                 # self.alpha = self.rate_decay*self.alpha + self.dalpha
                 # self.beta = self.rate_decay*self.beta + self.dbeta
                 # self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * self.rate_decay  # current rangk - target rank
-                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * tanh_ramp(epoch=self.nr_epoch, a=self.rate_decay/50.0, b=self.rate_decay)  # current rangk - target rank
+                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * tanh_ramp(epoch=self.nr_epoch, a=self.rate_decay/250.0, b=self.rate_decay)  # current rangk - target rank
                 self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 500.0 # current sparsity - target sparsity
                 self.alpha = self.alpha + self.dalpha  # update alpha
                 self.beta = self.beta + self.dbeta  # update beta
