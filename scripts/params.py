@@ -42,7 +42,7 @@ attn_o_proj_params = {
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
     'is_cal':        False,    # Whether to calculate sparse matrix
-    'rate_rank':      0.15,  # Rate of rank reduction for the layer
+    'rate_rank':      0.25,  # Rate of rank reduction for the layer
     'rate_sparsity':  0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.2,  # Rate of decay for the adaptive parameters
@@ -93,7 +93,7 @@ attn_v_proj_params = {
     'tol':          0.001,   # Convergence tolerance
     'loss_version': 'v1',    # Loss version (v1: X-L-S-Y/rho, v2: X-L)
     'is_cal':        False,    # Whether to calculate sparse matrix
-    'rate_rank':     0.15,  # Rate of rank reduction for the layer
+    'rate_rank':     0.25,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.2,  # Rate of decay for the adaptive parameters

@@ -56,6 +56,23 @@ class SALADTrainer():
 
         # Wrap model in DDP
         self.model.cuda()
+        # get all the names of the model layers
+        self.names_model_layers = get_linear_layers_name(self.model)
+        # get specified layers in the config
+        self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
+
+        for entry in self.cfg_layers:
+            name = entry['name']
+            params = entry['params']
+            W = self.get_weight(self.model, 'model.'+name)
+            rate_rank = params.get('rate_rank', 0.5)
+            # truncate the rank of X
+            U, s, Vt = torch.linalg.svd(W, full_matrices=False)
+            idx = int(len(s) * rate_rank)
+            _W = (U[:, :idx] * s[:idx]) @ Vt[:idx, :]
+            with torch.no_grad():
+                W.copy_(_W.to(W.dtype))
+
         self.ddp_model = DDP(self.model, device_ids=[torch.cuda.current_device()])
 
         data = datasets.distributed.split_dataset_by_node(data, rank=self.rank, world_size=self.world_size)
@@ -78,10 +95,7 @@ class SALADTrainer():
         # warmup the model
         # self.warmup(self.num_warmup_steps)
         
-        # get all the names of the model layers
-        self.names_model_layers = get_linear_layers_name(self.model)
-        # get specified layers in the config
-        self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
+        
         # assign layers to different GPUs
         self.assigned_layers = self.assign_layers(self.cfg_layers, self.rank, self.world_size)
         
