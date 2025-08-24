@@ -146,11 +146,11 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250823_110128'
+    file = '20250823_040107'
     ex_layers = [
-                 'layers.0.self_attn.o_proj',
+                #  'layers.0.self_attn.o_proj',
                  'layers.0.self_attn.v_proj',
-                #  'layers.0.mlp.down_proj',
+                 'layers.0.mlp.down_proj',
                 #  'layers.0.mlp.up_proj',
                 #  'layers.2.mlp.down_proj',
                 #  'layers.3.mlp.down_proj',
