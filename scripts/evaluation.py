@@ -146,16 +146,16 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250823_213716'
+    file = '20250824_192339'
     ex_layers = [
                 #  'layers.0.self_attn.o_proj',
-                 'layers.0.self_attn.v_proj',
+                #  'layers.0.self_attn.v_proj',
                  'layers.0.mlp.down_proj',
                 #  'layers.0.mlp.up_proj',
                 #  'layers.2.mlp.down_proj',
                 #  'layers.3.mlp.down_proj',
-                 'layers.3.self_attn.o_proj',
-                 'layers.3.self_attn.v_proj',
+                #  'layers.3.self_attn.o_proj',
+                #  'layers.3.self_attn.v_proj',
                  'layers.4.self_attn.o_proj',
                 #  'layers.4.self_attn.q_proj',
                 #  'layers.4.self_attn.k_proj',
@@ -166,19 +166,19 @@ if __name__ == "__main__":
                  'layers.5.self_attn.o_proj',
                  'layers.5.self_attn.v_proj',
                 #  'layers.5.mlp.gate_proj',
-                #  'layers.5.mlp.down_proj',
+                 'layers.5.mlp.down_proj',
                 #  'layers.5.mlp.up_proj',
-                 'layers.6.self_attn.o_proj',
+                #  'layers.6.self_attn.o_proj',
                  'layers.6.self_attn.v_proj',
                 #  'layers.6.mlp.gate_proj',
-                #  'layers.6.mlp.down_proj',
-                #  'layers.6.mlp.up_proj',
+                 'layers.6.mlp.down_proj',
+                 'layers.6.mlp.up_proj',
                  'layers.7.self_attn.o_proj',
                 #  'layers.7.self_attn.q_proj',
                 #  'layers.7.self_attn.k_proj',
                  'layers.7.self_attn.v_proj',
                 #  'layers.7.mlp.gate_proj',
-                #  'layers.7.mlp.down_proj',
+                 'layers.7.mlp.down_proj',
                 #  'layers.7.mlp.up_proj'
                 ]
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
