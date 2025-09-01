@@ -97,8 +97,9 @@ class SALADTrainer():
         
         
         # assign layers to different GPUs
-        self.assigned_layers = self.assign_layers(self.cfg_layers, self.rank, self.world_size)
-        
+        self.assigned_layers, self.owner_map = self.assign_layers(self.cfg_layers, self.rank, self.world_size)
+        self.per_owner_names, self.owner_sizes = self.build_per_owner_static(self.ddp_model, self.owner_map, self.world_size)
+
         self.layer_info = {entry['name']: {
             'loss': [],
             'rank': [],
@@ -136,7 +137,24 @@ class SALADTrainer():
         self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.model.'+entry['name']), device='cpu') for entry in self.cfg_layers}
         
         self.sync_weights()
-   
+
+    @staticmethod    
+    def canon(name: str) -> str:
+        if name.startswith('module.'): name = name[7:]
+        if name.startswith('model.'):  name = name[6:]
+        if name.endswith('.weight'):   name = name[:-7]
+        return name
+
+    def build_per_owner_static(self, ddp_model, owner_map, world_size):
+        per_owner_names = {r: [] for r in range(world_size)}
+
+        for n, item in owner_map.items():
+            per_owner_names[item].append(n)
+
+        param_dict = dict(ddp_model.named_parameters())
+        owner_sizes = {r: sum(param_dict['module.model.'+n+'.weight'].numel() for n in per_owner_names[r]) for r in range(world_size)}
+        return per_owner_names, owner_sizes
+
     @staticmethod
     def get_name_and_params(_params: dict):
         """
@@ -190,7 +208,10 @@ class SALADTrainer():
             entry['name'] for idx, entry in enumerate(layers)
             if idx % world_size == rank
         ]
-        return assigned_layers
+        owner_map = {
+            entry['name']: idx % world_size for idx, entry in enumerate(layers)
+        }
+        return assigned_layers, owner_map
     
     def _init_distributed(self):
         """Initialize distributed environment"""
@@ -201,7 +222,7 @@ class SALADTrainer():
 
     def get_penalty_loss(self):
         """User-defined loss; can be overridden or passed via config."""
-        loss = 0
+        loss = 0.0
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
                 loss += solver.get_loss_term(solver.L, solver.S, solver.Y)
@@ -211,6 +232,22 @@ class SALADTrainer():
                                              self.YY[solver.layer_name].to(self.device))
         return loss
 
+    def get_loss2_info(self):
+        # Z = rho*(X - S + (1/rho)*Y)
+        loss2_info = {}
+        loss = 0.0
+        for solver in self.ADMM_solvers:
+            if solver.layer_gpu_map == self.rank:
+                _name, _Z, loss = solver.get_loss_info(solver.L, solver.S, solver.Y)
+                loss2_info[_name] = _Z
+                loss += loss
+            else:
+                _, _, loss = solver.get_loss_info(self.LL[solver.layer_name].to(self.device),
+                                                  self.SS[solver.layer_name].to(self.device),
+                                                  self.YY[solver.layer_name].to(self.device))
+                loss += loss
+        return loss2_info, loss
+    
     def gather_results(self, local_results):
         """Gather dicts from all ranks to rank 0"""
         gathered = [None] * self.world_size
@@ -246,6 +283,68 @@ class SALADTrainer():
             log_loss = log_loss / self.world_size
         return log_loss.item()
 
+    # def single_step_train(self, batch, labels):
+    #     """
+    #     Single training step for the model.
+    #     Args:
+    #         data: Input data batch
+    #         target: Target labels
+    #     """
+    #     self.optimizer.zero_grad(set_to_none=True)
+    #     loss1 = self.ddp_model(**batch, labels=labels).loss
+    #     loss2 = self.get_penalty_loss()
+    #     loss = loss1 + loss2
+    #     loss.backward()
+
+    #     if self.is_clip > 0:
+    #         # Clip gradients to avoid exploding gradients
+    #         # This is a common practice in training large models
+    #         torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=self.is_clip)
+
+    #     self.optimizer.step()
+    #     self.lr_scheduler.step()
+
+    #     global_loss_mean = self.get_global_loss(loss.detach())
+    #     global_loss_mean1 = self.get_global_loss(loss1.detach())
+    #     global_loss_mean2 = self.get_global_loss(loss2.detach())
+    #     return global_loss_mean, global_loss_mean1, global_loss_mean2
+    
+    def _resolve_name(self, name, param_dict):
+        if name in param_dict: return name
+        if f"module.{name}" in param_dict: return f"module.{name}"
+        if name.startswith("module.") and name[7:] in param_dict: return name[7:]
+        return None
+
+    @torch.no_grad()
+    def broadcast_params(self, ddp_model):
+        param_dict = dict(ddp_model.named_parameters())
+
+        names_me = self.per_owner_names[self.rank]
+        sz_me    = self.owner_sizes[self.rank]
+
+        flat_me = torch.empty(sz_me, device=self.device)
+        off = 0
+        for n in names_me:
+            p = param_dict['module.model.'+n+'.weight'].data.view(-1)
+            flat_me[off:off+p.numel()] = p
+            off += p.numel()
+
+        for r in range(self.world_size):
+            sz = self.owner_sizes[r]
+
+            if r == self.rank:
+                buf = flat_me
+                dist.broadcast(buf, src=r)
+            else:
+                buf = torch.empty(sz, device=self.device)
+                dist.broadcast(buf, src=r)
+                off = 0
+                for n in self.per_owner_names[r]:
+                    p = param_dict['module.model.'+n+'.weight']
+                    k = p.numel()
+                    p.data.view(-1).copy_(buf[off:off+k])
+                    off += k
+
     def single_step_train(self, batch, labels):
         """
         Single training step for the model.
@@ -253,11 +352,12 @@ class SALADTrainer():
             data: Input data batch
             target: Target labels
         """
-        self.optimizer.zero_grad()
+        self.optimizer.zero_grad(set_to_none=True)
+        # only use optimizer to update the track loss
         loss1 = self.ddp_model(**batch, labels=labels).loss
-        loss2 = self.get_penalty_loss()
-        loss = loss1 + loss2
-        loss.backward()
+        loss2_info, loss2 = self.get_loss2_info()
+        # loss = loss1 + loss2
+        loss1.backward()
 
         if self.is_clip > 0:
             # Clip gradients to avoid exploding gradients
@@ -265,8 +365,18 @@ class SALADTrainer():
             torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=self.is_clip)
 
         self.optimizer.step()
+
+        param_dict = dict(self.ddp_model.named_parameters())
+        with torch.no_grad():
+            eta = self.optimizer.param_groups[0]['lr']
+            for name, Z in loss2_info.items():
+                param_dict['module.model.'+name+'.weight'].data -= eta * Z
+ 
         self.lr_scheduler.step()
 
+        self.broadcast_params(self.ddp_model)
+
+        loss = loss1 + loss2
         global_loss_mean = self.get_global_loss(loss.detach())
         global_loss_mean1 = self.get_global_loss(loss1.detach())
         global_loss_mean2 = self.get_global_loss(loss2.detach())

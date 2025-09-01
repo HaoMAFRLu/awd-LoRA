@@ -73,6 +73,19 @@ class SALAD():
         self.total_loss += np.sqrt(loss.item() / (self.nr_elements * self.rho/2))
         return loss
     
+    @torch.no_grad()
+    def get_loss_info(self, L, S, Y):
+        """
+        Compute the loss term for the model.
+        """
+        if self.loss_version == 'v1':
+            Z = self.rho * (self.X - L - S + Y/self.rho)
+        elif self.loss_version == 'v2':
+            Z = self.rho * (self.X - L)
+        
+        loss = self.get_loss_term(L, S, Y)
+        return self.layer_name, Z, loss
+    
     def reset(self):
         """
         Reset the solver state for a new training epoch.
