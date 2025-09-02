@@ -79,9 +79,9 @@ class SALAD():
         Compute the loss term for the model.
         """
         if self.loss_version == 'v1':
-            Z = self.rho * (self.X - L - S + Y/self.rho)
+            Z = self.rho * (self.X_with_grad.detach() - L - S + Y/self.rho)
         elif self.loss_version == 'v2':
-            Z = self.rho * (self.X - L)
+            Z = self.rho * (self.X_with_grad.detach() - L)
         
         loss = self.get_loss_term(L, S, Y)
         return self.layer_name, Z, loss
