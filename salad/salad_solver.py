@@ -219,11 +219,11 @@ class SALAD():
             self.S = self.X - self.L
 
         self.nr_epoch += 1
-        self.rho = tanh_ramp(self.nr_epoch, 
-                             total_epochs=1100,
-                             a=0.01, 
-                             b=0.1,
-                             alpha=3.0)
+        # self.rho = tanh_ramp(self.nr_epoch, 
+        #                      total_epochs=1100,
+        #                      a=0.01, 
+        #                      b=0.1,
+        #                      alpha=3.0)
 
         self.L, self.S, self.Y, self.nr_rank = self.PRCA(self.X.clone(),
                                                         self.L.clone(),
