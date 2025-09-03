@@ -167,7 +167,7 @@ if __name__ == "__main__":
         seed=42,
         lr=0.003,
         min_lr_ratio=0.1,
-        num_freq=20,
+        num_freq=5,
         seed_for_shuffle=42,
         num_total_iters=22000,
         batch_size=512,
