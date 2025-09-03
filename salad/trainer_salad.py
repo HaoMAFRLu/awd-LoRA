@@ -235,18 +235,18 @@ class SALADTrainer():
     def get_loss2_info(self):
         # Z = rho*(X - S + (1/rho)*Y)
         loss2_info = {}
-        loss = 0.0
+        total_loss = 0.0
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
                 _name, _Z, loss = solver.get_loss_info(solver.L, solver.S, solver.Y)
                 loss2_info[_name] = _Z
-                loss += loss
+                total_loss += loss
             else:
                 _, _, loss = solver.get_loss_info(self.LL[solver.layer_name].to(self.device),
                                                   self.SS[solver.layer_name].to(self.device),
                                                   self.YY[solver.layer_name].to(self.device))
-                loss += loss
-        return loss2_info, loss
+                total_loss += loss
+        return loss2_info, total_loss
     
     def gather_results(self, local_results):
         """Gather dicts from all ranks to rank 0"""
