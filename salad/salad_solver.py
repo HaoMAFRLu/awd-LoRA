@@ -42,7 +42,7 @@ class SALAD():
             _rho = torch.norm(self.X_with_grad.detach(), p='fro').cpu().numpy() / (np.sqrt(row * col))
             self.rho = 0.1 * _rho
             self.rho_min = 1e-2 * _rho
-            self.rho_max = 150 * _rho
+            self.rho_max = 1500 * _rho
             self.rho_rate = 0.10
             # self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
             # self.rho = 1.0 / (5 * nr_layers * np.sqrt(row * col))
