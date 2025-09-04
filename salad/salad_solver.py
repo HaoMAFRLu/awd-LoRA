@@ -23,8 +23,7 @@ class SALAD():
         self.X_with_grad = X  # Initial weight matrix
         self.layer_name = layer_name
 
-        self.L_pre = None
-        self.S_pre = None
+        self.sum_pre = None
         self.gamma = 0.9
         self.ema_r = None
         self.ema_s = None
@@ -42,8 +41,8 @@ class SALAD():
             # calculate the initial rho
             _rho = torch.norm(self.X_with_grad.detach(), p='fro').cpu().numpy() / (np.sqrt(row * col))
             self.rho = 0.1 * _rho
-            self.rho_min = 1e-3 * _rho
-            self.rho_max = 20 * _rho
+            self.rho_min = 1e-2 * _rho
+            self.rho_max = 8 * _rho
             self.rho_rate = 0.30
             # self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
             # self.rho = 1.0 / (5 * nr_layers * np.sqrt(row * col))
@@ -71,35 +70,49 @@ class SALAD():
         
         self.reset()
 
-    def get_loss_pre_term(self, L, S, Y):   
+    def get_loss_pre_term(self, 
+                          L: torch.Tensor, 
+                          S: torch.Tensor) -> float:   
         """
         Compute the loss term for the model.
         """
-        if self.L_pre is None:
-            self.L_pre = L.clone().detach()
-            self.S_pre = S.clone().detach()
+        if self.sum_pre is None:
+            self.sum_pre = L.clone().detach() + S.clone().detach()
 
-        loss = self.rho * torch.norm(L + S - self.L_pre - self.S_pre, p='fro')  
+        loss = self.rho * torch.norm(L + S - self.sum_pre, p='fro')  
+        self.sum_pre = L.clone().detach() + S.clone().detach()
+
         return loss
     
-    def get_loss_term(self, L, S, Y):
+    def get_loss_term(self, 
+                      X: torch.Tensor,
+                      L: torch.Tensor, 
+                      S: torch.Tensor) -> float:
         """
         Compute the loss term for the model.
         """
         # loss = self.rho/2 * torch.norm(self.X_with_grad - L - S + Y/self.rho, p='fro') ** 2        
-        loss = torch.norm(self.X_with_grad - L - S, p='fro')    
+        loss = torch.norm(X - L - S, p='fro')    
         self.nr_cals += 1
         self.total_loss += loss.item() / (self.nr_elements)
         return loss
     
+    @staticmethod
+    def get_gradient(X: torch.Tensor,
+                     L: torch.Tensor,
+                     S: torch.Tensor,
+                     Y: torch.Tensor,
+                     rho: float) -> torch.Tensor:
+        return rho * (X - L - S + Y/rho)
+
     @torch.no_grad()
     def get_loss_info(self, L, S, Y):
         """
         Compute the loss term for the model.
         """
-        Z = self.rho * (self.X_with_grad.detach() - L - S + Y/self.rho)
-        loss_r = self.get_loss_term(L, S, Y)
-        loss_s = self.get_loss_pre_term(L, S, Y)
+        Z = self.get_gradient(self.X_with_grad.detach(), L, S, Y, self.rho)
+        loss_r = self.get_loss_term(self.X_with_grad.detach(), L, S)
+        loss_s = self.get_loss_pre_term(L, S)
 
         if self.ema_r is None:
             self.ema_r = loss_r.item()
@@ -117,57 +130,33 @@ class SALAD():
         self.total_loss = 0.0
         self.nr_cals = 0
 
-    def update_alpha(self, rate_rank: float, s: torch.Tensor, rho: float) -> float:
-        """Return rate_rank-th value of s, then times rho."""
-        total_rank = len(s)
-        idx = int(total_rank * rate_rank)
-        # find idx maximum singular value
-        return max(s[idx], 0.0) * rho
-
-    def single_step_PRCA(self,
+    def single_step_RPCA(self,
                          X: torch.Tensor,
                          L: torch.Tensor,
                          S: torch.Tensor,
                          Y: torch.Tensor,
                          alpha: float,
                          beta: float,
-                         rho: float) -> tuple:
-        beta = self.update_beta(self.rate_sparsity, X - L + Y/rho, rho)
-        S = soft_threshold(X - L + Y/rho, beta/rho)
-        U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
-        
-        # self.alpha = self.update_alpha(self.rate_rank, s, rho)
-        # alpha = self.alpha
-        
-        _s = soft_threshold(s, alpha/rho)
-        L = U @ torch.diag(_s) @ Vt
-        Y = Y + rho * (X - L - S)
-        return L, S, Y, _s
-
-    def update_alpha(self, 
-                     rate_rank: float, 
-                     s: torch.Tensor, 
-                     rho: float,
-                     eps: float=1e-4) -> float:
-        """Update the alpha parameter based on the rank of singular values."""
-        total_rank = len(s)
-        idx = int(total_rank * rate_rank)
-        # find idx maximum singular value
-        return max(s[idx] - eps, 0.0) * rho
+                         rho: float,
+                         energy: float) -> tuple:
+        S = self._update_S(X, L, Y, self.rate_sparsity, rho)
+        L, nr_rank = self._update_L(X, S, Y, alpha, rho, energy)
+        Y = self._update_Y(X, L, S, rho)
+        return L, S, Y, nr_rank
     
-    def update_beta(self, 
-                    rate_sparsity: float, 
-                    S: torch.Tensor, 
-                    rho: float,
-                    scalar: float=1.0,
-                    eps: float=1e-4) -> float:
+    def get_beta_quantile(self, 
+                          rate_sparsity: float, 
+                          S: torch.Tensor, 
+                          rho: float,
+                          scalar: float=1.0,
+                          eps: float=1e-4) -> float:
         """Update the beta parameter based on the sparsity of the matrix."""
         vals, _ = torch.sort(S.abs().flatten(), descending=True)
         idx = int(len(vals) * rate_sparsity)
         # return (vals[idx] - eps) * rho * scalar  # in case the same values
         return vals[idx] * rho * scalar  # in case the same values
 
-    def PRCA(self,
+    def RPCA(self,
              X: torch.Tensor, 
              L: torch.Tensor,  
              S: torch.Tensor,
@@ -177,7 +166,7 @@ class SALAD():
              rho: float,
              iter_max: int = 100,
              tol: float = 1e-3,
-             energy_quantile: float=0.9) -> tuple:
+             energy: float=0.9) -> tuple:
         """
         Perform the Principal Component Analysis (PCA) using Robust PCA.
         Args:
@@ -191,21 +180,14 @@ class SALAD():
             Updated low-rank and sparse components, and dual variable.
         """
         for it in range(iter_max):
-            L, S, Y, singular_values = self.single_step_PRCA(X, L, S, Y, alpha, beta, rho)
-            nr_rank = get_energy_quantile(singular_values, quantile=energy_quantile)  # current rank
-            nr_sparsity = torch.count_nonzero(S)
+            self.L, self.S, self.Y, self.nr_rank = self.single_step_RPCA(X, L, S, Y, 
+                                                                         alpha, beta, rho, 
+                                                                         energy)
+            self.update_alpha()
+            self.update_beta()    
 
-            if self.is_adaptive:                
-                # self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * self.rate_decay  # current rangk - target rank
-                # self._rate_decay = tanh_ramp(epoch=self.nr_epoch, total_epochs=2200, a=self.rate_decay/10.0, b=self.rate_decay)
-                self._rate_decay = self.rate_decay
-                self.dalpha = self.rho * (nr_rank / self.nr_total_rank - self.rate_rank) * self._rate_decay  # current rangk - target rank
-                self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 500.0 # current sparsity - target sparsity
-                self.alpha = self.alpha + self.dalpha  # update alpha
-                self.beta = self.beta + self.dbeta  # update beta
             if torch.linalg.norm(X - L - S, 'fro') < tol:
                 break
-        return L, S, Y, nr_rank
 
     def initialization(self) -> None:
         if self.init_energy <= 0:
@@ -248,31 +230,136 @@ class SALAD():
         """Clip the rho value based on the ratio of loss_r and loss_s."""
         return max(min(rho * ((ema_r + eps) / (ema_s + eps))**beta, rho_max), rho_min)
 
+    def _update_S(self,
+                  X: torch.Tensor,
+                  L: torch.Tensor,
+                  Y: torch.Tensor,
+                  rate_sparsity: float,
+                  rho: float,
+                  mode: str='hard') -> torch.Tensor:
+        if mode == 'hard':
+            beta = self.get_beta_quantile(rate_sparsity, X - L + Y/rho, rho)
+            return soft_threshold(X - L + Y/rho, beta/rho)
+        elif mode == 'soft':
+            pass
+
+    def update_S(self) -> None:
+        """
+        Update the sparse component S. 
+        """
+        self.S = self._update_S(self.X.clone(), 
+                                self.L.clone(), 
+                                self.Y.clone(), 
+                                self.rate_sparsity, 
+                                self.rho)
+
+    @staticmethod
+    def _update_Y(X: torch.Tensor,
+                  L: torch.Tensor,
+                  S: torch.Tensor,
+                  rho: float) -> torch.Tensor:
+        return rho * (X - L - S)
+    
+    def update_Y(self) -> None:
+        """
+        Update the dual variable Y.
+        """
+        self.Y = self._update_Y(self.X.clone(), 
+                                self.L.clone(), 
+                                self.S.clone(), 
+                                self.rho)
+
+    def update_nr_epoch(self) -> None:
+        self.nr_epoch += 1
+
+    def _update_rho(self,
+                    rho: float,
+                    ema_r: float,
+                    ema_s: float,
+                    rho_rate: float,
+                    rho_min: float,
+                    rho_max: float) -> float:
+        return self.clip_rho(rho, ema_r, ema_s, rho_rate, rho_min, rho_max)
+
+
+    def update_rho(self) -> None:
+        """update the value of rho based on the loss terms.
+        """
+        self.rho = self._update_rho(self.rho,
+                                    self.ema_r,
+                                    self.ema_s,
+                                    self.rho_rate,
+                                    self.rho_min,
+                                    self.rho_max)
+
+    @staticmethod
+    def _update_L(X: torch.Tensor,
+                  S: torch.Tensor,
+                  Y: torch.Tensor,
+                  alpha: float,
+                  rho: float,
+                  energy: float) -> torch.Tensor:
+        U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
+        _s = soft_threshold(s, alpha/rho)
+        L  = U @ torch.diag(_s) @ Vt
+        nr_rank = get_energy_quantile(_s, quantile=energy)
+        return L, nr_rank
+
+    def update_L(self) -> None:
+        """
+        Update the low-rank component L.
+        """
+        self.L, self.nr_rank = self._update_L(self.X.clone(),
+                                              self.S.clone(),
+                                              self.Y.clone(),
+                                              self.alpha,
+                                              self.rho,
+                                              energy=self.energy)
+
+    def update_alpha(self) -> None:
+        """
+        Update the alpha parameter based on the rank of singular values.
+        """
+        if self.is_adaptive:
+            # self._rate_decay = tanh_ramp(epoch=self.nr_epoch, total_epochs=2200, a=self.rate_decay/10.0, b=self.rate_decay)
+            self._rate_decay = self.rate_decay
+            self.dalpha = self.rho * (self.nr_rank / self.nr_total_rank - self.rate_rank) * self._rate_decay  # current rangk - target rank
+            self.alpha = self.alpha + self.dalpha  # update alpha
+
+    def update_beta(self) -> None:
+        """
+        Update the beta parameter based on the sparsity of the matrix.
+        """
+        if self.is_adaptive:
+            nr_sparsity = torch.count_nonzero(self.S)
+            self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 500.0 # current sparsity - target sparsity
+            self.beta = self.beta + self.dbeta  # update beta
+
     def run(self):
         if self.is_cal:
             # calibration the sparse matrix
             self.S = self.X - self.L
 
-        self.nr_epoch += 1
+        self.update_nr_epoch()
         # self.rho = tanh_ramp(self.nr_epoch, 
         #                      total_epochs=1100,
         #                      a=0.01, 
         #                      b=0.1,
         #                      alpha=3.0)
         if self.nr_epoch > 2:
-            self.rho = self.clip_rho(self.rho, self.ema_r, self.ema_s, self.rho_rate, self.rho_min, self.rho_max)
+            self.rho = self.update_rho()
 
+        self.RPCA(self.X.clone(),
+                  self.L.clone(),
+                  self.S.clone(),
+                  self.Y.clone(),
+                  self.alpha,
+                  self.beta,
+                  self.rho,
+                  self.iter_max,
+                  self.tol,
+                  self.energy)
 
-        self.L, self.S, self.Y, self.nr_rank = self.PRCA(self.X.clone(),
-                                                        self.L.clone(),
-                                                        self.S.clone(),
-                                                        self.Y.clone(),
-                                                        self.alpha,
-                                                        self.beta,
-                                                        self.rho,
-                                                        self.iter_max,
-                                                        self.tol,
-                                                        self.energy)
         # calculate the results
         self.cal_results()
         

@@ -246,8 +246,38 @@ class SALADTrainer():
                                                   self.SS[solver.layer_name].to(self.device),
                                                   self.YY[solver.layer_name].to(self.device))
                 total_loss += loss
-        return loss2_info, total_loss
+        return loss2_info, total_loss/len(self.ADMM_solvers)
     
+    def sync_layer_info(self):
+        """
+        Synchronize weights across all ranks.
+        This is called after the optimizer step.
+        """
+        local_results = self.get_local_results()
+        self.gather_layer_info(local_results)
+
+    def gather_layer_info(self, local_results):
+        """
+        """
+        gathered = [None] * self.world_size
+        dist.all_gather_object(gathered, local_results)
+        if self.rank == 0:
+            for p in gathered:
+                for layer_name, data in p.items():
+                    self.layer_info[layer_name]['alpha'].append(data['alpha'])
+                    self.layer_info[layer_name]['beta'].append(data['beta'])
+                    self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
+                    self.layer_info[layer_name]['dbeta'].append(data['dbeta'])
+                    self.layer_info[layer_name]['rho'].append(data['rho'])
+                    self.layer_info[layer_name]['rate_decay'].append(data['rate_decay'])
+                    self.layer_info[layer_name]['loss'].append(data['avg_loss'])
+                    self.layer_info[layer_name]['rank'].append(data['nr_rank'])
+                    self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
+                    self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
+                    self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
+
+
+
     def gather_results(self, local_results):
         """Gather dicts from all ranks to rank 0"""
         gathered = [None] * self.world_size
@@ -395,7 +425,54 @@ class SALADTrainer():
         }
         atomic_pickle_dump(MATRIX, os.path.join(path_folder, "matrix.pkl"))
         atomic_pickle_dump(self.layer_info, os.path.join(path_folder, "layer_info.pkl"))
+
+    def get_local_single_weight(self,
+                                target: str='L'):
+        """
+        Get local single weight for the current rank.
+        Returns:
+            dict with layer names and their corresponding weights.
+        """
+        local_weights = {}
+        for solver in self.ADMM_solvers:
+            if solver.layer_gpu_map == self.rank:
+                if target == 'L':
+                    local_weights[solver.layer_name] = solver.L.to('cpu')
+                elif target == 'S':
+                    local_weights[solver.layer_name] = solver.S.to('cpu')
+                elif target == 'Y':
+                    local_weights[solver.layer_name] = solver.Y.to('cpu')
+        return local_weights
+
+    def gather_single_weight(self, local_weights, target: str='L'):
+        """Gather dicts from all ranks to rank 0"""
+        gathered = [None] * self.world_size
+        dist.all_gather_object(gathered, local_weights)
+        if self.rank == 0:
+            for p in gathered:
+                for layer_name, data in p.items():
+                    if target == 'L':
+                        self.LL[layer_name] = data  # L
+                    elif target == 'S':
+                        self.SS[layer_name] = data  # S
+                    elif target == 'Y':
+                        self.YY[layer_name] = data  # Y
     
+    def broadcast_single_weight(self, target: str='L'):
+        """
+        Broadcast weights from rank 0 to all ranks.
+        Returns:
+            L, S, Y: broadcasted weights
+        """
+        if target == 'L':
+            brd = self.LL
+        elif target == 'S':
+            brd = self.SS
+        elif target == 'Y':
+            brd = self.YY
+        dist.broadcast_object_list([brd], src=0)
+        return brd
+
     def get_local_weights(self):
         """
         Get local weights for the current rank.
@@ -459,6 +536,42 @@ class SALADTrainer():
                 local_results[solver.layer_name] = solver.results
         return local_results
     
+    def update_ADMM_single_step(self, target: str='L'):
+        """ Update the low-rank component L for all layers.
+        """
+        for solver in self.ADMM_solvers:
+            if solver.layer_gpu_map == self.rank:
+                if target == 'L':
+                    solver.update_L()
+                elif target == 'S':
+                    solver.update_S()
+                elif target == 'Y':
+                    solver.update_Y()
+                elif target == 'alpha':
+                    solver.update_alpha()
+                elif target == 'beta':
+                    solver.update_beta()
+                elif target == 'save':
+                    solver.cal_results()
+    
+    def sync_single_weight(self, target: str='L'):
+        """ Synchronize the low-rank component L across all ranks.
+        """
+        local_weights = self.get_local_single_weight(target=target)
+        self.gather_single_weight(local_weights, target=target)
+        if target == 'L':
+            self.LL = self.broadcast_single_weight(target=target)
+        elif target == 'S':
+            self.SS = self.broadcast_single_weight(target=target)
+        elif target == 'Y':
+            self.YY = self.broadcast_single_weight(target=target)
+
+    def update_ADMM_rho(self): 
+        """ Update the penalty parameter rho for all layers.
+        """
+        for solver in self.ADMM_solvers:
+            solver.update_rho()
+
     def run_ADMM_solvers(self):
         """ Run ADMM solvers for the current rank.
         """
@@ -536,7 +649,8 @@ class SALADTrainer():
             self.optimizer.step()
             self.lr_scheduler.step()
 
-    def train(self, path_folder: str=None):            
+    def train(self, path_folder: str=None):
+        # switch to train mode        
         self.ddp_model.train()
         num_it = 0
         num_epochs = self.num_total_iters // self.num_freq
@@ -547,17 +661,20 @@ class SALADTrainer():
 
         for batch_idx, batch in enumerate(self.dataloader):
             num_it += 1
-
+            # terminate training if reached max iterations
             if num_it > self.num_total_iters:
                 logger.info(f"Reached max number of update steps (f{self.num_total_iters}). Stopping training.")
                 print(f"Rank {self.rank} stopping training.")
                 break
+            
 
             batch = {k: v.to(self.device) for k, v in batch.items()}
             labels = batch["input_ids"].clone()
-            labels[labels == self.pad_idx] = -100     
+            labels[labels == self.pad_idx] = -100 
+            # do one step update: gt = nabla l(X) + rho(X - L - S - Y/rho)
             loss, loss1, loss2 = self.single_step_train(batch, labels=labels)
 
+            # calculate the constants
             num_tokens = (batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()) * self.world_size
             self.layer_info['loss'].append(loss)
             self.layer_info['loss1'].append(loss1)
@@ -569,13 +686,23 @@ class SALADTrainer():
             ep_loss2 += loss2
             acc_num_tokens += num_tokens
 
+            # now we update S and Y at each iteration
+            
             if num_it % self.num_freq == 0:
                 # run admm solvers
                 epoch += 1
 
-                self.run_ADMM_solvers()
-                self.sync_results()
+                self.update_ADMM_rho()
+                self.update_ADMM_single_step(target='L')
+                self.sync_single_weight(target='L')
+                self.update_ADMM_single_step(target='alpha')
+                self.update_ADMM_single_step(target='beta')
+                self.update_ADMM_single_step(target='save')
+                self.sync_layer_info()
                 self.solvers_reset()
+
+                # self.run_ADMM_solvers()
+                # self.sync_results()
 
                 # average losses
                 ep_loss /= self.num_freq
@@ -597,6 +724,11 @@ class SALADTrainer():
                         self.save_results(path_folder)
                 
                 ep_loss, ep_loss1, ep_loss2 = 0.0, 0.0, 0.0
+
+            self.update_ADMM_single_step(target='S')
+            self.sync_single_weight(target='S')
+            self.update_ADMM_single_step(target='Y')
+            self.sync_single_weight(target='Y')
 
         dist.destroy_process_group()
 
