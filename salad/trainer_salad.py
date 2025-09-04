@@ -687,7 +687,9 @@ class SALADTrainer():
             acc_num_tokens += num_tokens
 
             # now we update S and Y at each iteration
-            
+            self.update_ADMM_single_step(target='S')
+            self.sync_single_weight(target='S')
+
             if num_it % self.num_freq == 0:
                 # run admm solvers
                 epoch += 1
@@ -724,9 +726,7 @@ class SALADTrainer():
                         self.save_results(path_folder)
                 
                 ep_loss, ep_loss1, ep_loss2 = 0.0, 0.0, 0.0
-
-            self.update_ADMM_single_step(target='S')
-            self.sync_single_weight(target='S')
+            
             self.update_ADMM_single_step(target='Y')
             self.sync_single_weight(target='Y')
 

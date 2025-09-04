@@ -94,7 +94,8 @@ class SALAD():
         # loss = self.rho/2 * torch.norm(self.X_with_grad - L - S + Y/self.rho, p='fro') ** 2        
         loss = torch.norm(X - L - S, p='fro')    
         self.nr_cals += 1
-        self.total_loss += loss.item() / (self.nr_elements)
+        # self.total_loss += loss.item() / (self.nr_elements)
+        self.total_loss += loss.item()
         return loss
     
     @staticmethod
