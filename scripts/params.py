@@ -12,13 +12,13 @@ embed_params = {
     'is_adaptive':   True,  # Whether to use adaptive parameters for the layer
     'rate_decay':    0.9,   # Rate of decay for the adaptive 
     'rho_dict':            {
-        'rho': 0.1,
-        'mode': 'shape_dependent',  # 'fixed', 'shape_dependent', 'adaptive'
-        'start_epoch': 0,
-        'coeff_rho': 1.0,
+        'rho':           1e-5,
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
+        'start_epoch':   2,
+        'coeff_rho':     1.0,
         'coeff_rho_min': 0.1,
         'coeff_rho_max': 10.0,
-        'rho_rate': 1.1,
+        'rho_rate':      1.1,
     }, 
 }
 
@@ -36,13 +36,13 @@ lm_head_params = {
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     0.9,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
-        'rho': 0.1,
-        'mode': 'shape_dependent',  # 'fixed', 'shape_dependent', 'adaptive'
-        'start_epoch': 0,
-        'coeff_rho': 1.0,
+        'rho':           1e-5,
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
+        'start_epoch':   2,
+        'coeff_rho':     1.0,
         'coeff_rho_min': 0.1,
         'coeff_rho_max': 10.0,
-        'rho_rate': 1.1,
+        'rho_rate':      1.1,
     }, 
 }
 
@@ -60,13 +60,13 @@ attn_o_proj_params = {
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     1,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
-        'rho': 0.1,
-        'mode': 'shape_dependent',  # 'fixed', 'shape_dependent', 'adaptive'
-        'start_epoch': 0,
-        'coeff_rho': 1.0,
+        'rho':           1e-5,
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
+        'start_epoch':   2,
+        'coeff_rho':     1.0,
         'coeff_rho_min': 0.1,
         'coeff_rho_max': 10.0,
-        'rho_rate': 1.1,
+        'rho_rate':      1.1,
     }, 
 }
 
@@ -84,13 +84,13 @@ attn_q_proj_params = {
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     1,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
-        'rho': 0.1,
-        'mode': 'shape_dependent',  # 'fixed', 'shape_dependent', 'adaptive'
-        'start_epoch': 0,
-        'coeff_rho': 1.0,
+        'rho':           1e-5,
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
+        'start_epoch':   2,
+        'coeff_rho':     1.0,
         'coeff_rho_min': 0.1,
         'coeff_rho_max': 10.0,
-        'rho_rate': 1.1,
+        'rho_rate':      1.1,
     }, 
 }
 
@@ -108,13 +108,13 @@ attn_k_proj_params = {
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     1,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
-        'rho': 0.1,
-        'mode': 'shape_dependent',  # 'fixed', 'shape_dependent', 'adaptive'
-        'start_epoch': 0,
-        'coeff_rho': 1.0,
+        'rho':           1e-5,
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
+        'start_epoch':   2,
+        'coeff_rho':     1.0,
         'coeff_rho_min': 0.1,
         'coeff_rho_max': 10.0,
-        'rho_rate': 1.1,
+        'rho_rate':      1.1,
     }, 
 }
 
@@ -132,13 +132,13 @@ attn_v_proj_params = {
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     1,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
-        'rho': 0.1,
-        'mode': 'shape_dependent',  # 'fixed', 'shape_dependent', 'adaptive'
-        'start_epoch': 0,
-        'coeff_rho': 1.0,
+        'rho':           1e-5,
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
+        'start_epoch':   2,
+        'coeff_rho':     1.0,
         'coeff_rho_min': 0.1,
         'coeff_rho_max': 10.0,
-        'rho_rate': 1.1,
+        'rho_rate':      1.1,
     }, 
 }
 
@@ -156,13 +156,13 @@ mlp_gate_proj_params = {
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     1,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
-        'rho': 0.1,
-        'mode': 'shape_dependent',  # 'fixed', 'shape_dependent', 'adaptive'
-        'start_epoch': 0,
-        'coeff_rho': 1.0,
+        'rho':           1e-5,
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
+        'start_epoch':   2,
+        'coeff_rho':     1.0,
         'coeff_rho_min': 0.1,
         'coeff_rho_max': 10.0,
-        'rho_rate': 1.1,
+        'rho_rate':      1.1,
     }, 
 }
 
