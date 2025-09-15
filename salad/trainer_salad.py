@@ -35,6 +35,8 @@ class SALADTrainer():
         self.is_clip = config.get('is_clip', 1.0)
         self.max_length = config.get('max_length', 256)
         self.num_workers = config.get('num_workers', 4)
+        self.gradient= config.get('gradient', 'coupled')  # or 'decoupled'
+        self.is_asyn = config.get('is_asyn', False)
 
         self.rank, self.world_size = self._init_distributed()
 
@@ -313,31 +315,31 @@ class SALADTrainer():
             log_loss = log_loss / self.world_size
         return log_loss.item()
 
-    # def single_step_train(self, batch, labels):
-    #     """
-    #     Single training step for the model.
-    #     Args:
-    #         data: Input data batch
-    #         target: Target labels
-    #     """
-    #     self.optimizer.zero_grad(set_to_none=True)
-    #     loss1 = self.ddp_model(**batch, labels=labels).loss
-    #     loss2 = self.get_penalty_loss()
-    #     loss = loss1 + loss2
-    #     loss.backward()
+    def coupled_single_step_train(self, batch, labels):
+        """
+        Single training step for the model.
+        Args:
+            data: Input data batch
+            target: Target labels
+        """
+        self.optimizer.zero_grad(set_to_none=True)
+        loss1 = self.ddp_model(**batch, labels=labels).loss
+        loss2 = self.get_penalty_loss()
+        loss = loss1 + loss2
+        loss.backward()
 
-    #     if self.is_clip > 0:
-    #         # Clip gradients to avoid exploding gradients
-    #         # This is a common practice in training large models
-    #         torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=self.is_clip)
+        if self.is_clip > 0:
+            # Clip gradients to avoid exploding gradients
+            # This is a common practice in training large models
+            torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=self.is_clip)
 
-    #     self.optimizer.step()
-    #     self.lr_scheduler.step()
+        self.optimizer.step()
+        self.lr_scheduler.step()
 
-    #     global_loss_mean = self.get_global_loss(loss.detach())
-    #     global_loss_mean1 = self.get_global_loss(loss1.detach())
-    #     global_loss_mean2 = self.get_global_loss(loss2.detach())
-    #     return global_loss_mean, global_loss_mean1, global_loss_mean2
+        global_loss_mean = self.get_global_loss(loss.detach())
+        global_loss_mean1 = self.get_global_loss(loss1.detach())
+        global_loss_mean2 = self.get_global_loss(loss2.detach())
+        return global_loss_mean, global_loss_mean1, global_loss_mean2
     
     def _resolve_name(self, name, param_dict):
         if name in param_dict: return name
@@ -375,7 +377,7 @@ class SALADTrainer():
                     p.data.view(-1).copy_(buf[off:off+k])
                     off += k
 
-    def single_step_train(self, batch, labels):
+    def decoupled_single_step_train(self, batch, labels):
         """
         Single training step for the model.
         Args:
@@ -672,7 +674,10 @@ class SALADTrainer():
             labels = batch["input_ids"].clone()
             labels[labels == self.pad_idx] = -100 
             # do one step update: gt = nabla l(X) + rho(X - L - S - Y/rho)
-            loss, loss1, loss2 = self.single_step_train(batch, labels=labels)
+            if self.gradient == 'decoupled':
+                loss, loss1, loss2 = self.decoupled_single_step_train(batch, labels=labels)
+            elif self.gradient == 'coupled':
+                loss, loss1, loss2 = self.coupled_single_step_train(batch, labels=labels)
 
             # calculate the constants
             num_tokens = (batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()) * self.world_size
@@ -687,12 +692,18 @@ class SALADTrainer():
             acc_num_tokens += num_tokens
 
             # now we update S and Y at each iteration
-            self.update_ADMM_single_step(target='S')
-            self.sync_single_weight(target='S')
+            # asynchronous update for S
+            if self.is_asyn:
+                self.update_ADMM_single_step(target='S')
+                self.sync_single_weight(target='S')
 
             if num_it % self.num_freq == 0:
                 # run admm solvers
                 epoch += 1
+
+                if not self.is_asyn:
+                    self.update_ADMM_single_step(target='S')
+                    self.sync_single_weight(target='S')
 
                 self.update_ADMM_rho()
                 self.update_ADMM_single_step(target='L')
@@ -702,6 +713,10 @@ class SALADTrainer():
                 self.update_ADMM_single_step(target='save')
                 self.sync_layer_info()
                 self.solvers_reset()
+
+                if not self.is_asyn:
+                    self.update_ADMM_single_step(target='Y')
+                    self.sync_single_weight(target='Y')
 
                 # self.run_ADMM_solvers()
                 # self.sync_results()
@@ -727,8 +742,9 @@ class SALADTrainer():
                 
                 ep_loss, ep_loss1, ep_loss2 = 0.0, 0.0, 0.0
             
-            self.update_ADMM_single_step(target='Y')
-            self.sync_single_weight(target='Y')
+            if self.is_asyn:
+                self.update_ADMM_single_step(target='Y')
+                self.sync_single_weight(target='Y')
 
         dist.destroy_process_group()
 

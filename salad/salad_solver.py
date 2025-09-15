@@ -2,6 +2,7 @@ import torch
 import math
 
 from salad.utils import *
+from salad.adaptive_rho import RHO
 
 class SALAD():
     """
@@ -9,7 +10,7 @@ class SALAD():
     Subclass this to implement customized SVD-based updates.
     """
     def __init__(self, 
-                 layer_name: str, 
+                 layer_name: str,
                  params: dict,
                  X: torch.Tensor,
                  nr_layers: int,
@@ -35,22 +36,28 @@ class SALAD():
         self.dbeta = 0.0
         self.nr_epoch = 0
 
-        # overwrite the hyperparameters
-        if self.is_adaptive:
-            row, col = X.shape  
-            # calculate the initial rho
-            _rho = torch.norm(self.X_with_grad.detach(), p='fro').cpu().numpy() / (np.sqrt(row * col))
-            self.rho = 0.1 * _rho
-            self.rho_min = 1e-2 * _rho
-            self.rho_max = 1500 * _rho
-            self.rho_rate = 1.0
-            # self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
-            # self.rho = 1.0 / (5 * nr_layers * np.sqrt(row * col))
-            # self.rho = 1.0 / (25 * nr_layers * np.sqrt(row * col))
-            # self.rho = 1.0 / (nr_layers * row * col)
-            # self.rho = 1.0 / (np.sqrt(max(row, col)))
-            # self.rho = 0.1
-            # self.rho = 1.0 / (2.0*np.sqrt(max(row, col)))
+        rho_cfg = self.rho_dict
+        rho_cfg['row'] = X.shape[0]
+        rho_cfg['col'] = X.shape[1]
+        rho_cfg['nr_layers'] = nr_layers
+        rho_cfg['X_norm'] = torch.norm(X.detach(), p='fro').cpu().numpy()
+        self.rho_solver = RHO(rho_cfg)
+        self.rho = self.rho_solver.rho
+
+        # row, col = X.shape  
+        # # calculate the initial rho
+        # _rho = torch.norm(self.X_with_grad.detach(), p='fro').cpu().numpy() / (np.sqrt(row * col))
+        # self.rho = 0.1 * _rho
+        # self.rho_min = 1e-2 * _rho
+        # self.rho_max = 1500 * _rho
+        # self.rho_rate = 1.0
+        # self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
+        # self.rho = 1.0 / (5 * nr_layers * np.sqrt(row * col))
+        # self.rho = 1.0 / (25 * nr_layers * np.sqrt(row * col))
+        # self.rho = 1.0 / (nr_layers * row * col)
+        # self.rho = 1.0 / (np.sqrt(max(row, col)))
+        # self.rho = 0.1
+        # self.rho = 1.0 / (2.0*np.sqrt(max(row, col)))
         
         self.alpha = self.rho * self.alpha_to_rho
         self.beta = self.rho * self.beta_to_rho
@@ -84,17 +91,28 @@ class SALAD():
 
         return loss
     
-    def get_loss_term(self, 
-                      X: torch.Tensor,
+    def get_loss_term(self,
                       L: torch.Tensor, 
-                      S: torch.Tensor) -> float:
+                      S: torch.Tensor,
+                      Y: torch.Tensor) -> float:
         """
         Compute the loss term for the model.
         """
-        # loss = self.rho/2 * torch.norm(self.X_with_grad - L - S + Y/self.rho, p='fro') ** 2        
-        loss = torch.norm(X - L - S, p='fro')    
+        loss = self.rho/2 * torch.norm(self.X_with_grad - L - S + Y/self.rho, p='fro') ** 2        
         self.nr_cals += 1
         # self.total_loss += loss.item() / (self.nr_elements)
+        self.total_loss += loss.item()
+        return loss
+    
+    def get_gradient_term(self, 
+                          X: torch.Tensor,
+                          L: torch.Tensor, 
+                          S: torch.Tensor) -> float:
+        """
+        Compute the loss term for the model.
+        """   
+        loss = torch.norm(X - L - S, p='fro')    
+        self.nr_cals += 1
         self.total_loss += loss.item()
         return loss
     
@@ -112,7 +130,7 @@ class SALAD():
         Compute the loss term for the model.
         """
         Z = self.get_gradient(self.X_with_grad.detach(), L, S, Y, self.rho)
-        loss_r = self.get_loss_term(self.X_with_grad.detach(), L, S)
+        loss_r = self.get_gradient_term(self.X_with_grad.detach(), L, S)
         loss_s = self.get_loss_pre_term(L, S)
 
         if self.ema_r is None:
@@ -220,17 +238,6 @@ class SALAD():
                         'nr_elements': self.nr_elements,
                         'avg_loss': (self.total_loss/self.nr_cals)}
 
-    def clip_rho(self, 
-                 rho: float, 
-                 ema_r: float, 
-                 ema_s: float, 
-                 beta: float, 
-                 rho_min: float, 
-                 rho_max: float,
-                 eps: float=1e-6) -> float:
-        """Clip the rho value based on the ratio of loss_r and loss_s."""
-        return max(min(rho * ((ema_r + eps) / (ema_s + eps))**beta, rho_max), rho_min)
-
     def _update_S(self,
                   X: torch.Tensor,
                   L: torch.Tensor,
@@ -286,12 +293,8 @@ class SALAD():
     def update_rho(self) -> None:
         """update the value of rho based on the loss terms.
         """
-        self.rho = self._update_rho(self.rho,
-                                    self.ema_r,
-                                    self.ema_s,
-                                    self.rho_rate,
-                                    self.rho_min,
-                                    self.rho_max)
+        self.update_nr_epoch()
+        self.rho = self.rho_solver.get_rho(self.nr_epoch, self.ema_r, self.ema_s)
 
     @staticmethod
     def _update_L(X: torch.Tensor,
@@ -336,31 +339,28 @@ class SALAD():
             self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 500.0 # current sparsity - target sparsity
             self.beta = self.beta + self.dbeta  # update beta
 
-    def run(self):
-        if self.is_cal:
-            # calibration the sparse matrix
-            self.S = self.X - self.L
+    # def run(self):
 
-        self.update_nr_epoch()
-        # self.rho = tanh_ramp(self.nr_epoch, 
-        #                      total_epochs=1100,
-        #                      a=0.01, 
-        #                      b=0.1,
-        #                      alpha=3.0)
-        if self.nr_epoch > 2:
-            self.rho = self.update_rho()
+    #     self.update_nr_epoch()
+    #     # self.rho = tanh_ramp(self.nr_epoch, 
+    #     #                      total_epochs=1100,
+    #     #                      a=0.01, 
+    #     #                      b=0.1,
+    #     #                      alpha=3.0)
+    #     if self.nr_epoch > 2:
+    #         self.rho = self.update_rho()
 
-        self.RPCA(self.X.clone(),
-                  self.L.clone(),
-                  self.S.clone(),
-                  self.Y.clone(),
-                  self.alpha,
-                  self.beta,
-                  self.rho,
-                  self.iter_max,
-                  self.tol,
-                  self.energy)
+    #     self.RPCA(self.X.clone(),
+    #               self.L.clone(),
+    #               self.S.clone(),
+    #               self.Y.clone(),
+    #               self.alpha,
+    #               self.beta,
+    #               self.rho,
+    #               self.iter_max,
+    #               self.tol,
+    #               self.energy)
 
-        # calculate the results
-        self.cal_results()
+    #     # calculate the results
+    #     self.cal_results()
         
