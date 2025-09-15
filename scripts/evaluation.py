@@ -146,7 +146,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250905_101501'
+    file = '20250905_122825'
     ex_layers = [
                 #  'layers.0.self_attn.o_proj',
                 #  'layers.0.self_attn.v_proj',
