@@ -14,7 +14,7 @@ class RHO():
             row = cfg.get('row', 512)
             col = cfg.get('col', 512)
             nr_layers = cfg.get('nr_layers', 12)
-            self.rho = 1.0 / (25 * nr_layers * np.sqrt(row * col))
+            self.rho = 1.0 / (nr_layers * np.sqrt(row * col))
         elif mode == 'adaptive':
             X_norm = cfg.get('X_norm', 1.0)
             row = cfg.get('row', 512)
