@@ -1,12 +1,12 @@
 seed: 42
-num_total_iters: 44000
+num_total_iters: 22000
 num_freq: 20
 gradient: coupled
 is_asyn: true
 is_clip: !!float '1'
 max_length: 256
 seed_for_shuffle: 42
-batch_size: 256
+batch_size: 512
 num_workers: 0
 scheduler:
   name: cosine

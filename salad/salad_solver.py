@@ -64,7 +64,6 @@ class SALAD():
         self.nr_elements = X.numel()
 
         if is_full:
-            self.X = X.detach()
             _, s, _ = torch.linalg.svd(X, full_matrices=False)
             self.nr_total_rank = len(s)
             
@@ -210,14 +209,14 @@ class SALAD():
 
     def initialization(self) -> None:
         if self.init_energy <= 0:
-            self.L = torch.zeros_like(self.X, device=self.device)
+            self.L = torch.zeros_like(self.X_with_grad.detach(), device=self.device)
         else:
-            U, s, Vt = torch.linalg.svd(self.X, full_matrices=False)
+            U, s, Vt = torch.linalg.svd(self.X_with_grad.detach(), full_matrices=False)
             nr_singular_values = int(len(s) * self.rate_rank)
             self.L = U[:, :nr_singular_values] @ torch.diag(s[:nr_singular_values]) @ Vt[:nr_singular_values, :]
 
-        self.S = torch.zeros_like(self.X)
-        self.Y = torch.zeros_like(self.X)
+        self.S = torch.zeros_like(self.X_with_grad.detach())
+        self.Y = torch.zeros_like(self.X_with_grad.detach())
 
     def cal_results(self) -> None:
         """
@@ -255,9 +254,9 @@ class SALAD():
         """
         Update the sparse component S. 
         """
-        self.S = self._update_S(self.X.clone(), 
-                                self.L.clone(), 
-                                self.Y.clone(), 
+        self.S = self._update_S(self.X_with_grad.detach(), 
+                                self.L, 
+                                self.Y, 
                                 self.rate_sparsity, 
                                 self.rho)
 
@@ -272,9 +271,9 @@ class SALAD():
         """
         Update the dual variable Y.
         """
-        self.Y = self._update_Y(self.X.clone(), 
-                                self.L.clone(), 
-                                self.S.clone(), 
+        self.Y = self._update_Y(self.X_with_grad.detach(), 
+                                self.L, 
+                                self.S, 
                                 self.rho)
 
     def update_nr_epoch(self) -> None:
@@ -313,9 +312,9 @@ class SALAD():
         """
         Update the low-rank component L.
         """
-        self.L, self.nr_rank = self._update_L(self.X.clone(),
-                                              self.S.clone(),
-                                              self.Y.clone(),
+        self.L, self.nr_rank = self._update_L(self.X_with_grad.detach(),
+                                              self.S,
+                                              self.Y,
                                               self.alpha,
                                               self.rho,
                                               energy=self.energy)

@@ -287,9 +287,9 @@ class SALADTrainer():
         if self.rank == 0:
             for p in gathered:
                 for layer_name, data in p.items():
-                    self.LL[layer_name] = data['L']
-                    self.SS[layer_name] = data['S']
-                    self.YY[layer_name] = data['Y']
+                    self.LL[layer_name] = data['L'].to('cpu')
+                    self.SS[layer_name] = data['S'].to('cpu')
+                    self.YY[layer_name] = data['Y'].to('cpu')
                     self.layer_info[layer_name]['alpha'].append(data['alpha'])
                     self.layer_info[layer_name]['beta'].append(data['beta'])
                     self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
@@ -454,11 +454,11 @@ class SALADTrainer():
             for p in gathered:
                 for layer_name, data in p.items():
                     if target == 'L':
-                        self.LL[layer_name] = data  # L
+                        self.LL[layer_name] = data.to('cpu')  # L
                     elif target == 'S':
-                        self.SS[layer_name] = data  # S
+                        self.SS[layer_name] = data.to('cpu')  # S
                     elif target == 'Y':
-                        self.YY[layer_name] = data  # Y
+                        self.YY[layer_name] = data.to('cpu')  # Y
     
     def broadcast_single_weight(self, target: str='L'):
         """
@@ -494,9 +494,9 @@ class SALADTrainer():
         if self.rank == 0:
             for p in gathered:
                 for layer_name, data in p.items():
-                    self.LL[layer_name] = data[0]  # L
-                    self.SS[layer_name] = data[1]  # S
-                    self.YY[layer_name] = data[2]  # Y
+                    self.LL[layer_name] = data[0].to('cpu')  # L
+                    self.SS[layer_name] = data[1].to('cpu')  # S
+                    self.YY[layer_name] = data[2].to('cpu')  # Y
 
     def sync_weights(self):
         """
@@ -513,7 +513,9 @@ class SALADTrainer():
         Returns:
             L, S, Y: broadcasted weights
         """
-        brd = [self.LL, self.SS, self.YY]
+        brd = [self.LL, 
+               self.SS, 
+               self.YY]
         dist.broadcast_object_list(brd, src=0)
         return brd[0], brd[1], brd[2]
     
