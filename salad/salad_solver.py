@@ -3,6 +3,7 @@ import math
 
 from salad.utils import *
 from salad.adaptive_rho import RHO
+from salad.adaptive_param import PARAM
 
 class SALAD():
     """
@@ -32,8 +33,6 @@ class SALAD():
         for key, val in params.items():
             setattr(self, key, val)
 
-        self.dalpha = 0.0
-        self.dbeta = 0.0
         self.nr_epoch = 0
 
         rho_cfg = self.rho_dict
@@ -42,6 +41,15 @@ class SALAD():
         rho_cfg['nr_layers'] = nr_layers
         rho_cfg['X_norm'] = torch.norm(X.detach(), p='fro').cpu().numpy()
         self.rho_solver = RHO(rho_cfg)
+        
+        alpha_cfg = self.alpha_dict
+        alpha_cfg['target_rate'] = self.rate_rank
+        self.alpha_solver = PARAM(alpha_cfg)
+
+        beta_cfg = self.beta_dict
+        beta_cfg['target_rate'] = self.rate_sparsity
+        self.beta_solver = PARAM(beta_cfg)
+
         self.rho = self.rho_solver.rho
 
         # self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
@@ -52,8 +60,6 @@ class SALAD():
         # self.rho = 0.1
         # self.rho = 1.0 / (2.0*np.sqrt(max(row, col)))
         
-        self.alpha = self.rho * self.alpha_to_rho
-        self.beta = self.rho * self.beta_to_rho
         self.nr_elements = X.numel()
 
         if is_full:
@@ -61,7 +67,7 @@ class SALAD():
             self.nr_total_rank = len(s)
             
             k = math.ceil(self.nr_total_rank * self.rate_rank) - 1
-            self.alpha = float(s[k] * self.rho)
+            self.alpha_solver.value = float(s[k] * self.rho)
 
             # self.alpha = 1.0e-5
             # Initialize SVD factors
@@ -152,18 +158,6 @@ class SALAD():
         Y = self._update_Y(X, L, S, rho)
         return L, S, Y, nr_rank
     
-    def get_beta_quantile(self, 
-                          rate_sparsity: float, 
-                          S: torch.Tensor, 
-                          rho: float,
-                          scalar: float=1.0,
-                          eps: float=1e-4) -> float:
-        """Update the beta parameter based on the sparsity of the matrix."""
-        vals, _ = torch.sort(S.abs().flatten(), descending=True)
-        idx = int(len(vals) * rate_sparsity)
-        # return (vals[idx] - eps) * rho * scalar  # in case the same values
-        return vals[idx] * rho * scalar  # in case the same values
-
     def RPCA(self,
              X: torch.Tensor, 
              L: torch.Tensor,  
@@ -215,12 +209,15 @@ class SALAD():
         self.results = {'L': self.L.to('cpu'),
                         'S': self.S.to('cpu'),
                         'Y': self.Y.to('cpu'),
-                        'alpha': self.alpha,
-                        'beta': self.beta,
-                        'dalpha': self.dalpha,
-                        'dbeta': self.dbeta,
+                        'alpha_mode': self.alpha_solver.mode,
+                        'beta_mode': self.beta_solver.mode,
+                        'alpha': self.alpha_solver.value,
+                        'beta': self.beta_solver.value,
+                        'dalpha': self.alpha_solver.dvalue,
+                        'dbeta': self.beta_solver.dvalue,
                         'rho': self.rho,
-                        'rate_decay': self._rate_decay,
+                        'rate_decay_alpha': self.alpha_solver.rate_decay,
+                        'rate_decay_beta': self.beta_solver.rate_decay,
                         'nr_rank': self.nr_rank,
                         'nr_nonzero': int(torch.count_nonzero(self.S)),
                         'nr_total_rank': self.nr_total_rank,
@@ -231,14 +228,11 @@ class SALAD():
                   X: torch.Tensor,
                   L: torch.Tensor,
                   Y: torch.Tensor,
-                  rate_sparsity: float,
-                  rho: float,
-                  mode: str='hard') -> torch.Tensor:
-        if mode == 'hard':
-            beta = self.get_beta_quantile(rate_sparsity, X - L + Y/rho, rho)
-            return soft_threshold(X - L + Y/rho, beta/rho)
-        elif mode == 'soft':
-            pass
+                  rho: float,) -> torch.Tensor:
+        if self.beta_solver.mode == 'hard_cut':
+            self.beta_solver.update_quantile(X-L+Y/rho, rho)
+        return soft_threshold(X - L + Y/rho, self.beta_solver.value/rho)
+
 
     def update_S(self) -> None:
         """
@@ -246,8 +240,7 @@ class SALAD():
         """
         self.S = self._update_S(self.X_with_grad.detach(), 
                                 self.L, 
-                                self.Y, 
-                                self.rate_sparsity, 
+                                self.Y,
                                 self.rho)
 
     @staticmethod
@@ -268,16 +261,6 @@ class SALAD():
 
     def update_nr_epoch(self) -> None:
         self.nr_epoch += 1
-
-    def _update_rho(self,
-                    rho: float,
-                    ema_r: float,
-                    ema_s: float,
-                    rho_rate: float,
-                    rho_min: float,
-                    rho_max: float) -> float:
-        return self.clip_rho(rho, ema_r, ema_s, rho_rate, rho_min, rho_max)
-
 
     def update_rho(self) -> None:
         """update the value of rho based on the loss terms.
@@ -305,7 +288,7 @@ class SALAD():
         self.L, self.nr_rank = self._update_L(self.X_with_grad.detach(),
                                               self.S,
                                               self.Y,
-                                              self.alpha,
+                                              self.alpha_solver.value,
                                               self.rho,
                                               energy=self.energy)
 
@@ -313,43 +296,13 @@ class SALAD():
         """
         Update the alpha parameter based on the rank of singular values.
         """
-        if self.is_adaptive:
-            # self._rate_decay = tanh_ramp(epoch=self.nr_epoch, total_epochs=2200, a=self.rate_decay/10.0, b=self.rate_decay)
-            self._rate_decay = self.rate_decay
-            self.dalpha = self.rho * (self.nr_rank / self.nr_total_rank - self.rate_rank) * self._rate_decay  # current rangk - target rank
-            self.alpha = self.alpha + self.dalpha  # update alpha
+        self.alpha_solver.update(self.nr_rank/self.nr_total_rank, self.rho)
 
     def update_beta(self) -> None:
         """
         Update the beta parameter based on the sparsity of the matrix.
         """
-        if self.is_adaptive:
-            nr_sparsity = torch.count_nonzero(self.S)
-            self.dbeta = self.rho * (nr_sparsity / self.nr_elements - self.rate_sparsity) / 500.0 # current sparsity - target sparsity
-            self.beta = self.beta + self.dbeta  # update beta
+        cur_elements = torch.count_nonzero(self.S)
+        self.beta_solver.update(cur_elements/self.nr_elements, self.rho)
 
-    # def run(self):
-
-    #     self.update_nr_epoch()
-    #     # self.rho = tanh_ramp(self.nr_epoch, 
-    #     #                      total_epochs=1100,
-    #     #                      a=0.01, 
-    #     #                      b=0.1,
-    #     #                      alpha=3.0)
-    #     if self.nr_epoch > 2:
-    #         self.rho = self.update_rho()
-
-    #     self.RPCA(self.X.clone(),
-    #               self.L.clone(),
-    #               self.S.clone(),
-    #               self.Y.clone(),
-    #               self.alpha,
-    #               self.beta,
-    #               self.rho,
-    #               self.iter_max,
-    #               self.tol,
-    #               self.energy)
-
-    #     # calculate the results
-    #     self.cal_results()
         

@@ -105,12 +105,15 @@ class SALADTrainer():
         self.layer_info = {entry['name']: {
             'loss': [],
             'rank': [],
+            'alpha_mode': [],
+            'beta_mode': [],
             'alpha': [],
             'dalpha': [],
             'beta': [],
             'dbeta': [],
             'rho': [],
-            'rate_decay': [],
+            'rate_decay_alpha': [],
+            'rate_decay_beta': [],
             'nonzero': [],
             'total_rank': [],
             'total_elements': []
@@ -320,12 +323,15 @@ class SALADTrainer():
         if self.rank == 0:
             for p in gathered:
                 for layer_name, data in p.items():
+                    self.layer_info[layer_name]['alpha_mode'].append(data['alpha_mode'])
+                    self.layer_info[layer_name]['beta_mode'].append(data['beta_mode'])
                     self.layer_info[layer_name]['alpha'].append(data['alpha'])
                     self.layer_info[layer_name]['beta'].append(data['beta'])
                     self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
                     self.layer_info[layer_name]['dbeta'].append(data['dbeta'])
                     self.layer_info[layer_name]['rho'].append(data['rho'])
-                    self.layer_info[layer_name]['rate_decay'].append(data['rate_decay'])
+                    self.layer_info[layer_name]['rate_decay_alpha'].append(data['rate_decay_alpha'])
+                    self.layer_info[layer_name]['rate_decay_beta'].append(data['rate_decay_beta'])
                     self.layer_info[layer_name]['loss'].append(data['avg_loss'])
                     self.layer_info[layer_name]['rank'].append(data['nr_rank'])
                     self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
@@ -602,12 +608,15 @@ class SALADTrainer():
         
         layer_stats = [{'name': entry['name'],
                         'loss': layer_info[entry['name']]['loss'][-1],
+                        'alpha_mode': layer_info[entry['name']]['alpha_mode'][-1],
+                        'beta_mode': layer_info[entry['name']]['beta_mode'][-1],
                         'alpha': layer_info[entry['name']]['alpha'][-1],
                         'beta': layer_info[entry['name']]['beta'][-1],
                         'dalpha': layer_info[entry['name']]['dalpha'][-1],
                         'dbeta': layer_info[entry['name']]['dbeta'][-1],
                         'rho': layer_info[entry['name']]['rho'][-1],
-                        'rate_decay': layer_info[entry['name']]['rate_decay'][-1],
+                        'rate_decay_alpha': layer_info[entry['name']]['rate_decay_alpha'][-1],
+                        'rate_decay_beta': layer_info[entry['name']]['rate_decay_beta'][-1],
                         'non_zero': layer_info[entry['name']]['nonzero'][-1],
                         'rank': layer_info[entry['name']]['rank'][-1],
                         'total_rank': layer_info[entry['name']]['total_rank'][-1],

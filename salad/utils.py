@@ -81,18 +81,23 @@ def print_epoch(epoch: int,
               f"Penalty: {losses['avg_loss_penalty']:.6f}")
     print(header)
 
-    headers = ["name", "layer diff", "non-zero", "rank", "alpha", "dalpha", "beta", "dbeta", "rho", "rate_decay"]
+    headers = ["name", "layer diff", "non-zero", "rank", 
+               "mode" "alpha", "dalpha", "decay", 
+               "mode", "beta", "dbeta", "decay", "rho"]
     rows = [
         [s["name"], 
          f"{s['loss']:.6f}", 
          f"{s['non_zero']}/{s['total_elements']} ({100. * s['non_zero']/s['total_elements']:.2f}%)", 
          f"{s['rank']}/{s['total_rank']} ({100. * s['rank']/s['total_rank']:.2f}%)",
+         f"{s['alpha_mode']}",
          f"{s['alpha']:.12f}", 
          f"{s['dalpha']:.12f}",
+         f"{s['rate_decay_alpha']:.6f}",
+         f"{s['beta_mode']}",
          f"{s['beta']:.8f}",
          f"{s['dbeta']:.8f}",
-         f"{s['rho']:.12f}",
-         f"{s['rate_decay']:.6f}"
+         f"{s['rate_decay_beta']:.6f}",
+         f"{s['rho']:.12f}"
         ]
         for s in layer_stats
     ]

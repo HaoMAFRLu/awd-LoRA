@@ -170,7 +170,7 @@ if __name__ == "__main__":
         name='llama_60m',
         seed=42,
         lr=0.003,
-        gradient='decoupled',  # or decoupled
+        gradient='coupled',  # or decoupled
         is_asyn=False,
         min_lr_ratio=0.1,
         num_freq=20,
@@ -205,7 +205,7 @@ if __name__ == "__main__":
         seed=42,
         lr=0.008,
         num_freq=2,
-        gradient='decoupled',  # or decoupled
+        gradient='coupled',  # or decoupled
         is_asyn=True,
         seed_for_shuffle=42,
         num_total_iters=200000,
