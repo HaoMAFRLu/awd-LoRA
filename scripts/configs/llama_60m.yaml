@@ -1,7 +1,7 @@
 seed: 42
 num_total_iters: 22000
 num_freq: 20
-gradient: coupled
+gradient: decoupled
 is_asyn: false
 is_clip: !!float '1'
 max_length: 256
