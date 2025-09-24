@@ -77,8 +77,8 @@ def print_epoch(epoch: int,
               f"Lr: {lr:.6f} | "
               f"Tokens: {num_tokens / 1000000:.3f}M | "
               f"Loss: {losses['avg_loss']:.6f} | "
-              f"Layer diff: {losses['avg_diff']:.6f}"
-              f"Penalty: {losses['avg_loss_penalty']:.6f} | ")
+              f"Layer diff: {losses['avg_diff']:.6f} | "
+              f"Penalty: {losses['avg_loss_penalty']:.6f}")
     print(header)
 
     headers = ["name", "layer diff", "non-zero", "rank", "alpha", "dalpha", "beta", "dbeta", "rho", "rate_decay"]

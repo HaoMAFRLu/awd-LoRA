@@ -171,7 +171,7 @@ if __name__ == "__main__":
         seed=42,
         lr=0.003,
         gradient='coupled',  # or decoupled
-        is_asyn=True,
+        is_asyn=False,
         min_lr_ratio=0.1,
         num_freq=20,
         seed_for_shuffle=42,

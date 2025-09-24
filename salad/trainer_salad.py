@@ -115,9 +115,9 @@ class SALADTrainer():
             'total_rank': [],
             'total_elements': []
         } for entry in self.cfg_layers}
-        self.layer_info['loss'] = []
-        self.layer_info['loss1'] = []
-        self.layer_info['loss2'] = []
+        self.layer_info['avg_loss'] = []
+        self.layer_info['avg_loss_penalty'] = []
+        self.layer_info['avg_diff'] = []
         self.layer_info['num_tokens'] = []
 
         # initialize the ADMM solvers
@@ -240,7 +240,7 @@ class SALADTrainer():
         gradient_per_layer = {}
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                Z = solver.get_gradient(solver.X_with_grad, solver.L, solver.S)
+                Z = solver.get_gradient(solver.X_with_grad.detach(), solver.L, solver.S, solver.Y, solver.rho)
                 gradient_per_layer[solver.layer_name] = Z
         return gradient_per_layer
 
@@ -300,8 +300,8 @@ class SALADTrainer():
                 loss += solver.get_penalty(solver.L, solver.S, solver.Y)
             else:
                 loss += solver.get_penalty(self.LL[solver.layer_name].to(self.device),
-                                             self.SS[solver.layer_name].to(self.device),
-                                             self.YY[solver.layer_name].to(self.device))
+                                           self.SS[solver.layer_name].to(self.device),
+                                           self.YY[solver.layer_name].to(self.device))
         return loss
     
     def sync_layer_info(self):
@@ -584,8 +584,8 @@ class SALADTrainer():
                    total_epochs: int,
                    num_freq: int,
                    loss: float,
-                   loss1: float,
-                   loss2: float,
+                   loss_penalty: float,
+                   loss_diff: float,
                    acc_num_tokens: int,
                    layer_info: dict,
                    lr: float):
@@ -596,9 +596,9 @@ class SALADTrainer():
             total_epochs: Total number of epochs
             layer_info: Dictionary containing layer statistics
         """
-        losses = {'loss': loss,
-                  'loss1': loss1,
-                  'loss2': loss2}
+        losses = {'avg_loss': loss,
+                  'avg_loss_penalty': loss_penalty,
+                  'avg_diff': loss_diff}
         
         layer_stats = [{'name': entry['name'],
                         'loss': layer_info[entry['name']]['loss'][-1],
@@ -648,7 +648,7 @@ class SALADTrainer():
         num_it = 0
         num_epochs = self.num_total_iters // self.num_freq
         epoch = 0
-        ep_loss, ep_loss1, ep_loss2 = 0.0, 0.0, 0.0
+        ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
         num_tokens = 0
         acc_num_tokens = 0
 
@@ -675,8 +675,8 @@ class SALADTrainer():
             self.layer_info['num_tokens'].append(num_tokens)
             
             ep_loss += avg_loss
-            ep_loss1 += avg_loss_penalty
-            ep_loss2 += avg_diff
+            ep_penalty += avg_loss_penalty
+            ep_diff += avg_diff
             acc_num_tokens += num_tokens
 
             # now we update S and Y at each iteration
@@ -711,8 +711,8 @@ class SALADTrainer():
 
                 # average losses
                 ep_loss /= self.num_freq
-                ep_loss1 /= self.num_freq
-                ep_loss2 /= self.num_freq    
+                ep_penalty /= self.num_freq
+                ep_diff /= self.num_freq    
                 
                 # print and save results
                 if self.rank == 0:
@@ -720,15 +720,15 @@ class SALADTrainer():
                                     num_epochs,
                                     self.num_freq,
                                     ep_loss,
-                                    ep_loss1,
-                                    ep_loss2, 
+                                    ep_penalty,
+                                    ep_diff, 
                                     acc_num_tokens, 
                                     self.layer_info, 
                                     self.lr_scheduler.get_last_lr()[0])
                     if path_folder is not None:
                         self.save_results(path_folder)
                 
-                ep_loss, ep_loss1, ep_loss2 = 0.0, 0.0, 0.0
+                ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
             
             if self.is_asyn:
                 self.update_ADMM_single_step(target='Y')
