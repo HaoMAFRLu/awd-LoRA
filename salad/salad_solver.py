@@ -83,30 +83,27 @@ class SALAD():
         Compute the loss term for the model.
         """
         if self.sum_pre is None:
-            self.sum_pre = L.clone().detach() + S.clone().detach()
+            self.sum_pre = L.detach() + S.detach()
 
         loss = self.rho * torch.norm(L + S - self.sum_pre, p='fro')  
-        self.sum_pre = L.clone().detach() + S.clone().detach()
+        self.sum_pre = L.detach() + S.detach()
 
         return loss
     
-    def get_loss_term(self,
-                      L: torch.Tensor, 
-                      S: torch.Tensor,
-                      Y: torch.Tensor) -> float:
+    def get_penalty(self,
+                    L: torch.Tensor, 
+                    S: torch.Tensor,
+                    Y: torch.Tensor) -> float:
         """
         Compute the loss term for the model.
         """
         loss = self.rho/2 * torch.norm(self.X_with_grad - L - S + Y/self.rho, p='fro') ** 2        
-        self.nr_cals += 1
-        # self.total_loss += loss.item() / (self.nr_elements)
-        self.total_loss += loss.item()
         return loss
     
-    def get_gradient_term(self, 
-                          X: torch.Tensor,
-                          L: torch.Tensor, 
-                          S: torch.Tensor) -> float:
+    def _get_diff(self, 
+                  X: torch.Tensor,
+                  L: torch.Tensor, 
+                  S: torch.Tensor) -> float:
         """
         Compute the loss term for the model.
         """   
@@ -124,14 +121,14 @@ class SALAD():
         return rho * (X - L - S + Y/rho)
 
     @torch.no_grad()
-    def get_loss_info(self, L, S, Y):
-        """
-        Compute the loss term for the model.
-        """
-        Z = self.get_gradient(self.X_with_grad.detach(), L, S, Y, self.rho)
-        loss_r = self.get_gradient_term(self.X_with_grad.detach(), L, S)
+    def get_diff(self,
+                 L: torch.Tensor,
+                 S: torch.Tensor,
+                 Y: torch.Tensor) -> torch.Tensor:  
+        """Get the difference X - L - S for the layer."""
+        loss_r = self._get_diff(self.X_with_grad.detach(), L, S)
         loss_s = self.get_loss_pre_term(L, S)
-
+        
         if self.ema_r is None:
             self.ema_r = loss_r.item()
             self.ema_s = loss_s.item()
@@ -139,8 +136,8 @@ class SALAD():
             self.ema_r = self.gamma * self.ema_r + (1 - self.gamma) * loss_r.item()
             self.ema_s = self.gamma * self.ema_s + (1 - self.gamma) * loss_s.item()
 
-        return self.layer_name, Z, loss_r
-    
+        return loss_r
+        
     def reset(self):
         """
         Reset the solver state for a new training epoch.

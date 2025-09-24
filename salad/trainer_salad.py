@@ -222,33 +222,87 @@ class SALADTrainer():
         world = dist.get_world_size()
         return rank, world
 
+
+    def get_diff_per_layer(self) -> dict:
+        """Get the difference X - L - S for each layer."""
+        diff = 0.0
+        for solver in self.ADMM_solvers:
+            if solver.layer_gpu_map == self.rank:
+                diff += solver.get_diff(solver.L, solver.S, solver.Y)
+            else:
+                diff += solver.get_diff(self.LL[solver.layer_name].to(self.device),
+                                        self.SS[solver.layer_name].to(self.device),
+                                        self.YY[solver.layer_name].to(self.device))
+        return diff/len(self.ADMM_solvers)
+
+    def get_gradient_per_layer(self) -> dict:
+        """Get the gradient term for each layer."""
+        gradient_per_layer = {}
+        for solver in self.ADMM_solvers:
+            if solver.layer_gpu_map == self.rank:
+                Z = solver.get_gradient(solver.X_with_grad, solver.L, solver.S)
+                gradient_per_layer[solver.layer_name] = Z
+        return gradient_per_layer
+
+    def single_step_train(self, batch, labels, gradient: str='coupled'):
+        # reset the gradient
+        self.optimizer.zero_grad(set_to_none=True)
+        # calculate the loss of the neural network
+        loss = self.ddp_model(**batch, labels=labels).loss
+        # get the loss for each layer, (X - L - S)
+        # update ema_r and ema_s for updating rho
+        avg_diff = self.get_diff_per_layer()
+        # calculate the penalty loss of each layer
+        # X with gradient -> rho/2 * (X - L - S + Y/rho)^2
+        # only used for coupled gradient
+        loss_penalty = self.get_penalty_loss()
+        # get the closed-form gradient for each layer, rho * (X - L -S + Y/rho)
+        # used only for decoupled gradient
+        gradient_per_layer = self.get_gradient_per_layer()     
+
+        if gradient == 'decoupled':
+            loss.backward()
+        elif gradient == 'coupled':
+            loss_total = loss + loss_penalty
+            loss_total.backward()
+
+        if self.is_clip > 0:
+            # Clip gradients to avoid exploding gradients
+            # This is a common practice in training large models
+            torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=self.is_clip)
+
+        self.optimizer.step()
+
+        if gradient == 'decoupled':
+            param_dict = dict(self.ddp_model.named_parameters())
+            with torch.no_grad():
+                eta = self.optimizer.param_groups[0]['lr']
+                for name, Z in gradient_per_layer.items():
+                    param_dict['module.model.'+name+'.weight'].data -= eta * Z
+            # broadcast the updated weights
+            self.broadcast_params(self.ddp_model)
+        
+        self.lr_scheduler.step()
+
+        # broadcast the neural network loss
+        global_avg_loss = self.get_global_loss(loss.detach())
+        # broadcast the penalty loss
+        global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
+        # broadcast the avg_diff
+        global_avg_diff = self.get_global_loss(avg_diff.detach())
+        return global_avg_loss, global_avg_loss_penalty, global_avg_diff
+
     def get_penalty_loss(self):
         """User-defined loss; can be overridden or passed via config."""
         loss = 0.0
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                loss += solver.get_loss_term(solver.L, solver.S, solver.Y)
+                loss += solver.get_penalty(solver.L, solver.S, solver.Y)
             else:
-                loss += solver.get_loss_term(self.LL[solver.layer_name].to(self.device),
+                loss += solver.get_penalty(self.LL[solver.layer_name].to(self.device),
                                              self.SS[solver.layer_name].to(self.device),
                                              self.YY[solver.layer_name].to(self.device))
         return loss
-
-    def get_loss2_info(self):
-        # Z = rho*(X - S + (1/rho)*Y)
-        loss2_info = {}
-        total_loss = 0.0
-        for solver in self.ADMM_solvers:
-            if solver.layer_gpu_map == self.rank:
-                _name, _Z, loss = solver.get_loss_info(solver.L, solver.S, solver.Y)
-                loss2_info[_name] = _Z
-                total_loss += loss
-            else:
-                _, _, loss = solver.get_loss_info(self.LL[solver.layer_name].to(self.device),
-                                                  self.SS[solver.layer_name].to(self.device),
-                                                  self.YY[solver.layer_name].to(self.device))
-                total_loss += loss
-        return loss2_info, total_loss/len(self.ADMM_solvers)
     
     def sync_layer_info(self):
         """
@@ -277,8 +331,6 @@ class SALADTrainer():
                     self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
                     self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
                     self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
-
-
 
     def gather_results(self, local_results):
         """Gather dicts from all ranks to rank 0"""
@@ -315,32 +367,6 @@ class SALADTrainer():
             log_loss = log_loss / self.world_size
         return log_loss.item()
 
-    def coupled_single_step_train(self, batch, labels):
-        """
-        Single training step for the model.
-        Args:
-            data: Input data batch
-            target: Target labels
-        """
-        self.optimizer.zero_grad(set_to_none=True)
-        loss1 = self.ddp_model(**batch, labels=labels).loss
-        loss2 = self.get_penalty_loss()
-        loss = loss1 + loss2
-        loss.backward()
-
-        if self.is_clip > 0:
-            # Clip gradients to avoid exploding gradients
-            # This is a common practice in training large models
-            torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=self.is_clip)
-
-        self.optimizer.step()
-        self.lr_scheduler.step()
-
-        global_loss_mean = self.get_global_loss(loss.detach())
-        global_loss_mean1 = self.get_global_loss(loss1.detach())
-        global_loss_mean2 = self.get_global_loss(loss2.detach())
-        return global_loss_mean, global_loss_mean1, global_loss_mean2
-    
     def _resolve_name(self, name, param_dict):
         if name in param_dict: return name
         if f"module.{name}" in param_dict: return f"module.{name}"
@@ -376,44 +402,7 @@ class SALADTrainer():
                     k = p.numel()
                     p.data.view(-1).copy_(buf[off:off+k])
                     off += k
-
-    def decoupled_single_step_train(self, batch, labels):
-        """
-        Single training step for the model.
-        Args:
-            data: Input data batch
-            target: Target labels
-        """
-        self.optimizer.zero_grad(set_to_none=True)
-        # only use optimizer to update the track loss
-        loss1 = self.ddp_model(**batch, labels=labels).loss
-        loss2_info, loss2 = self.get_loss2_info()
-        # loss = loss1 + loss2
-        loss1.backward()
-
-        if self.is_clip > 0:
-            # Clip gradients to avoid exploding gradients
-            # This is a common practice in training large models
-            torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=self.is_clip)
-
-        self.optimizer.step()
-
-        param_dict = dict(self.ddp_model.named_parameters())
-        with torch.no_grad():
-            eta = self.optimizer.param_groups[0]['lr']
-            for name, Z in loss2_info.items():
-                param_dict['module.model.'+name+'.weight'].data -= eta * Z
  
-        self.lr_scheduler.step()
-
-        self.broadcast_params(self.ddp_model)
-
-        loss = loss1 + loss2
-        global_loss_mean = self.get_global_loss(loss.detach())
-        global_loss_mean1 = self.get_global_loss(loss1.detach())
-        global_loss_mean2 = self.get_global_loss(loss2.detach())
-        return global_loss_mean, global_loss_mean1, global_loss_mean2
-    
     def save_results(self, path_folder):
         os.makedirs(path_folder, exist_ok=True)
 
@@ -675,22 +664,19 @@ class SALADTrainer():
             batch = {k: v.to(self.device) for k, v in batch.items()}
             labels = batch["input_ids"].clone()
             labels[labels == self.pad_idx] = -100 
-            # do one step update: gt = nabla l(X) + rho(X - L - S - Y/rho)
-            if self.gradient == 'decoupled':
-                loss, loss1, loss2 = self.decoupled_single_step_train(batch, labels=labels)
-            elif self.gradient == 'coupled':
-                loss, loss1, loss2 = self.coupled_single_step_train(batch, labels=labels)
+            # do one step update
+            avg_loss, avg_loss_penalty, avg_diff = self.single_step_train(batch, labels, gradient=self.gradient)
 
             # calculate the constants
             num_tokens = (batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()) * self.world_size
-            self.layer_info['loss'].append(loss)
-            self.layer_info['loss1'].append(loss1)
-            self.layer_info['loss2'].append(loss2)
+            self.layer_info['avg_loss'].append(avg_loss)
+            self.layer_info['avg_loss_penalty'].append(avg_loss_penalty)
+            self.layer_info['avg_diff'].append(avg_diff)
             self.layer_info['num_tokens'].append(num_tokens)
             
-            ep_loss += loss
-            ep_loss1 += loss1
-            ep_loss2 += loss2
+            ep_loss += avg_loss
+            ep_loss1 += avg_loss_penalty
+            ep_loss2 += avg_diff
             acc_num_tokens += num_tokens
 
             # now we update S and Y at each iteration

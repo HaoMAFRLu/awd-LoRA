@@ -76,12 +76,12 @@ def print_epoch(epoch: int,
               f"It {epoch * num_freq}/{total_epochs * num_freq} | "
               f"Lr: {lr:.6f} | "
               f"Tokens: {num_tokens / 1000000:.3f}M | "
-              f"Loss: {losses['loss']:.6f} | "
-              f"Loss1: {losses['loss1']:.6f} | "
-              f"Loss2: {losses['loss2']:.6f}")
+              f"Loss: {losses['avg_loss']:.6f} | "
+              f"Layer diff: {losses['avg_diff']:.6f}"
+              f"Penalty: {losses['avg_loss_penalty']:.6f} | ")
     print(header)
 
-    headers = ["name", "layer loss", "non-zero", "rank", "alpha", "dalpha", "beta", "dbeta", "rho", "rate_decay"]
+    headers = ["name", "layer diff", "non-zero", "rank", "alpha", "dalpha", "beta", "dbeta", "rho", "rate_decay"]
     rows = [
         [s["name"], 
          f"{s['loss']:.6f}", 
@@ -319,12 +319,8 @@ def tanh_ramp(epoch, total_epochs=1100, a=1e-6, b=1e-4, alpha=3.0, inflect_at=0.
     if total_epochs <= 1:
         return float(b)
     e = max(0, min(int(epoch), total_epochs - 1))
-    # 将 epoch 映射到 x∈[-1,1]
     x = 2.0 * e / (total_epochs - 1) - 1.0
-    # 把希望的拐点位置转换到 x 轴：x=delta 时是拐点
     delta = 2.0 * inflect_at - 1.0
-
-    # 做移位后的 tanh，并用端点重新归一化到 [0,1]
     s_raw  = math.tanh(alpha * (x - delta))
     s_min  = math.tanh(alpha * (-1.0 - delta))  # x=-1
     s_max  = math.tanh(alpha * ( 1.0 - delta))  # x=+1
