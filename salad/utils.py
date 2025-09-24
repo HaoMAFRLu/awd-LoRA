@@ -82,7 +82,7 @@ def print_epoch(epoch: int,
     print(header)
 
     headers = ["name", "layer diff", "non-zero", "rank", 
-               "mode" "alpha", "dalpha", "decay", 
+               "mode", "alpha", "dalpha", "decay", 
                "mode", "beta", "dbeta", "decay", "rho"]
     rows = [
         [s["name"], 

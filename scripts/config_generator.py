@@ -206,7 +206,7 @@ if __name__ == "__main__":
         lr=0.008,
         num_freq=2,
         gradient='coupled',  # or decoupled
-        is_asyn=True,
+        is_asyn=False,
         seed_for_shuffle=42,
         num_total_iters=200000,
         batch_size=8,

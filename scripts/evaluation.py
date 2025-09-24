@@ -93,9 +93,25 @@ def get_eval_data(split: str,
     _data_mapped.batch = lambda batch_size: batch_fn(_data_mapped, batch_size)
     return _data_mapped
 
+def get_ex_layers(layers: list, model, LL: dict, SS: dict, nr_remove: int) -> list:
+    ex_layers = []
+    loss = {}
+    for layer in layers:
+        L = LL[layer]
+        S = SS[layer]
+
+        X = model.get_submodule('model.'+layer).weight.data
+        loss[layer] = torch.norm(X - L - S, p='fro').item() / X.numel()  # average per element
+ 
+    sorted_layers = sorted(loss.items(), key=lambda item: item[1], reverse=True)
+    for i in range(nr_remove):
+        ex_layers.append(sorted_layers[i][0])
+
+    return ex_layers
+
 def main(cfg_version: str,
          path_folder: str,
-         ex_layers: list=[]) -> None:
+         nr_remove: int) -> None:
     # load the config
     path_cfg = os.path.join(path_folder, cfg_version+'.yaml')
     path_cfg_model = os.path.join(path_folder, cfg_version+'_model.json')
@@ -112,6 +128,7 @@ def main(cfg_version: str,
     model = get_model(path_cfg_model)
     load_model(model, os.path.join(path_folder, 'model.pth'))
     LL, SS = get_lowspa_layers(os.path.join(path_folder, 'matrix.pkl'))
+
     # get the tokenizer
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
     pad_idx = tokenizer.pad_token_id
@@ -123,6 +140,8 @@ def main(cfg_version: str,
     
     layers = [entry['name'] for entry in cfg['layers']]
     rank_quantile = {entry['name']: entry['params']['rate_rank'] + 0.02 for entry in cfg['layers']}
+
+    ex_layers = get_ex_layers(layers, model, LL, SS, nr_remove)
 
     evaluator = CrossEvaluator(model_type=cfg_version,
                                model=model,
@@ -146,46 +165,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250924_145047'
-    ex_layers = [
-                #  'layers.0.self_attn.o_proj',
-                #  'layers.0.self_attn.v_proj',
-                #  'layers.0.mlp.down_proj',
-                #  'layers.0.mlp.up_proj',
-                 'layers.0.mlp.gate_proj',
-                 'layers.1.mlp.gate_proj',
-                #  'layers.2.mlp.down_proj',
-                #  'layers.2.mlp.up_proj',
-                #  'layers.3.mlp.down_proj',
-                #  'layers.3.mlp.up_proj',
-                #  'layers.3.self_attn.o_proj',
-                #  'layers.3.self_attn.v_proj',
-                #  'layers.4.self_attn.o_proj',
-                #  'layers.4.self_attn.q_proj',
-                #  'layers.4.self_attn.k_proj',
-                #  'layers.4.self_attn.v_proj',
-                 'layers.4.mlp.gate_proj',
-                #  'layers.4.mlp.down_proj',
-                #  'layers.4.mlp.up_proj',
-                #  'layers.5.self_attn.o_proj',
-                #  'layers.5.self_attn.v_proj',
-                #  'layers.5.mlp.gate_proj',
-                #  'layers.5.mlp.down_proj',
-                #  'layers.5.mlp.up_proj',
-                #  'layers.6.self_attn.o_proj',
-                #  'layers.6.self_attn.v_proj',
-                #  'layers.6.mlp.gate_proj',
-                 'layers.6.mlp.down_proj',
-                #  'layers.6.mlp.up_proj',
-                 'layers.6.mlp.gate_proj',
-                #  'layers.7.self_attn.o_proj',
-                #  'layers.7.self_attn.q_proj',
-                #  'layers.7.self_attn.k_proj',
-                #  'layers.7.self_attn.v_proj',
-                 'layers.7.mlp.gate_proj',
-                 'layers.7.mlp.down_proj',
-                 'layers.7.mlp.up_proj'
-                ]
+    file = '20250924_141137'
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
-    main(cfg_version, path_folder, ex_layers=ex_layers)
+    main(cfg_version, path_folder, nr_remove=8)
     
