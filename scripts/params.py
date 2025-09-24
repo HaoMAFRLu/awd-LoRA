@@ -10,10 +10,10 @@ embed_params = {
     'rate_rank':     0.2,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,   # Rate of sparsity for the layer
     'is_adaptive':   True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':    0.9,   # Rate of decay for the adaptive 
+    'rate_decay':    0.02,   # Rate of decay for the adaptive 
     'rho_dict':            {
         'rho':           1e-5,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -34,10 +34,10 @@ lm_head_params = {
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     0.9,  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
         'rho':           1e-5,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -58,10 +58,10 @@ attn_o_proj_params = {
     'rate_rank':      0.25,  # Rate of rank reduction for the layer
     'rate_sparsity':  0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     1,  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
         'rho':           1e-5,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -82,10 +82,10 @@ attn_q_proj_params = {
     'rate_rank':    0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     1,  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
         'rho':           1e-5,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -106,10 +106,10 @@ attn_k_proj_params = {
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     1,  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
         'rho':           1e-5,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -130,10 +130,10 @@ attn_v_proj_params = {
     'rate_rank':     0.25,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     1,  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
         'rho':           1e-5,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -154,10 +154,10 @@ mlp_gate_proj_params = {
     'rate_rank':    0.35,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     1,  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
         'rho':           1e-5,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -178,10 +178,10 @@ mlp_down_proj_params = {
     'rate_rank':      0.35,  # Rate of rank reduction for the layer
     'rate_sparsity':  0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     1,  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
         'rho':           1e-5,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -202,10 +202,10 @@ mlp_up_proj_params = {
     'rate_rank':     0.35,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.1,  # Rate of sparsity for the layer
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
-    'rate_decay':     1,  # Rate of decay for the adaptive parameters
+    'rate_decay':     0.02,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
         'rho':           1e-5,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
