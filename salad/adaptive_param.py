@@ -16,7 +16,7 @@ class PARAM():
             self.value = 0.0
             self.rate_decay = 0.0
         elif mode == 'adaptive':
-            self.value = cfg.get('param', 1e-5)
+            self.value = cfg.get('init', 1e-5)
             self.rate_decay = cfg.get('rate_decay', 0.02)
         else:
             raise ValueError(f"Unsupported param mode: {mode}")
