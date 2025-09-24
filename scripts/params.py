@@ -180,7 +180,7 @@ mlp_down_proj_params = {
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     1,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
-        'rho':           1e-3,
+        'rho':           1e-5,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     1.0,
@@ -204,7 +204,7 @@ mlp_up_proj_params = {
     'is_adaptive':    True,  # Whether to use adaptive parameters for the layer
     'rate_decay':     1,  # Rate of decay for the adaptive parameters
     'rho_dict':            {
-        'rho':           1e-3,
+        'rho':           1e-5,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     1.0,
