@@ -705,9 +705,9 @@ class SALADTrainer():
                     self.sync_single_weight(target='S')
 
                 self.update_ADMM_rho()
-                self.update_ADMM_single_step(target='alpha')
                 self.update_ADMM_single_step(target='L')
                 self.sync_single_weight(target='L')
+                self.update_ADMM_single_step(target='alpha')
                 self.update_ADMM_single_step(target='save')
                 self.sync_layer_info()
                 self.solvers_reset()
