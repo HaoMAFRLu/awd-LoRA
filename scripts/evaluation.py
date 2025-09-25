@@ -96,13 +96,15 @@ def get_eval_data(split: str,
 def get_ex_layers(layers: list, model, LL: dict, SS: dict, nr_remove: int) -> list:
     ex_layers = []
     loss = {}
+    _list = []
     for layer in layers:
         L = LL[layer]
         S = SS[layer]
 
         X = model.get_submodule('model.'+layer).weight.data
         loss[layer] = torch.norm(X - L - S, p='fro').item() / X.numel()  # average per element
- 
+        _list.append(torch.norm(X - L - S, p='fro').item())
+
     sorted_layers = sorted(loss.items(), key=lambda item: item[1], reverse=True)
     for i in range(nr_remove):
         ex_layers.append(sorted_layers[i][0])
@@ -165,7 +167,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20250924_220313'
+    file = '20250821_164645'
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
-    main(cfg_version, path_folder, nr_remove=8)
+    main(cfg_version, path_folder, nr_remove=15)
     
