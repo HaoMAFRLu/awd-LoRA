@@ -173,8 +173,8 @@ if __name__ == "__main__":
         name='llama_60m',
         seed=42,
         lr=0.003,
-        gradient='decoupled',  # or decoupled
-        is_asyn=False,
+        gradient='coupled',  # or decoupled
+        is_asyn=True,
         is_init=False,
         min_lr_ratio=0.1,
         weight_decay=0.1,
