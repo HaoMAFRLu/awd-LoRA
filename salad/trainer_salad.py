@@ -691,32 +691,25 @@ class SALADTrainer():
             acc_num_tokens += num_tokens
 
             # now we update S and Y at each iteration
-            # asynchronous update for S
-            if self.is_asyn:
-                self.update_ADMM_single_step(target='beta')
-                self.update_ADMM_single_step(target='S')
-                self.sync_single_weight(target='S')
-
+            # asynchronous update for 
             if num_it % self.num_freq == 0:
                 # run admm solvers
                 epoch += 1
 
-                if not self.is_asyn:
-                    self.update_ADMM_single_step(target='beta')
-                    self.update_ADMM_single_step(target='S')
-                    self.sync_single_weight(target='S')
-
+                self.update_ADMM_single_step(target='beta')
+                self.update_ADMM_single_step(target='S')
                 self.update_ADMM_rho()
                 self.update_ADMM_single_step(target='L')
-                self.sync_single_weight(target='L')
                 self.update_ADMM_single_step(target='alpha')
+                self.update_ADMM_single_step(target='Y')
+
+                self.sync_single_weight(target='S')
+                self.sync_single_weight(target='L')
+                self.sync_single_weight(target='Y')
+
                 self.update_ADMM_single_step(target='save')
                 self.sync_layer_info()
                 self.solvers_reset()
-
-                if not self.is_asyn:
-                    self.update_ADMM_single_step(target='Y')
-                    self.sync_single_weight(target='Y')
 
                 # self.run_ADMM_solvers()
                 # self.sync_results()
@@ -742,9 +735,15 @@ class SALADTrainer():
                 
                 ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
             
-            if self.is_asyn:
-                self.update_ADMM_single_step(target='Y')
-                self.sync_single_weight(target='Y')
+            else:
+                if self.is_asyn:
+                    self.update_ADMM_single_step(target='beta')
+                    
+                    self.update_ADMM_single_step(target='S')
+                    self.update_ADMM_single_step(target='Y')
+
+                    self.sync_single_weight(target='S')
+                    self.sync_single_weight(target='Y')
 
         dist.destroy_process_group()
 
