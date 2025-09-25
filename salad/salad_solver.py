@@ -247,8 +247,9 @@ class SALAD():
     def _update_Y(X: torch.Tensor,
                   L: torch.Tensor,
                   S: torch.Tensor,
+                  Y: torch.Tensor,
                   rho: float) -> torch.Tensor:
-        return rho * (X - L - S)
+        return Y + rho * (X - L - S)
     
     def update_Y(self) -> None:
         """
@@ -256,7 +257,8 @@ class SALAD():
         """
         self.Y = self._update_Y(self.X_with_grad.detach(), 
                                 self.L, 
-                                self.S, 
+                                self.S,
+                                self.Y, 
                                 self.rho)
 
     def update_nr_epoch(self) -> None:
