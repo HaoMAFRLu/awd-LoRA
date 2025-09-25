@@ -70,7 +70,7 @@ class SALAD():
             loss = self.rho/2 * torch.norm(self.X_with_grad - L, p='fro') ** 2
         
         self.nr_cals += 1
-        self.total_loss += np.sqrt(loss.item() / (self.nr_elements * self.rho/2))
+        self.total_loss += torch.norm(self.X_with_grad.detach() - L - S, p='fro').item()
         return loss
     
     def reset(self):
