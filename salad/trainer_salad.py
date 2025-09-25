@@ -37,6 +37,7 @@ class SALADTrainer():
         self.num_workers = config.get('num_workers', 4)
         self.gradient= config.get('gradient', 'coupled')  # or 'decoupled'
         self.is_asyn = config.get('is_asyn', False)
+        self.is_init = config.get('is_init', False)
 
         self.rank, self.world_size = self._init_distributed()
 
@@ -63,17 +64,18 @@ class SALADTrainer():
         # get specified layers in the config
         self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
 
-        for entry in self.cfg_layers:
-            name = entry['name']
-            params = entry['params']
-            W = self.get_weight(self.model, 'model.'+name)
-            rate_rank = params.get('rate_rank', 0.5)
-            # truncate the rank of X
-            U, s, Vt = torch.linalg.svd(W, full_matrices=False)
-            idx = int(len(s) * rate_rank)
-            _W = (U[:, :idx] * s[:idx]) @ Vt[:idx, :]
-            with torch.no_grad():
-                W.copy_(_W.to(W.dtype))
+        if self.is_init:
+            for entry in self.cfg_layers:
+                name = entry['name']
+                params = entry['params']
+                W = self.get_weight(self.model, 'model.'+name)
+                rate_rank = params.get('rate_rank', 0.5)
+                # truncate the rank of X
+                U, s, Vt = torch.linalg.svd(W, full_matrices=False)
+                idx = int(len(s) * rate_rank)
+                _W = (U[:, :idx] * s[:idx]) @ Vt[:idx, :]
+                with torch.no_grad():
+                    W.copy_(_W.to(W.dtype))
 
         self.ddp_model = DDP(self.model, device_ids=[torch.cuda.current_device()])
 

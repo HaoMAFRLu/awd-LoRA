@@ -23,6 +23,7 @@ def generate_config(
     weight_decay: float=0.0,
     gradient: str='coupled',
     is_asyn: bool = False,
+    is_init: bool = False,
     seed_for_shuffle: int = 42,
     is_clip: float = 1.0,
     num_total_iters: int=20_000,
@@ -85,6 +86,7 @@ def generate_config(
         'num_freq': num_freq,
         'gradient': gradient,
         'is_asyn': is_asyn,
+        'is_init': is_init,
         'is_clip': is_clip,
         'max_length': max_length,
         'seed_for_shuffle': seed_for_shuffle,
@@ -173,6 +175,7 @@ if __name__ == "__main__":
         lr=0.003,
         gradient='coupled',  # or decoupled
         is_asyn=False,
+        is_init=False,
         min_lr_ratio=0.1,
         weight_decay=0.1,
         num_freq=20,
