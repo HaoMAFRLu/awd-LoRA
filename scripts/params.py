@@ -1,6 +1,7 @@
 embed_params = {
     'energy':        0.999,   # Energy parameter
     'init_energy':   0.45,   # Initial energy
+    'is_init':       False,  # Whether to initialize
     'iter_max':      1,     # Max ADMM iterations per layer
     'tol':           0.001, # Convergence tolerance
     'rate_rank':     0.2,  # Rate of rank reduction for the layer
@@ -27,11 +28,12 @@ embed_params = {
 }
 
 lm_head_params = {
-    'energy':       0.999,     # Energy parameter
-    'init_energy':  0.15,     # Initial energy
-    'iter_max':     1,       # Max ADMM iterations per layer
-    'tol':          0.001,   # Convergence tolerance
-    'rate_rank':    0.15,  # Rate of rank reduction for the layer
+    'energy':        0.999,     # Energy parameter
+    'init_energy':   0.15,     # Initial energy
+    'is_init':       False,  # Whether to initialize
+    'iter_max':      1,       # Max ADMM iterations per layer
+    'tol':           0.001,   # Convergence tolerance
+    'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
@@ -55,12 +57,13 @@ lm_head_params = {
 }
 
 attn_o_proj_params = {
-    'energy':       0.999,     # Energy parameter
-    'init_energy':  0.15,     # Initial energy
-    'iter_max':     1,       # Max ADMM iterations per layer
-    'tol':          0.001,   # Convergence tolerance
-    'rate_rank':      0.25,  # Rate of rank reduction for the layer
-    'rate_sparsity':  0.1,  # Rate of sparsity for the layer
+    'energy':        0.999,     # Energy parameter
+    'init_energy':   0.15,     # Initial energy
+    'is_init':       False,  # Whether to initialize
+    'iter_max':      1,       # Max ADMM iterations per layer
+    'tol':           0.001,   # Convergence tolerance
+    'rate_rank':     0.25,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
@@ -83,12 +86,13 @@ attn_o_proj_params = {
 }
 
 attn_q_proj_params = {
-    'energy':       0.999,     # Energy parameter
-    'init_energy':  0.15,     # Initial energy
-    'iter_max':     1,       # Max ADMM iterations per layer
-    'tol':          0.001,   # Convergence tolerance
-    'rate_rank':    0.15,  # Rate of rank reduction for the layer
-    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'energy':        0.999,     # Energy parameter
+    'init_energy':   0.15,     # Initial energy
+    'is_init':       False,  # Whether to initialize
+    'iter_max':      1,       # Max ADMM iterations per layer
+    'tol':           0.001,   # Convergence tolerance
+    'rate_rank':     0.15,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
@@ -111,12 +115,13 @@ attn_q_proj_params = {
 }
 
 attn_k_proj_params = {
-    'energy':       0.999,     # Energy parameter
-    'init_energy':  0.15,     # Initial energy
-    'iter_max':     1,       # Max ADMM iterations per layer
-    'tol':          0.001,   # Convergence tolerance
+    'energy':        0.999,     # Energy parameter
+    'init_energy':   0.15,     # Initial energy
+    'is_init':       False,  # Whether to initialize
+    'iter_max':      1,       # Max ADMM iterations per layer
+    'tol':           0.001,   # Convergence tolerance
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
-    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
@@ -139,12 +144,13 @@ attn_k_proj_params = {
 }
 
 attn_v_proj_params = {
-    'energy':       0.999,     # Energy parameter
-    'init_energy':  0.15,     # Initial energy
-    'iter_max':     1,       # Max ADMM iterations per layer
-    'tol':          0.001,   # Convergence tolerance
+    'energy':        0.999,     # Energy parameter
+    'init_energy':   0.15,     # Initial energy
+    'is_init':       False,  # Whether to initialize
+    'iter_max':      1,       # Max ADMM iterations per layer
+    'tol':           0.001,   # Convergence tolerance
     'rate_rank':     0.25,  # Rate of rank reduction for the layer
-    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
@@ -167,12 +173,13 @@ attn_v_proj_params = {
 }
 
 mlp_gate_proj_params = {
-    'energy':       0.999,     # Energy parameter
-    'init_energy':  0.35,     # Initial energy
-    'iter_max':     1,       # Max ADMM iterations per layer
-    'tol':          0.001,   # Convergence tolerance
-    'rate_rank':    0.35,  # Rate of rank reduction for the layer
-    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'energy':        0.999,     # Energy parameter
+    'init_energy':   0.35,     # Initial energy
+    'is_init':       False,  # Whether to initialize
+    'iter_max':      1,       # Max ADMM iterations per layer
+    'tol':           0.001,   # Convergence tolerance
+    'rate_rank':     0.35,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
@@ -197,10 +204,11 @@ mlp_gate_proj_params = {
 mlp_down_proj_params = {
     'energy':         0.999,     # Energy parameter
     'init_energy':    0.35,     # Initial energy
+    'is_init':        False,  # Whether to initialize
     'iter_max':       1,       # Max ADMM iterations per layer
     'tol':            0.001,   # Convergence tolerance
     'rate_rank':      0.35,  # Rate of rank reduction for the layer
-    'rate_sparsity':  0.1,  # Rate of sparsity for the layer
+    'rate_sparsity':  0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
@@ -223,12 +231,13 @@ mlp_down_proj_params = {
 }
 
 mlp_up_proj_params = {
-    'energy':       0.999,     # Energy parameter
-    'init_energy':  0.35,     # Initial energy
-    'iter_max':     1,       # Max ADMM iterations per layer
-    'tol':          0.001,   # Convergence tolerance
+    'energy':        0.999,     # Energy parameter
+    'init_energy':   0.35,     # Initial energy
+    'is_init':       False,  # Whether to initialize
+    'iter_max':      1,       # Max ADMM iterations per layer
+    'tol':           0.001,   # Convergence tolerance
     'rate_rank':     0.35,  # Rate of rank reduction for the layer
-    'rate_sparsity': 0.1,  # Rate of sparsity for the layer
+    'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'

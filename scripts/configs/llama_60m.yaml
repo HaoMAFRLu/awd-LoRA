@@ -27,10 +27,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -51,10 +52,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -75,10 +77,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -99,10 +102,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -123,10 +127,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -147,10 +152,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -171,10 +177,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -195,10 +202,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -219,10 +227,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -243,10 +252,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -267,10 +277,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -291,10 +302,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -315,10 +327,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -339,10 +352,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -363,10 +377,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -387,10 +402,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -411,10 +427,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -435,10 +452,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -459,10 +477,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -483,10 +502,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -507,10 +527,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -531,10 +552,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -555,10 +577,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -579,10 +602,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -603,10 +627,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -627,10 +652,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -651,10 +677,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -675,10 +702,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -699,10 +727,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -723,10 +752,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -747,10 +777,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -771,10 +802,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -795,10 +827,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -819,10 +852,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -843,10 +877,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -867,10 +902,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -891,10 +927,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -915,10 +952,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -939,10 +977,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -963,10 +1002,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -987,10 +1027,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1011,10 +1052,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1035,10 +1077,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1059,10 +1102,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1083,10 +1127,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1107,10 +1152,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1131,10 +1177,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1155,10 +1202,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1179,10 +1227,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1203,10 +1252,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1227,10 +1277,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1251,10 +1302,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1275,10 +1327,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1299,10 +1352,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1323,10 +1377,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
@@ -1347,10 +1402,11 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
