@@ -20,6 +20,7 @@ def generate_config(
     seed: int = 42,
     lr: float = 0.008,
     num_freq: int = 1000,
+    weight_decay: float=0.0,
     gradient: str='coupled',
     is_asyn: bool = False,
     seed_for_shuffle: int = 42,
@@ -102,7 +103,7 @@ def generate_config(
                 'lr':  lr,
                 'betas': (0.9, 0.95),
                 'eps':  1e-8,
-                'weight_decay': 0.0,
+                'weight_decay': weight_decay,
             }
         },
         'layers': []
@@ -173,6 +174,7 @@ if __name__ == "__main__":
         gradient='coupled',  # or decoupled
         is_asyn=False,
         min_lr_ratio=0.1,
+        weight_decay=0.1,
         num_freq=20,
         seed_for_shuffle=42,
         num_total_iters=22000,
