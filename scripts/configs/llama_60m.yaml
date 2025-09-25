@@ -1,7 +1,7 @@
 seed: 42
 num_total_iters: 22000
 num_freq: 20
-gradient: coupled
+gradient: decoupled
 is_asyn: false
 is_init: false
 is_clip: !!float '1'
@@ -31,7 +31,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -106,7 +106,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -206,7 +206,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -281,7 +281,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -381,7 +381,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -456,7 +456,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -556,7 +556,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -631,7 +631,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -731,7 +731,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -806,7 +806,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -906,7 +906,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -981,7 +981,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -1081,7 +1081,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -1156,7 +1156,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -1256,7 +1256,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
@@ -1331,7 +1331,7 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
