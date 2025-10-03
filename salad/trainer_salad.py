@@ -542,6 +542,8 @@ class SALADTrainer():
         """
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
+                if solver.layer_name == 'layers.0.mlp.gate_proj':
+                    print('here')
                 if target == 'L':
                     solver.update_L()
                 elif target == 'S':
