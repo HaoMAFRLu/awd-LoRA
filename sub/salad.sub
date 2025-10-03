@@ -16,6 +16,6 @@ output          = jobs/task$(Process).out
 request_cpus    = 5
 request_memory  = 65536
 request_gpus    = 5
-+GPUModel       = "NVIDIA H100"
+requirements = (CUDAGlobalMemoryMb > 70000 && CUDAGlobalMemoryMb < 100000)
 
 queue 1
