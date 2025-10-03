@@ -238,5 +238,42 @@ if __name__ == "__main__":
         transformers_version="4.28.1",
         use_cache=True,
         vocab_size=32000)
+    
+    cfg_llama_debug = dict(
+        name='llama_debug',
+        seed=42,
+        lr=0.003,
+        gradient='coupled',  # or decoupled
+        is_asyn=False,
+        is_init=False,
+        min_lr_ratio=0.1,
+        weight_decay=0.1,
+        num_freq=2,              # 少一些方便快速跑
+        seed_for_shuffle=42,
+        num_total_iters=200,     # 迭代数减少，便于debug
+        batch_size=8,            # 小batch，加快速度
+        max_length=32,           # 短序列，便于快速测试
+        warmup_steps=20,
+        num_workers=0,
+        scheduler_type='cosine',
+        include_embeddings=True,  # debug时最好包含embedding和head
+        include_head=True,
+        is_clip=1.0,
+        bos_token_id=0,
+        eos_token_id=1,
+        hidden_act='silu',
+        hidden_size=64,          # 降低维度
+        intermediate_size=128,   # 对应feedforward更小
+        initializer_range=0.02,
+        max_sequence_length=64,
+        model_type="llama",
+        num_attention_heads=2,   # 简化多头
+        num_hidden_layers=1,     # ✅ 只保留一层
+        pad_token_id=-1,
+        rms_norm_eps=1e-06,
+        transformers_version="4.28.1",
+        use_cache=False,         # debug时一般关掉cache方便对比
+        vocab_size=500           # 缩小词表
+    )
 
-    generate_config(**cfg_llama_60m)
+    generate_config(**cfg_llama_debug)
