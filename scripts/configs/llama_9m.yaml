@@ -3,10 +3,11 @@ num_total_iters: 200000
 num_freq: 2
 gradient: coupled
 is_asyn: false
+is_init: false
 is_clip: !!float '1'
 max_length: 256
 seed_for_shuffle: 42
-batch_size: 8
+batch_size: 2
 num_workers: 0
 scheduler:
   name: cosine
@@ -27,20 +28,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
-      rate_decay: 0.02
+      mode: hard_cut
+      rate_decay: 0.2
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -51,20 +53,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -75,20 +78,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -99,20 +103,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -123,20 +128,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -147,20 +153,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -171,20 +178,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -195,20 +203,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
-      rate_decay: 0.02
+      mode: hard_cut
+      rate_decay: 0.2
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -219,20 +228,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -243,20 +253,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -267,20 +278,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -291,20 +303,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -315,20 +328,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -339,20 +353,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -363,20 +378,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
-      rate_decay: 0.02
+      mode: hard_cut
+      rate_decay: 0.2
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -387,20 +403,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -411,20 +428,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -435,20 +453,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -459,20 +478,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -483,20 +503,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -507,20 +528,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -531,20 +553,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
-      rate_decay: 0.02
+      mode: hard_cut
+      rate_decay: 0.2
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -555,20 +578,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -579,20 +603,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.15
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -603,20 +628,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.15
+    is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.25
-    rate_sparsity: 0.1
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.0000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -627,20 +653,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -651,20 +678,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -675,20 +703,21 @@ layers:
   params:
     energy: 0.999
     init_energy: 0.35
+    is_init: false
     iter_max: 1
     tol: 0.001
     rate_rank: 0.35
-    rate_sparsity: 0.1
+    rate_sparsity: 0.05
     alpha_dict:
-      init: 0.00001
+      init: 0.000000001
       mode: adaptive
       rate_decay: 0.02
     beta_dict:
       init: 0.0000001
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.02
     rho_dict:
-      rho: 0.0001
+      rho: 0.00001
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1

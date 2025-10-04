@@ -212,9 +212,10 @@ if __name__ == "__main__":
         num_freq=2,
         gradient='coupled',  # or decoupled
         is_asyn=False,
+        is_init=False,
         seed_for_shuffle=42,
         num_total_iters=200000,
-        batch_size=8,
+        batch_size=2,
         max_length=256,
         warmup_steps=1000,
         num_workers=0,
@@ -268,7 +269,7 @@ if __name__ == "__main__":
         max_sequence_length=64,
         model_type="llama",
         num_attention_heads=2,   # 简化多头
-        num_hidden_layers=1,     # ✅ 只保留一层
+        num_hidden_layers=2,     # ✅ 只保留一层
         pad_token_id=-1,
         rms_norm_eps=1e-06,
         transformers_version="4.28.1",
@@ -276,4 +277,4 @@ if __name__ == "__main__":
         vocab_size=32000           # 缩小词表
     )
 
-    generate_config(**cfg_llama_60m)
+    generate_config(**cfg_llama_9m)
