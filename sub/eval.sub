@@ -7,4 +7,5 @@ log    = jobs_eval/task$(Process).log
 request_gpus = 1
 request_memory = 65536
 request_cpus = 1
+requirements = (CUDAGlobalMemoryMb > 70000 && CUDAGlobalMemoryMb < 100000)
 queue
