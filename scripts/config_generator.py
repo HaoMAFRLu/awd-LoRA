@@ -277,4 +277,4 @@ if __name__ == "__main__":
         vocab_size=32000           # 缩小词表
     )
 
-    generate_config(**cfg_llama_9m)
+    generate_config(**cfg_llama_60m)

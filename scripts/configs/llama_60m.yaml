@@ -36,7 +36,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -61,7 +61,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -86,7 +86,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -111,7 +111,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -134,9 +134,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -159,9 +159,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -184,9 +184,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -211,7 +211,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -236,7 +236,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -261,7 +261,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -286,7 +286,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -309,9 +309,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -334,9 +334,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -359,9 +359,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -386,7 +386,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -411,7 +411,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -436,7 +436,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -461,7 +461,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -484,9 +484,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -509,9 +509,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -534,9 +534,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -561,7 +561,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -586,7 +586,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -611,7 +611,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -636,7 +636,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -659,9 +659,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -684,9 +684,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -709,9 +709,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -736,7 +736,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -761,7 +761,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -786,7 +786,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -811,7 +811,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -834,9 +834,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -859,9 +859,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -884,9 +884,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -911,7 +911,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -936,7 +936,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -961,7 +961,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -986,7 +986,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1009,9 +1009,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1034,9 +1034,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1059,9 +1059,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1086,7 +1086,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1111,7 +1111,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1136,7 +1136,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1161,7 +1161,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1184,9 +1184,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1209,9 +1209,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1234,9 +1234,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1261,7 +1261,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1286,7 +1286,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1311,7 +1311,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1336,7 +1336,7 @@ layers:
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1359,9 +1359,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1384,9 +1384,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1409,9 +1409,9 @@ layers:
     rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
-      init: 0.000000001
+      init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut

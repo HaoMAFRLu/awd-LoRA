@@ -25,6 +25,8 @@ class SALADTrainer():
                 - gpu_map: optional mapping layer_name -> gpu id
                 - training: dict with optimizer, lr, num_epochs
         """
+        # for debug
+        # torch.set_printoptions(precision=8)
 
         self.model = model
         self.config = config
