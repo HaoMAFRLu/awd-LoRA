@@ -31,12 +31,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -56,12 +56,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -81,12 +81,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -106,12 +106,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -131,12 +131,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -156,12 +156,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -181,12 +181,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -206,12 +206,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -231,12 +231,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -256,12 +256,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -281,12 +281,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -306,12 +306,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -331,12 +331,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -356,12 +356,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -381,12 +381,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -406,12 +406,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -431,12 +431,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -456,12 +456,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -481,12 +481,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -506,12 +506,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -531,12 +531,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -556,12 +556,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -581,12 +581,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -606,12 +606,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -631,12 +631,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -656,12 +656,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -681,12 +681,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -706,12 +706,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -731,12 +731,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -756,12 +756,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -781,12 +781,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -806,12 +806,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -831,12 +831,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -856,12 +856,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -881,12 +881,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -906,12 +906,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -931,12 +931,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -956,12 +956,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -981,12 +981,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1006,12 +1006,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1031,12 +1031,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1056,12 +1056,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1081,12 +1081,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1106,12 +1106,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1131,12 +1131,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1156,12 +1156,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1181,12 +1181,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1206,12 +1206,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1231,12 +1231,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1256,12 +1256,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1281,12 +1281,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1306,12 +1306,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.02
+      rate_decay: 0.015
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1331,12 +1331,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.15
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.03
+      rate_decay: 0.05
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1356,12 +1356,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1381,12 +1381,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
@@ -1406,12 +1406,12 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.1
+    rate_rank: 0.35
     rate_sparsity: 0.05
     alpha_dict:
       init: 0.0000001
       mode: adaptive
-      rate_decay: 0.05
+      rate_decay: 0.07
     beta_dict:
       init: 0.0000001
       mode: hard_cut
