@@ -13,7 +13,7 @@ embed_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -33,7 +33,7 @@ lm_head_params = {
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
     'tol':           0.001,   # Convergence tolerance
-    'rate_rank':     0.15,  # Rate of rank reduction for the layer
+    'rate_rank':     0.10,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
@@ -42,7 +42,7 @@ lm_head_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -62,7 +62,7 @@ attn_o_proj_params = {
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
     'tol':           0.001,   # Convergence tolerance
-    'rate_rank':     0.15,  # Rate of rank reduction for the layer
+    'rate_rank':     0.10,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
@@ -71,7 +71,7 @@ attn_o_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.2,
     },
     'rho_dict':            {
@@ -91,7 +91,7 @@ attn_q_proj_params = {
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
     'tol':           0.001,   # Convergence tolerance
-    'rate_rank':     0.15,  # Rate of rank reduction for the layer
+    'rate_rank':     0.10,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
@@ -100,7 +100,7 @@ attn_q_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -120,7 +120,7 @@ attn_k_proj_params = {
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
     'tol':           0.001,   # Convergence tolerance
-    'rate_rank':     0.15,  # Rate of rank reduction for the layer
+    'rate_rank':     0.10,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
@@ -129,7 +129,7 @@ attn_k_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -149,7 +149,7 @@ attn_v_proj_params = {
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
     'tol':           0.001,   # Convergence tolerance
-    'rate_rank':     0.15,  # Rate of rank reduction for the layer
+    'rate_rank':     0.10,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
@@ -158,7 +158,7 @@ attn_v_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -178,7 +178,7 @@ mlp_gate_proj_params = {
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
     'tol':           0.001,   # Convergence tolerance
-    'rate_rank':     0.35,  # Rate of rank reduction for the layer
+    'rate_rank':     0.10,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
@@ -187,7 +187,7 @@ mlp_gate_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -207,7 +207,7 @@ mlp_down_proj_params = {
     'is_init':        False,  # Whether to initialize
     'iter_max':       1,       # Max ADMM iterations per layer
     'tol':            0.001,   # Convergence tolerance
-    'rate_rank':      0.35,  # Rate of rank reduction for the layer
+    'rate_rank':      0.10,  # Rate of rank reduction for the layer
     'rate_sparsity':  0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
@@ -216,7 +216,7 @@ mlp_down_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -236,7 +236,7 @@ mlp_up_proj_params = {
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
     'tol':           0.001,   # Convergence tolerance
-    'rate_rank':     0.35,  # Rate of rank reduction for the layer
+    'rate_rank':     0.10,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 1e-7,
@@ -245,7 +245,7 @@ mlp_up_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
