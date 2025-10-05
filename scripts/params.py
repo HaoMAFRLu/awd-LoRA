@@ -13,7 +13,7 @@ embed_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -42,7 +42,7 @@ lm_head_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -71,7 +71,7 @@ attn_o_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.2,
     },
     'rho_dict':            {
@@ -100,7 +100,7 @@ attn_q_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -129,7 +129,7 @@ attn_k_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -158,7 +158,7 @@ attn_v_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -187,7 +187,7 @@ mlp_gate_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -216,7 +216,7 @@ mlp_down_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -245,7 +245,7 @@ mlp_up_proj_params = {
     },
     'beta_dict': {
         'init': 1e-7,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
