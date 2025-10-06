@@ -141,7 +141,7 @@ def main(cfg_version: str,
                               tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
     
     layers = [entry['name'] for entry in cfg['layers']]
-    rank_quantile = {entry['name']: entry['params']['rate_rank'] + 0.10 for entry in cfg['layers']}
+    rank_quantile = {entry['name']: entry['params']['rate_rank'] + 0.03 for entry in cfg['layers']}
 
     ex_layers = get_ex_layers(layers, model, LL, SS, nr_remove)
 
@@ -167,7 +167,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_60m'
-    file = '20251006_093251'
+    file = '20251006_092303'
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder, nr_remove=15)
     
