@@ -4,7 +4,7 @@ num_freq: 20
 gradient: coupled
 is_asyn: false
 is_init: false
-is_clip: !!float '1'
+is_clip: !!float '0'
 max_length: 256
 seed_for_shuffle: 42
 batch_size: 512
@@ -22,7 +22,7 @@ optimizer:
     - 0.9
     - 0.95
     eps: 0.00000001
-    weight_decay: !!float '0'
+    weight_decay: !!float '1'
 layers:
 - name: layers.0.self_attn.o_proj
   params:
