@@ -169,6 +169,42 @@ def generate_config(
 
 if __name__ == "__main__":
     # Customize parameters as needed
+    cfg_llama_130m = dict(
+        name='llama_130m',
+        seed=42,
+        lr=0.003,
+        gradient='coupled',  # or decoupled
+        is_asyn=False,
+        is_init=False,
+        min_lr_ratio=0.1,
+        weight_decay=1.0,
+        num_freq=20,
+        seed_for_shuffle=42,
+        num_total_iters=22000,
+        batch_size=512,
+        max_length=256,
+        warmup_steps=2200,
+        num_workers=0,
+        scheduler_type='cosine',
+        include_embeddings=False,
+        include_head=False,
+        is_clip=1.0,
+        bos_token_id=0,
+        eos_token_id=1,
+        hidden_act='silu',
+        hidden_size=768,
+        intermediate_size=2048,
+        initializer_range=0.02,
+        max_sequence_length=1024,
+        model_type="llama",
+        num_attention_heads=12,
+        num_hidden_layers=12,
+        pad_token_id=-1,
+        rms_norm_eps=1e-06,
+        transformers_version="4.28.1",
+        use_cache=True,
+        vocab_size=32000)
+    
     cfg_llama_60m = dict(
         name='llama_60m',
         seed=42,
@@ -277,4 +313,4 @@ if __name__ == "__main__":
         vocab_size=32000           # 缩小词表
     )
 
-    generate_config(**cfg_llama_60m)
+    generate_config(**cfg_llama_130m)
