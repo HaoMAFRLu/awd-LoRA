@@ -158,7 +158,8 @@ def get_linear_layers_name(model):
     Returns:
         list: A list of names of linear layers in the model.
     """
-    return [name for name, module in model.named_modules() if isinstance(module, torch.nn.Linear)]
+    ll = ['model.embed_tokens']
+    return ll + [name for name, module in model.named_modules() if isinstance(module, torch.nn.Linear)]
 
 def unwrap(m):
     return m.module if hasattr(m, "module") else m
@@ -332,3 +333,17 @@ def tanh_ramp(epoch, total_epochs=1100, a=1e-6, b=1e-4, alpha=3.0, inflect_at=0.
     s = (s_raw - s_min) / (s_max - s_min)
 
     return a + (b - a) * s
+
+def get_param_tensor(param_dict, name, attr="weight"):
+    """
+    """
+    candidates = [
+        f"module.model.{name}.{attr}",
+        f"module.{name}.{attr}",
+        f"model.{name}.{attr}",
+        f"{name}.{attr}",
+    ]
+    for k in candidates:
+        if k in param_dict:
+            return param_dict[k]
+    raise KeyError(f"Parameter not found for layer '{name}' (attr='{attr}'). Tried: {candidates}")

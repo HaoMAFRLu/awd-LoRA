@@ -70,7 +70,7 @@ class SALADTrainer():
             for entry in self.cfg_layers:
                 name = entry['name']
                 params = entry['params']
-                W = self.get_weight(self.model, 'model.'+name)
+                W = self.get_weight(self.model, name)
                 rate_rank = params.get('rate_rank', 0.5)
                 # truncate the rank of X
                 U, s, Vt = torch.linalg.svd(W, full_matrices=False)
@@ -134,16 +134,16 @@ class SALADTrainer():
             params = entry['params']
             solver = SALAD(name, 
                            params, 
-                           self.get_weight(self.ddp_model, 'module.model.'+name), 
+                           self.get_weight(self.ddp_model, name), 
                            len(self.cfg_layers),
                            is_full=name in self.assigned_layers)
             solver.layer_gpu_map = self.rank if name in self.assigned_layers else -1
             self.ADMM_solvers.append(solver)
         
         # after initialization, sync the initial weights
-        self.LL = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.model.'+entry['name']), device='cpu') for entry in self.cfg_layers}
-        self.SS = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.model.'+entry['name']), device='cpu') for entry in self.cfg_layers}
-        self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, 'module.model.'+entry['name']), device='cpu') for entry in self.cfg_layers}
+        self.LL = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
+        self.SS = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
+        self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
         
         self.sync_weights()
 
@@ -161,7 +161,11 @@ class SALADTrainer():
             per_owner_names[item].append(n)
 
         param_dict = dict(ddp_model.named_parameters())
-        owner_sizes = {r: sum(param_dict['module.model.'+n+'.weight'].numel() for n in per_owner_names[r]) for r in range(world_size)}
+        owner_sizes = {
+            r: sum(get_param_tensor(param_dict, n, "weight").numel() for n in per_owner_names[r])
+            for r in range(world_size)
+        }
+        # owner_sizes = {r: sum(param_dict['module.model.'+n+'.weight'].numel() for n in per_owner_names[r]) for r in range(world_size)}
         return per_owner_names, owner_sizes
 
     @staticmethod
@@ -180,9 +184,25 @@ class SALADTrainer():
         return name, params
     
     @staticmethod
-    def get_weight(model: torch.nn.Module, layer_name: str) -> torch.Tensor:
+    def _get_weight(model: torch.nn.Module, layer_name: str) -> torch.Tensor:
         sub = model.get_submodule(layer_name)
         return sub.weight
+
+    def get_weight(self, model: torch.nn.Module, layer_name: str) -> torch.Tensor:
+        candidates = [
+            f"module.model.{layer_name}",
+            f"module.{layer_name}",
+            f"model.{layer_name}",
+            layer_name
+        ]
+
+        for candidate in candidates:
+            try:
+                return self._get_weight(model, candidate)
+            except (KeyError, AttributeError):
+                continue
+
+        raise KeyError(f"Weight not found for layer '{layer_name}'. Tried: {candidates}")
 
     @staticmethod
     def get_cfg_layers(config: dict,
@@ -195,7 +215,7 @@ class SALADTrainer():
 
         for entry in layers:
             name = entry.get('name')        
-            if 'model.'+name not in names_model_layers:
+            if name not in names_model_layers and f"model.{name}" not in names_model_layers:
                 raise KeyError(f"Layer {name} not found in model")
 
         return layers
