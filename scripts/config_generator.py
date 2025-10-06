@@ -188,7 +188,7 @@ if __name__ == "__main__":
         scheduler_type='cosine',
         include_embeddings=False,
         include_head=False,
-        is_clip=0.0,
+        is_clip=1.0,
         bos_token_id=0,
         eos_token_id=1,
         hidden_act='silu',
