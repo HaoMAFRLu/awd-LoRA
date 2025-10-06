@@ -173,7 +173,7 @@ if __name__ == "__main__":
         name='llama_60m',
         seed=42,
         lr=0.003,
-        gradient='decoupled',  # or decoupled
+        gradient='coupled',  # or decoupled
         is_asyn=False,
         is_init=False,
         min_lr_ratio=0.1,
@@ -186,8 +186,8 @@ if __name__ == "__main__":
         warmup_steps=2200,
         num_workers=0,
         scheduler_type='cosine',
-        include_embeddings=False,
-        include_head=False,
+        include_embeddings=True,
+        include_head=True,
         is_clip=1.0,
         bos_token_id=0,
         eos_token_id=1,
