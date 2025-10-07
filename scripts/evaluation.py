@@ -227,7 +227,7 @@ if __name__ == "__main__":
     # file = '20251005_130200'
 
     cfg_version = 'llama_130m'
-    file = '20251006_223931'
+    file = '20251006_210512'
 
     rank_cfg = {
         'o_proj': 0.30,
