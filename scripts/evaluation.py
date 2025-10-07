@@ -167,7 +167,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_130m'
-    file = '20251006_143955'
+    file = '20251006_140135'
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder, nr_remove=15)
     
