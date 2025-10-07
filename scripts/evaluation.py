@@ -200,13 +200,13 @@ if __name__ == "__main__":
     # file = '20251006_143955'
     file = '20251006_092303'
     rank_cfg = {
-        'o_proj': 0.25,
+        'o_proj': 0.20,
         'q_proj': 0.20,
         'k_proj': 0.20,
-        'v_proj': 0.25,
-        'gate_proj': 0.30,
-        'down_proj': 0.30,
-        'up_proj': 0.30
+        'v_proj': 0.20,
+        'gate_proj': 0.38,
+        'down_proj': 0.38,
+        'up_proj': 0.38
     }
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder, nr_remove=15, rank_cfg=rank_cfg)
