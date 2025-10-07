@@ -171,7 +171,9 @@ def main(model_type: str, files: list) -> None:
 if __name__ == "__main__":
     model_type = 'llama_60m'
     model_type = 'llama_130m'
-    files = ['20251006_143955']
+    files = [
+             '20251006_143955',
+             '20251006_140135']
     # files = [
     #         '20250814_150324',
     #         # '20250816_004617',
