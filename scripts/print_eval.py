@@ -34,9 +34,14 @@ def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) ->
     row = [file, data_type, 'loss']
     for key in header:
         if key in key_word_map and key_word_map[key] in eval_results and eval_results[key_word_map[key]] is not None:
-            value = eval_results[key_word_map[key]]['avg_loss'][-1]
+            _key = key_word_map[key]
+            value = eval_results[_key]['avg_loss'][-1]
             if isinstance(value, float):
-                row.append(f"{value:.4f}")
+                if 'nr_'+_key in eval_results:
+                    nr = eval_results['nr_'+_key]
+                    row.append(f"{value:.4f} | {nr/1000000:.4f}M")
+                else:
+                    row.append(f"{value:.4f}")
             elif isinstance(value, str):   # Handle case where value is 'N/A'
                 row.append(value)
         else:
@@ -170,13 +175,16 @@ def main(model_type: str, files: list) -> None:
 
 
 if __name__ == "__main__":
-    model_type = 'llama_60m'
-    # model_type = 'llama_130m'
-    # files = [
-    #          '20251006_143955',
-    #          '20251006_140135']
+    model_type = 'llama_130m'
     files = [
-            '20250814_150324',
+            #  '20251006_143955',
+            #  '20251006_140135',
+             '20251006_223931'
+            ]
+
+    # model_type = 'llama_60m'
+    # files = [
+            # '20250814_150324',
             # '20250816_004617',
             # '20250816_205604',
             # '20250817_140155',
@@ -218,14 +226,14 @@ if __name__ == "__main__":
             # '20250926_131149',
             # '20251003_154042',
             # '20251004_143539',
-            '20251005_130200',  # best so far
+            # '20251005_130200',  # best so far
             # '20251005_130358',
             # '20251005_132342',
             # '20251005_133102',
             # '20251005_233442',
             # '20251005_234330',
             # '20251006_093251',
-            '20251006_092303',    # best so far
-             ]
+            # '20251006_092303',    # best so far
+            #  ]
     main(model_type=model_type,
          files=files)

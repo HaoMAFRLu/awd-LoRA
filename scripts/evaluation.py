@@ -130,6 +130,7 @@ def main(cfg_version: str,
 
     # get the model and load the checkpoint
     model = get_model(path_cfg_model)
+
     load_model(model, os.path.join(path_folder, 'model.pth'))
     LL, SS = get_lowspa_layers(os.path.join(path_folder, 'matrix.pkl'))
 
@@ -151,9 +152,16 @@ def main(cfg_version: str,
     rank_quantile_energy = {}
     rank_quantile_specify = {}
     rank_diff = {}
+    rate_sparsity = {}
+    layer_dim = {}
 
     for key in energy_quantile:
         _L = LL[key]
+        _S = SS[key]
+        layer_dim[key] = _L.shape
+
+        rate_sparsity[key] = torch.sum(_S != 0).item() / _S.numel()
+
         _, s, _ = torch.linalg.svd(_L, full_matrices=False)
         energy = torch.cumsum(s, dim=0) / torch.sum(s)
         rank = torch.sum(energy < energy_quantile[key]).item() + 1
@@ -198,6 +206,8 @@ def main(cfg_version: str,
                                rank_quantile_energy=rank_quantile_energy,
                                rank_quantile_specify=rank_quantile_specify,
                                rank_quantile_partial=rank_quantile_partial,
+                               rate_sparsity=rate_sparsity,
+                               layer_dim=layer_dim,
                                batch_size=10)
     
     evaluator.collect_results()

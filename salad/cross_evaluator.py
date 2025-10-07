@@ -26,6 +26,8 @@ class CrossEvaluator():
                  rank_quantile_energy: dict=None,
                  rank_quantile_specify: dict=None,
                  rank_quantile_partial: dict=None,
+                 rate_sparsity: dict=None,
+                 layer_dim: dict=None,
                  batch_size: int=10) -> None:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -43,6 +45,7 @@ class CrossEvaluator():
         self.pad_idx = pad_idx
         self.model_type = model_type
         self.batch_size = batch_size
+        self.total_params = sum(p.numel() for p in model.parameters())
         self.model = model.to(self.device) if model is not None else None
         self.model_sd = (
             {k: v.detach().cpu().clone() for k, v in self.model.state_dict().items()}
@@ -54,7 +57,8 @@ class CrossEvaluator():
         self.rank_quantile_target = rank_quantile_target
         self.rank_quantile_specify = rank_quantile_specify
         self.rank_quantile_partial = rank_quantile_partial
-
+        self.rate_sparsity = rate_sparsity
+        self.layer_dim = layer_dim
 
         self.LL = LL if LL is not None else {}
         self.SS = SS if SS is not None else {}
@@ -142,6 +146,22 @@ class CrossEvaluator():
         self.opt_add(self.model, self.partial_layers, self.SS)  # add sparse components S
         return self.evaluate_one_step(self.model, dataloader)
 
+    def cal_nr_params(self,
+                      total_params: int,
+                      rank_quantile: dict,
+                      rate_sparsity: dict,
+                      layer_dim: dict) -> int:
+        """Calculate the number of parameters after low-rank approximation and sparsity."""
+        nr_params = total_params
+        for key in rank_quantile:
+            row, col = layer_dim[key]
+            # how many parameters are reduced due to low-rank approximation
+            rank = int(min(row, col) * rank_quantile[key])
+            nr_params -= (row * col - (row + col) * rank)
+            # how many parameters are reduced due to sparsity
+            nr_params -= int(row * col * rate_sparsity[key])
+        return nr_params
+    
     @torch.no_grad()        
     def eval_model(self,
                    eval_results: dict,
@@ -152,6 +172,7 @@ class CrossEvaluator():
             Dictionary with evaluation results.
         """
         eval_results['X'] = self._eval_original(dataloader)
+        eval_results['nr_X'] = self.total_params
         eval_results['X_without_S'] = None # self._eval_orginal_without_sparsity(dataloader)
         eval_results['lowrank_X_without_S'] = None # self._eval_original_lowrank_without_sparsity(dataloader)
         eval_results['L'] = None # self._eval_lowrank(dataloader)
@@ -159,10 +180,16 @@ class CrossEvaluator():
         # eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)  # 99.9 energy
         # eval_results['par_L_with_S'] = self._eval_par_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
         eval_results['L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
+        eval_results['nr_L_with_S'] = self.cal_nr_params(self.total_params, self.rank_quantile_energy, self.rate_sparsity, self.layer_dim)
+        
         eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_target)  # target rate
+        eval_results['nr_lowrank_L_with_S'] = self.cal_nr_params(self.total_params, self.rank_quantile_target, self.rate_sparsity, self.layer_dim)
+        
         eval_results['lowrank_L_with_S_specify'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify)  # specified rate
+        eval_results['nr_lowrank_L_with_S_specify'] = self.cal_nr_params(self.total_params, self.rank_quantile_specify, self.rate_sparsity, self.layer_dim)
         # eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
         eval_results['par_lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_partial) if self.is_partial else eval_results['lowrank_L_with_S']
+        eval_results['nr_par_lowrank_L_with_S'] = self.cal_nr_params(self.total_params, self.rank_quantile_partial, self.rate_sparsity, self.layer_dim) if self.is_partial else eval_results['nr_lowrank_L_with_S']
         return eval_results
     
     def opt_copy(self,
