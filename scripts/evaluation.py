@@ -113,7 +113,8 @@ def get_ex_layers(layers: list, model, LL: dict, SS: dict, nr_remove: int) -> li
 
 def main(cfg_version: str,
          path_folder: str,
-         nr_remove: int) -> None:
+         nr_remove: int,
+         rank_cfg: dict) -> None:
     # load the config
     path_cfg = os.path.join(path_folder, cfg_version+'.yaml')
     path_cfg_model = os.path.join(path_folder, cfg_version+'_model.json')
@@ -141,7 +142,34 @@ def main(cfg_version: str,
                               tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
     
     layers = [entry['name'] for entry in cfg['layers']]
-    rank_quantile = {entry['name']: entry['params']['rate_rank'] + 0.10 for entry in cfg['layers']}
+    
+    rank_quantile_target = {entry['name']: entry['params']['rate_rank'] for entry in cfg['layers']}
+
+    energy_quantile = {entry['name']: entry['params']['energy'] for entry in cfg['layers']}
+    
+    rank_quantile_energy = {}
+    rank_quantile_specify = {}
+    for key in energy_quantile:
+        _L = LL[key]
+        _, s, _ = torch.linalg.svd(_L, full_matrices=False)
+        energy = torch.cumsum(s, dim=0) / torch.sum(s)
+        rank = torch.sum(energy < energy_quantile[key]).item() + 1
+        rank_quantile_energy[key] = rank / len(s)
+
+        if key.endswith('o_proj'):
+            rank_quantile_specify[key] = rank_cfg['o_proj']
+        elif key.endswith('q_proj'):
+            rank_quantile_specify[key] = rank_cfg['q_proj']
+        elif key.endswith('k_proj'):
+            rank_quantile_specify[key] = rank_cfg['k_proj']
+        elif key.endswith('v_proj'):
+            rank_quantile_specify[key] = rank_cfg['v_proj']
+        elif key.endswith('gate_proj'):
+            rank_quantile_specify[key] = rank_cfg['gate_proj']
+        elif key.endswith('down_proj'): 
+            rank_quantile_specify[key] = rank_cfg['down_proj']
+        elif key.endswith('up_proj'):
+            rank_quantile_specify[key] = rank_cfg['up_proj']
 
     ex_layers = get_ex_layers(layers, model, LL, SS, nr_remove)
 
@@ -154,7 +182,9 @@ def main(cfg_version: str,
                                pad_idx=pad_idx,
                                LL=LL,
                                SS=SS,
-                               rank_quantile=rank_quantile,
+                               rank_quantile_target=rank_quantile_target,
+                               rank_quantile_energy=rank_quantile_energy,
+                               rank_quantile_specify=rank_quantile_specify,
                                batch_size=10)
     
     evaluator.collect_results()
@@ -168,6 +198,15 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     cfg_version = 'llama_130m'
     file = '20251006_140135'
+    rank_cfg = {
+        'o_proj': 0.3,
+        'q_proj': 0.3,
+        'k_proj': 0.3,
+        'v_proj': 0.3,
+        'gate_proj': 0.35,
+        'down_proj': 0.35,
+        'up_proj': 0.35
+    }
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
-    main(cfg_version, path_folder, nr_remove=15)
+    main(cfg_version, path_folder, nr_remove=15, rank_cfg=rank_cfg)
     

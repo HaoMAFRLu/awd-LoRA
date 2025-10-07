@@ -18,7 +18,8 @@ key_word_map = {
     'L+S': 'L_with_S',
     'par L+S': 'par_L_with_S',
     'LoR(L)+S': 'lowrank_L_with_S',
-    'par LoR(L)+S': 'par_lowrank_L_with_S'
+    'par LoR(L)+S': 'par_lowrank_L_with_S',
+    'spe LoR(L)+S': 'lowrank_L_with_S_specify'
 }
 
 def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) -> list:
@@ -32,7 +33,7 @@ def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) ->
     """
     row = [file, data_type, 'loss']
     for key in header:
-        if key in key_word_map:
+        if key in key_word_map and key_word_map[key] in eval_results:
             value = eval_results[key_word_map[key]]['avg_loss'][-1]
             if isinstance(value, float):
                 row.append(f"{value:.4f}")
@@ -54,7 +55,7 @@ def get_ppl_row(file: str, data_type: str, eval_results: dict, header: list) -> 
     """
     row = [file, data_type, 'ppl']
     for key in header:
-        if key in key_word_map:
+        if key in key_word_map and key_word_map[key] in eval_results:
             value = eval_results[key_word_map[key]]['ppl']
             if isinstance(value, float):
                 row.append(f"{value:.4f}")
@@ -150,7 +151,7 @@ def main(model_type: str, files: list) -> None:
     
     headers = [f"model", f"dataset", f"metric", 
                f"X",  f"L+S",
-               f"LoR(L)+S", f"par LoR(L)+S"]
+               f"LoR(L)+S", f"spe LoR(L)+S"]
     
     rows = []
     for file in files:
@@ -163,7 +164,7 @@ def main(model_type: str, files: list) -> None:
 
         pth_fig = os.path.join(root, 'data', 'salad', model_type, file, 'figures', 'eval')
         mkdir(pth_fig)
-        plot_loss(eval_train_results, eval_test_resutls, headers[3:], pth_fig)
+        # plot_loss(eval_train_results, eval_test_resutls, headers[3:], pth_fig)
     
     print(tabulate(rows, headers=headers, tablefmt="grid"))
 

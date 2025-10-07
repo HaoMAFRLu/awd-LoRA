@@ -22,7 +22,9 @@ class CrossEvaluator():
                  layers: list=None,
                  ex_layers: list=[],
                  pad_idx: int=0,
-                 rank_quantile: list=None,
+                 rank_quantile_target: dict=None,
+                 rank_quantile_energy: dict=None,
+                 rank_quantile_specify: dict=None,
                  batch_size: int=10) -> None:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -47,7 +49,11 @@ class CrossEvaluator():
 
         self.train_loader = train_loader
         self.test_loader = test_loader
-        self.rank_quantile = rank_quantile
+        self.rank_quantile_energy = rank_quantile_energy
+        self.rank_quantile_target = rank_quantile_target
+        self.rank_quantile_specify = rank_quantile_specify
+
+
         self.LL = LL if LL is not None else {}
         self.SS = SS if SS is not None else {}
         self.layers = layers if layers is not None else []
@@ -112,10 +118,10 @@ class CrossEvaluator():
         self.opt_add(self.model, self.partial_layers, self.SS)
         return self.evaluate_one_step(self.model, dataloader)
 
-    def _eval_lowrank_lowrank_sparsity(self, dataloader) -> dict:
+    def _eval_lowrank_lowrank_sparsity(self, dataloader, rank_quantile) -> dict:
         """Evaluate the low-rank model with low-rank approximation and sparsity."""
         self.opt_replace(self.model, self.layers, self.LL)
-        self.opt_lowrank(self.model, self.layers, self.rank_quantile)
+        self.opt_lowrank(self.model, self.layers, rank_quantile)
         self.opt_add(self.model, self.layers, self.SS)
         return self.evaluate_one_step(self.model, dataloader)
 
@@ -144,14 +150,16 @@ class CrossEvaluator():
             Dictionary with evaluation results.
         """
         eval_results['X'] = self._eval_original(dataloader)
-        eval_results['X_without_S'] = self._eval_orginal_without_sparsity(dataloader)
-        eval_results['lowrank_X_without_S'] = self._eval_original_lowrank_without_sparsity(dataloader)
-        eval_results['L'] = self._eval_lowrank(dataloader)
-        eval_results['lowrank_L'] = self._eval_lowrank_lowrank(dataloader)
-        eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)
+        eval_results['X_without_S'] = None # self._eval_orginal_without_sparsity(dataloader)
+        eval_results['lowrank_X_without_S'] = None # self._eval_original_lowrank_without_sparsity(dataloader)
+        eval_results['L'] = None # self._eval_lowrank(dataloader)
+        eval_results['lowrank_L'] = None # self._eval_lowrank_lowrank(dataloader)
+        # eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)  # 99.9 energy
         # eval_results['par_L_with_S'] = self._eval_par_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
-        eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader)
-        eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader) if self.is_partial else eval_results['lowrank_L_with_S']
+        eval_results['L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
+        eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_target)  # target rate
+        eval_results['lowrank_L_with_S_specify'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify)  # specified rate
+        eval_results['par_lowrank_L_with_S'] = None # self._eval_par_lowrank_lowrank_sparsity(dataloader) if self.is_partial else eval_results['lowrank_L_with_S']
         return eval_results
     
     def opt_copy(self,
