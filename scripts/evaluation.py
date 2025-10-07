@@ -5,6 +5,7 @@ import yaml
 import pickle
 import io
 import torch
+import copy
 from transformers import AutoTokenizer
 from torch.nn.parallel import DistributedDataParallel as DDP
 
@@ -149,6 +150,8 @@ def main(cfg_version: str,
     
     rank_quantile_energy = {}
     rank_quantile_specify = {}
+    rank_diff = {}
+
     for key in energy_quantile:
         _L = LL[key]
         _, s, _ = torch.linalg.svd(_L, full_matrices=False)
@@ -171,6 +174,15 @@ def main(cfg_version: str,
         elif key.endswith('up_proj'):
             rank_quantile_specify[key] = rank_cfg['up_proj']
 
+        rank_diff[key] = rank_quantile_energy[key] - rank_quantile_specify[key]
+
+    rank_quantile_partial = copy.deepcopy(rank_quantile_specify)
+    # sort according to rank diff
+    sorted_layers = sorted(rank_diff.items(), key=lambda item: item[1], reverse=True)
+    for i in range(nr_remove):
+        layer_name = sorted_layers[i][0]
+        rank_quantile_partial[layer_name] = rank_quantile_energy[layer_name]
+
     ex_layers = get_ex_layers(layers, model, LL, SS, nr_remove)
 
     evaluator = CrossEvaluator(model_type=cfg_version,
@@ -185,6 +197,7 @@ def main(cfg_version: str,
                                rank_quantile_target=rank_quantile_target,
                                rank_quantile_energy=rank_quantile_energy,
                                rank_quantile_specify=rank_quantile_specify,
+                               rank_quantile_partial=rank_quantile_partial,
                                batch_size=10)
     
     evaluator.collect_results()
@@ -196,14 +209,21 @@ def main(cfg_version: str,
         pickle.dump(data, f)
 
 if __name__ == "__main__":
-    cfg_version = 'llama_60m'
+    # cfg_version = 'llama_9m'
+    # file = '20250903_165259'
+
+    # cfg_version = 'llama_60m'
     # file = '20251006_143955'
-    file = '20251005_130200'
+    # file = '20251005_130200'
+
+    cfg_version = 'llama_130m'
+    file = '20251006_223931'
+
     rank_cfg = {
-        'o_proj': 0.20,
-        'q_proj': 0.15,
-        'k_proj': 0.15,
-        'v_proj': 0.20,
+        'o_proj': 0.30,
+        'q_proj': 0.30,
+        'k_proj': 0.30,
+        'v_proj': 0.30,
         'gate_proj': 0.35,
         'down_proj': 0.35,
         'up_proj': 0.35

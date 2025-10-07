@@ -25,6 +25,7 @@ class CrossEvaluator():
                  rank_quantile_target: dict=None,
                  rank_quantile_energy: dict=None,
                  rank_quantile_specify: dict=None,
+                 rank_quantile_partial: dict=None,
                  batch_size: int=10) -> None:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -52,6 +53,7 @@ class CrossEvaluator():
         self.rank_quantile_energy = rank_quantile_energy
         self.rank_quantile_target = rank_quantile_target
         self.rank_quantile_specify = rank_quantile_specify
+        self.rank_quantile_partial = rank_quantile_partial
 
 
         self.LL = LL if LL is not None else {}
@@ -159,7 +161,8 @@ class CrossEvaluator():
         eval_results['L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
         eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_target)  # target rate
         eval_results['lowrank_L_with_S_specify'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify)  # specified rate
-        eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
+        # eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
+        eval_results['par_lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_partial) if self.is_partial else eval_results['lowrank_L_with_S']
         return eval_results
     
     def opt_copy(self,
