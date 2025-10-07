@@ -132,11 +132,11 @@ class CrossEvaluator():
     #     self.opt_add(self.model, self.layers, self.SS)
     #     return self.evaluate_one_step(self.model, dataloader)
 
-    def _eval_par_lowrank_lowrank_sparsity(self, dataloader) -> dict:
+    def _eval_par_lowrank_lowrank_sparsity(self, dataloader, rank_quantile) -> dict:
         """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
         self.opt_copy(self.model_sd, self.model, self.layers)  # copy the original model
         self.opt_replace(self.model, self.partial_layers, self.LL)  # replace partial layers with low-rank matrices L
-        self.opt_lowrank(self.model, self.partial_layers, self.rank_quantile)
+        self.opt_lowrank(self.model, self.partial_layers, rank_quantile)
         self.opt_add(self.model, self.partial_layers, self.SS)  # add sparse components S
         return self.evaluate_one_step(self.model, dataloader)
 
@@ -159,7 +159,7 @@ class CrossEvaluator():
         eval_results['L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
         eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_target)  # target rate
         eval_results['lowrank_L_with_S_specify'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify)  # specified rate
-        eval_results['par_lowrank_L_with_S'] = None # self._eval_par_lowrank_lowrank_sparsity(dataloader) if self.is_partial else eval_results['lowrank_L_with_S']
+        eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
         return eval_results
     
     def opt_copy(self,
