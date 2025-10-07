@@ -196,16 +196,17 @@ def main(cfg_version: str,
         pickle.dump(data, f)
 
 if __name__ == "__main__":
-    cfg_version = 'llama_130m'
-    file = '20251006_143955'
+    cfg_version = 'llama_60m'
+    # file = '20251006_143955'
+    file = '20251006_092303'
     rank_cfg = {
-        'o_proj': 0.3,
-        'q_proj': 0.3,
-        'k_proj': 0.3,
-        'v_proj': 0.3,
-        'gate_proj': 0.35,
-        'down_proj': 0.35,
-        'up_proj': 0.35
+        'o_proj': 0.25,
+        'q_proj': 0.20,
+        'k_proj': 0.20,
+        'v_proj': 0.25,
+        'gate_proj': 0.30,
+        'down_proj': 0.30,
+        'up_proj': 0.30
     }
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder, nr_remove=15, rank_cfg=rank_cfg)
