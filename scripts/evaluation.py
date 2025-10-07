@@ -197,7 +197,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
     cfg_version = 'llama_130m'
-    file = '20251006_140135'
+    file = '20251006_143955'
     rank_cfg = {
         'o_proj': 0.3,
         'q_proj': 0.3,
