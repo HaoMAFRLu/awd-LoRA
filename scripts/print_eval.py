@@ -39,7 +39,7 @@ def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) ->
             if isinstance(value, float):
                 if 'nr_'+_key in eval_results:
                     nr = eval_results['nr_'+_key]
-                    row.append(f"{value:.4f} | {nr/1000000:.4f}M")
+                    row.append(f"{value:.4f}({nr/1000000:.2f}M)")
                 else:
                     row.append(f"{value:.4f}")
             elif isinstance(value, str):   # Handle case where value is 'N/A'
@@ -156,7 +156,7 @@ def main(model_type: str, files: list) -> None:
     
     headers = [f"model", f"dataset", f"metric", 
                f"X",  f"L+S", f"LoR(L)+S", 
-               f'par LoR(L)+S', f"spe LoR(L)+S"]
+               f"spe LoR(L)+S", f'par LoR(L)+S']
     
     rows = []
     for file in files:
