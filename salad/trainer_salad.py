@@ -419,6 +419,7 @@ class SALADTrainer():
         """
         with torch.no_grad():
             dist.all_reduce(log_loss, op=dist.ReduceOp.SUM)
+            # log_loss = log_loss / self.world_size
             log_loss = log_loss / self.world_size
         return log_loss.item()
 
