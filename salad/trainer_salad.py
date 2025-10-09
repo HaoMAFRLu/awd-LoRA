@@ -487,7 +487,7 @@ class SALADTrainer():
         MATRIX = {
             'LL': self.LL, 'SS': self.SS, 'YY': self.YY
         }
-        
+
         atomic_pickle_dump(MATRIX, os.path.join(path_folder, "matrix.pkl"))
         atomic_pickle_dump(self.layer_info, os.path.join(path_folder, "layer_info.pkl"))
 
@@ -552,14 +552,18 @@ class SALADTrainer():
     
     def gather_weights(self, local_weights):
         """Gather dicts from all ranks to rank 0"""
-        gathered = [None] * self.world_size
-        dist.all_gather_object(gathered, local_weights)
+        gathered = None
+        if self.rank == 0:
+            gathered = [None] * self.world_size
+            
+        dist.gather_object(local_weights, gathered, dst=0)
+
         if self.rank == 0:
             for p in gathered:
                 for layer_name, data in p.items():
-                    self.LL[layer_name] = data[0].to('cpu')  # L
-                    self.SS[layer_name] = data[1].to('cpu')  # S
-                    self.YY[layer_name] = data[2].to('cpu')  # Y
+                    self.LL[layer_name] = data[0].to("cpu")  # L
+                    self.SS[layer_name] = data[1].to("cpu")  # S
+                    self.YY[layer_name] = data[2].to("cpu")  # Y
 
     def sync_weights(self):
         """
