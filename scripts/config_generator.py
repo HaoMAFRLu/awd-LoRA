@@ -176,10 +176,12 @@ if __name__ == "__main__":
     cfg_llama_350m = dict(
         name='llama_350m',
         seed=42,
-        lr=0.003,
+        lr=0.001,
         gradient='coupled',  # or decoupled
         is_asyn=False,
         is_init=False,
+        is_wandb=True,
+        is_monitor=True,
         min_lr_ratio=0.1,
         weight_decay=0.0,
         num_freq=40,
@@ -217,6 +219,8 @@ if __name__ == "__main__":
         gradient='coupled',  # or decoupled
         is_asyn=False,
         is_init=False,
+        is_wandb=True,
+        is_monitor=True,
         min_lr_ratio=0.1,
         weight_decay=0.0,
         num_freq=20,
@@ -356,4 +360,4 @@ if __name__ == "__main__":
     #     vocab_size=32000           # 缩小词表
     # )
 
-    generate_config(**cfg_llama_9m)
+    generate_config(**cfg_llama_350m)

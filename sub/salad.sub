@@ -14,7 +14,7 @@ error           = jobs9/task$(Process).err
 output          = jobs9/task$(Process).out
 
 request_cpus    = 5
-request_memory  = 85000
+request_memory  = 100000
 request_gpus    = 5
 requirements = (CUDAGlobalMemoryMb > 70000 && CUDAGlobalMemoryMb < 100000)
 
