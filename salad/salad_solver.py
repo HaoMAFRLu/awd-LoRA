@@ -209,10 +209,10 @@ class SALAD():
         """
         self.T = torch.zeros(l, K, dtype=torch.float32, device=self.X_with_grad.device)
 
-    def cal_weights(self) -> None:
-        self.results = {'L': self.L.to('cpu'),
-                        'S': self.S.to('cpu'),
-                        'Y': self.Y.to('cpu')}
+    # def cal_weights(self) -> None:
+    #     self.results = {'L': self.L,
+    #                     'S': self.S,
+    #                     'Y': self.Y}
 
     def cal_results(self) -> None:
         """

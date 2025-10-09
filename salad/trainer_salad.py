@@ -487,6 +487,7 @@ class SALADTrainer():
         MATRIX = {
             'LL': self.LL, 'SS': self.SS, 'YY': self.YY
         }
+        
         atomic_pickle_dump(MATRIX, os.path.join(path_folder, "matrix.pkl"))
         atomic_pickle_dump(self.layer_info, os.path.join(path_folder, "layer_info.pkl"))
 
@@ -556,9 +557,9 @@ class SALADTrainer():
         if self.rank == 0:
             for p in gathered:
                 for layer_name, data in p.items():
-                    self.LL[layer_name] = data['L'].to('cpu')  # L
-                    self.SS[layer_name] = data['S'].to('cpu')  # S
-                    self.YY[layer_name] = data['Y'].to('cpu')  # Y
+                    self.LL[layer_name] = data[0].to('cpu')  # L
+                    self.SS[layer_name] = data[1].to('cpu')  # S
+                    self.YY[layer_name] = data[2].to('cpu')  # Y
 
     def sync_weights(self):
         """
@@ -568,7 +569,7 @@ class SALADTrainer():
         local_results = {}
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                local_results[solver.layer_name] = solver.results
+                local_results[solver.layer_name] = (solver.L, solver.S, solver.Y)
         self.gather_weights(local_results)
 
     # def broadcast_weights(self):
@@ -795,7 +796,6 @@ class SALADTrainer():
                     # self.sync_all_weights()
                     pass
                 
-                with self.timers['save']:
                     self.update_ADMM_single_step(target='save')
                     self.sync_layer_info()
 
@@ -811,11 +811,6 @@ class SALADTrainer():
                 
                 # print and save results
                 if self.rank == 0:
-                    if self.is_monitor:
-                        print(f'Train: {self.timers["train"].total:.1f}s | Avg Train: {self.timers["train"].avg():.1f}s | S: {self.timers["S"].total:.1f}s | L: {self.timers["L"].total:.1f}s | Y: {self.timers["Y"].total:.1f}s | Sync: {self.timers["sync"].total:.1f}s | Save: {self.timers["save"].total:.1f}s')
-                        for key in self.timers:
-                            self.timers[key].reset()
-                    
                     self.print_info(epoch, 
                                     num_epochs,
                                     self.num_freq,
@@ -826,10 +821,16 @@ class SALADTrainer():
                                     self.layer_info, 
                                     self.lr_scheduler.get_last_lr()[0])
                     
-                    if path_folder is not None and epoch % self.save_interval == 0:
-                        self.update_ADMM_single_step(target='weight')
-                        self.sync_weights()
-                        self.save_results(path_folder)
+                    with self.timers['save']:
+                        if path_folder is not None and epoch % self.save_interval == 0:
+                            # self.update_ADMM_single_step(target='weight')
+                            self.sync_weights()
+                            self.save_results(path_folder)
+                    
+                    if self.is_monitor:
+                        print(f'Train: {self.timers["train"].total:.1f}s | Avg Train: {self.timers["train"].avg():.1f}s | S: {self.timers["S"].total:.1f}s | L: {self.timers["L"].total:.1f}s | Y: {self.timers["Y"].total:.1f}s | Sync: {self.timers["sync"].total:.1f}s | Save: {self.timers["save"].total:.1f}s')
+                        for key in self.timers:
+                            self.timers[key].reset()
 
                 ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
             

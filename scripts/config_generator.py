@@ -184,7 +184,7 @@ if __name__ == "__main__":
         is_init=False,
         is_wandb=True,
         is_monitor=True,
-        save_interval=50,
+        save_interval=1,
         min_lr_ratio=0.1,
         weight_decay=0.0,
         num_freq=40,
