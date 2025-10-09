@@ -356,7 +356,7 @@ class SALADTrainer():
         # broadcast the neural network loss
         global_avg_loss = self.get_global_loss(loss.detach())
         # broadcast the penalty loss
-        global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach()) * self.world_size
+        global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
         # broadcast the avg_diff
         # global_avg_diff = self.get_global_loss(avg_diff.detach())
         return global_avg_loss, global_avg_loss_penalty, global_avg_diff
