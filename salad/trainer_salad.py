@@ -166,6 +166,10 @@ class SALADTrainer():
         # self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
         # self.sync_weights()
 
+        self.LL = {}
+        self.SS = {}
+        self.YY = {}
+
     @staticmethod    
     def canon(name: str) -> str:
         if name.startswith('module.'): name = name[7:]
