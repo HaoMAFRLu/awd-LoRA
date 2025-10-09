@@ -10,6 +10,7 @@ from loguru import logger
 from salad.salad_solver import SALAD
 from salad.utils import *
 from salad.register import *
+from salad.simple_timer import SimpleTimer
 
 class SALADTrainer():
     def __init__(self, 
@@ -42,8 +43,17 @@ class SALADTrainer():
         self.is_asyn = config.get('is_asyn', False)
         self.is_init = config.get('is_init', False)
         self.is_wandb = config.get('is_wandb', False)
+        self.is_monitor = config.get('is_monitor', False)
 
         self.rank, self.world_size = self._init_distributed()
+
+        self.timers = {
+            "train": SimpleTimer("train"),
+            "S": SimpleTimer("S"),
+            "L": SimpleTimer("L"),
+            "Y": SimpleTimer("Y"),
+            "sync": SimpleTimer("sync"),
+        }
 
         if self.is_wandb and self.rank == 0:
             import wandb
@@ -715,7 +725,8 @@ class SALADTrainer():
             labels = batch["input_ids"].clone()
             labels[labels == self.pad_idx] = -100 
             # do one step update
-            avg_loss, avg_loss_penalty, avg_diff = self.single_step_train(batch, labels, gradient=self.gradient)
+            with self.timers['train']:
+                avg_loss, avg_loss_penalty, avg_diff = self.single_step_train(batch, labels, gradient=self.gradient)
 
             # calculate the constants
             num_tokens = (batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()) * self.world_size
@@ -736,18 +747,24 @@ class SALADTrainer():
                 epoch += 1
 
                 self.update_ADMM_single_step(target='beta')
-                self.update_ADMM_single_step(target='S')
+                with self.timers['S']:
+                    self.update_ADMM_single_step(target='S')
                 self.update_ADMM_rho()
-                self.update_ADMM_single_step(target='L')
+                
+                with self.timers['L']:
+                    self.update_ADMM_single_step(target='L')
                 self.update_ADMM_single_step(target='alpha')
-                self.update_ADMM_single_step(target='Y')
+               
+                with self.timers['Y']:
+                    self.update_ADMM_single_step(target='Y')
 
-                self.sync_single_weight(target='S')
-                self.sync_single_weight(target='L')
-                self.sync_single_weight(target='Y')
+                with self.timers['sync']:
+                    self.sync_single_weight(target='S')
+                    self.sync_single_weight(target='L')
+                    self.sync_single_weight(target='Y')
+                    self.update_ADMM_single_step(target='save')
+                    self.sync_layer_info()
 
-                self.update_ADMM_single_step(target='save')
-                self.sync_layer_info()
                 self.solvers_reset()
 
                 # self.run_ADMM_solvers()
@@ -771,6 +788,11 @@ class SALADTrainer():
                                     self.lr_scheduler.get_last_lr()[0])
                     if path_folder is not None:
                         self.save_results(path_folder)
+
+                    if self.is_monitor:
+                        print(f'Train: {self.timers["train"].total:.1f}s | Avg Train: {self.timers["train"].avg():.1f}s | S: {self.timers["S"].total:.1f}s | L: {self.timers["L"].total:.1f}s | Y: {self.timers["Y"].total:.1f}s | Sync: {self.timers["sync"].total:.1f}s')
+                        for key in self.timers:
+                            self.timers[key].reset()
                 
                 ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
             

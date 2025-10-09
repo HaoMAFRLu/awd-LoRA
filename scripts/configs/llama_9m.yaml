@@ -6,6 +6,7 @@ gradient: coupled
 is_asyn: false
 is_init: false
 is_wandb: true
+is_monitor: true
 is_clip: !!float '1'
 max_length: 256
 seed_for_shuffle: 42
