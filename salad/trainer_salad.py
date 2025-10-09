@@ -48,6 +48,9 @@ class SALADTrainer():
 
         self.rank, self.world_size = self._init_distributed()
 
+        if self.rank == 0:
+            print(f'Total rank: {self.world_size}')
+
         self.timers = {
             "train": SimpleTimer("train"),
             "S": SimpleTimer("S"),
