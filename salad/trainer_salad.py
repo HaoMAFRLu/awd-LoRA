@@ -33,6 +33,7 @@ class SALADTrainer():
 
         self.num_warmup_steps = 40
         self.num_total_iters = config.get('num_total_iters', 1000)
+
         self.num_freq = config.get('num_freq', 1)
         self.is_clip = config.get('is_clip', 1.0)
         self.max_length = config.get('max_length', 256)
@@ -40,10 +41,18 @@ class SALADTrainer():
         self.gradient= config.get('gradient', 'coupled')  # or 'decoupled'
         self.is_asyn = config.get('is_asyn', False)
         self.is_init = config.get('is_init', False)
+        self.is_wandb = config.get('is_wandb', False)
 
         self.rank, self.world_size = self._init_distributed()
 
-        # fk the error 429!!!!!!
+        if self.is_wandb and self.rank == 0:
+            import wandb
+            wandb.login(key=os.getenv("WANDB_API_KEY"), relogin=False)
+            self.run_wandb = wandb.init(project="SALAD_"+self.config['name'], 
+                                        entity="hao-ma-eth-z-rich", 
+                                        config=self.config)
+            
+        # fk the error 429!!!!!!ls -l
         hf_login_once()
 
         torch.cuda.set_device(self.rank % torch.cuda.device_count())
@@ -649,6 +658,12 @@ class SALADTrainer():
                         'total_elements': layer_info[entry['name']]['total_elements'][-1]} for entry in self.cfg_layers]
         
         print_epoch(epoch, total_epochs, num_freq, lr, acc_num_tokens, losses, layer_stats)
+        if self.is_wandb and self.rank == 0:
+            print_wandb(self.run_wandb, 
+                        epoch=epoch, 
+                        total_epochs=total_epochs, 
+                        num_freq=num_freq, 
+                        lr=lr, num_tokens=acc_num_tokens, losses=losses, layer_stats=layer_stats)
 
     def warmup(self, num_warmup_steps: int = 30):
         """
@@ -770,4 +785,6 @@ class SALADTrainer():
                     self.sync_single_weight(target='Y')
 
         dist.destroy_process_group()
+        if self.is_wandb and self.rank == 0:
+            self.run_wandb.finish()
 

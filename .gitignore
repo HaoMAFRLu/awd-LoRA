@@ -33,3 +33,6 @@
 /sparse-lora
 /peft_pretraining
 /RoSA
+
+# ignore wandb
+/wandb

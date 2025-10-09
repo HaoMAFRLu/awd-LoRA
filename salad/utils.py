@@ -14,6 +14,7 @@ import pickle
 from matplotlib.axes import Axes
 from loguru import logger
 import time, random
+import wandb
 
 def mkdir(path: Path) -> None:
     """Check if the folder exists and create it if it does not."""
@@ -63,6 +64,86 @@ def get_energy_quantile(s, quantile=0.9) -> int:
     else:
         energy = torch.cumsum(s**2, dim=0) / torch.sum(s**2)
         return int(torch.where(energy >= quantile)[0][0])+1
+
+
+
+def print_wandb(
+        run,
+        *,
+        epoch: int,
+        total_epochs: int,
+        num_freq: int,
+        lr: float,
+        num_tokens: float,
+        losses: dict,
+        layer_stats: list,
+    ):
+    """
+    Upload per-layer metrics as scalar time series to W&B (no tables, no local plots).
+    Each metric becomes a series like: layer/<name>/<metric>.
+    Then you can create charts in the W&B UI by selecting these series.
+
+    Logged (per run epoch):
+      Global series:
+        - train/loss, train/layer_diff, train/penalty, train/lr, train/tokens_M, epoch
+      Per-layer series (for each layer name):
+        - layer/<name>/layer_diff
+        - layer/<name>/non_zero_ratio
+        - layer/<name>/rank_ratio
+        - layer/<name>/alpha
+        - layer/<name>/dalpha
+        - layer/<name>/beta
+        - layer/<name>/dbeta
+        - layer/<name>/alpha_decay
+        - layer/<name>/beta_decay
+        - layer/<name>/rho
+    """
+    # Build one flat payload per epoch (faster & consistent than many small logs)
+    payload = {
+        # global scalars (optional; remove if you truly only want per-layer series)
+        "train/loss": float(losses.get("avg_loss", float("nan"))),
+        "train/layer_diff": float(losses.get("avg_diff", float("nan"))),
+        "train/penalty": float(losses.get("avg_loss_penalty", float("nan"))),
+        "train/lr": float(lr),
+        "train/tokens_M": float(num_tokens) / 1e6,
+        # DO NOT add "epoch": step already carries this
+    }
+
+    for s in layer_stats:
+        name = s.get("name")
+        if not name:
+            continue
+
+        # Ratios
+        nz = int(s.get("non_zero", 0))
+        tot = int(s.get("total_elements", 0))
+        non_zero_ratio = float(nz / tot) if tot else 0.0
+
+        rnk = int(s.get("rank", 0))
+        trk = int(s.get("total_rank", 0))
+        rank_ratio = float(rnk / trk) if trk else 0.0
+
+        # Scalars for params
+        layer_diff = float(s.get("loss", float("nan")))
+        alpha  = float(s.get("alpha",  float("nan")))
+        dalpha = float(s.get("dalpha", float("nan")))
+        beta   = float(s.get("beta",   float("nan")))
+        dbeta  = float(s.get("dbeta",  float("nan")))
+        rho    = float(s.get("rho",    float("nan")))
+
+        # Grouped metric names (easy to pick in W&B UI)
+        prefix = f"layer/{name}"
+        payload.update({
+            f"{prefix}/diff": layer_diff,                                 
+            f"{prefix}/non_zero_ratio": non_zero_ratio,          
+            f"{prefix}/rank_ratio": rank_ratio,                   
+            f"{prefix}/alpha": alpha,                              
+            f"{prefix}/beta": beta,                             
+            f"{prefix}/rho": rho,                           
+        })
+
+    # Single log call per epoch
+    wandb.log(payload, step=epoch)
 
 def print_epoch(epoch: int, 
                 total_epochs: int, 
