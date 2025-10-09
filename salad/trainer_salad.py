@@ -44,6 +44,7 @@ class SALADTrainer():
         self.is_init = config.get('is_init', False)
         self.is_wandb = config.get('is_wandb', False)
         self.is_monitor = config.get('is_monitor', False)
+        self.save_interval = config.get('save_interval', 50)
 
         self.rank, self.world_size = self._init_distributed()
 
@@ -801,7 +802,8 @@ class SALADTrainer():
                                     acc_num_tokens, 
                                     self.layer_info, 
                                     self.lr_scheduler.get_last_lr()[0])
-                    if path_folder is not None:
+                    
+                    if path_folder is not None and epoch % self.save_interval == 0:
                         self.save_results(path_folder)
 
                 ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
