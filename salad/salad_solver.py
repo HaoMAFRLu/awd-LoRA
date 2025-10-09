@@ -202,27 +202,52 @@ class SALAD():
         self.S = torch.zeros_like(self.X_with_grad.detach())
         self.Y = torch.zeros_like(self.X_with_grad.detach())
 
+    def init_T(self, l: int, K: int) -> None:
+        """[alpha, beta, dalpha, dbeta, rho, 
+            rate_decay_alpha, rate_decay_beta, 
+            loss, rank, nonzero, total_rank, total_elems]
+        """
+        self.T = torch.zeros(l, K, dtype=torch.float32, device=self.X_with_grad.device)
+
+    def cal_weights(self) -> None:
+        self.results = {'L': self.L.to('cpu'),
+                        'S': self.S.to('cpu'),
+                        'Y': self.Y.to('cpu')}
+
     def cal_results(self) -> None:
         """
         Calculate the results after running the solver.
         """
-        self.results = {'L': self.L.to('cpu'),
-                        'S': self.S.to('cpu'),
-                        'Y': self.Y.to('cpu'),
-                        'alpha_mode': self.alpha_solver.mode,
-                        'beta_mode': self.beta_solver.mode,
-                        'alpha': self.alpha_solver.value,
-                        'beta': self.beta_solver.value,
-                        'dalpha': self.alpha_solver.dvalue,
-                        'dbeta': self.beta_solver.dvalue,
-                        'rho': self.rho,
-                        'rate_decay_alpha': self.alpha_solver.rate_decay,
-                        'rate_decay_beta': self.beta_solver.rate_decay,
-                        'nr_rank': self.nr_rank,
-                        'nr_nonzero': int(torch.count_nonzero(self.S)),
-                        'nr_total_rank': self.nr_total_rank,
-                        'nr_elements': self.nr_elements,
-                        'avg_loss': (self.total_loss/self.nr_cals)}
+        self.T[self.layer_idx, 0] = self.alpha_solver.value
+        self.T[self.layer_idx, 1] = self.beta_solver.value
+        self.T[self.layer_idx, 2] = self.alpha_solver.dvalue
+        self.T[self.layer_idx, 3] = self.beta_solver.dvalue
+        self.T[self.layer_idx, 4] = self.rho
+        self.T[self.layer_idx, 5] = self.alpha_solver.rate_decay
+        self.T[self.layer_idx, 6] = self.beta_solver.rate_decay
+        self.T[self.layer_idx, 7] = self.total_loss / self.nr_cals
+        self.T[self.layer_idx, 8] = self.nr_rank
+        self.T[self.layer_idx, 9] = int(torch.count_nonzero(self.S))
+        self.T[self.layer_idx, 10] = self.nr_total_rank
+        self.T[self.layer_idx, 11] = self.nr_elements
+
+        # self.results = {'L': self.L.to('cpu'),
+        #                 'S': self.S.to('cpu'),
+        #                 'Y': self.Y.to('cpu'),
+        #                 'alpha_mode': self.alpha_solver.mode,
+        #                 'beta_mode': self.beta_solver.mode,
+        #                 'alpha': self.alpha_solver.value,
+        #                 'beta': self.beta_solver.value,
+        #                 'dalpha': self.alpha_solver.dvalue,
+        #                 'dbeta': self.beta_solver.dvalue,
+        #                 'rho': self.rho,
+        #                 'rate_decay_alpha': self.alpha_solver.rate_decay,
+        #                 'rate_decay_beta': self.beta_solver.rate_decay,
+        #                 'nr_rank': self.nr_rank,
+        #                 'nr_nonzero': int(torch.count_nonzero(self.S)),
+        #                 'nr_total_rank': self.nr_total_rank,
+        #                 'nr_elements': self.nr_elements,
+        #                 'avg_loss': (self.total_loss/self.nr_cals)}
 
     def _update_S(self,
                   X: torch.Tensor,

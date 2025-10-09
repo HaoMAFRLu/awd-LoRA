@@ -166,6 +166,19 @@ class SALADTrainer():
         # self.SS = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
         # self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
         # self.sync_weights()
+        if self.rank == 0:
+            global_layer_names = sorted({s.layer_name for s in self.ADMM_solvers})
+        else:
+            global_layer_names = None
+
+        global_layer_names = [global_layer_names]  # broadcast_object_list 接受列表
+        dist.broadcast_object_list(global_layer_names, src=0)
+        global_layer_names = global_layer_names[0]
+        self.name2idx = {n: i for i, n in enumerate(global_layer_names)}
+        
+        for solver in self.ADMM_solvers:
+            solver.layer_idx = self.name2idx[solver.layer_name]
+            solver.init_T(len(global_layer_names), K=12)
 
         self.LL = {}
         self.SS = {}
@@ -340,7 +353,7 @@ class SALADTrainer():
         # broadcast the neural network loss
         global_avg_loss = self.get_global_loss(loss.detach())
         # broadcast the penalty loss
-        global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
+        global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach()) * self.world_size
         # broadcast the avg_diff
         # global_avg_diff = self.get_global_loss(avg_diff.detach())
         return global_avg_loss, global_avg_loss_penalty, global_avg_diff
@@ -356,59 +369,60 @@ class SALADTrainer():
             #                                self.SS[solver.layer_name].to(self.device),
             #                                self.YY[solver.layer_name].to(self.device))
         return loss
-    
+
     def sync_layer_info(self):
         """
         Synchronize weights across all ranks.
         This is called after the optimizer step.
         """
-        local_results = self.get_local_results()
-        self.gather_layer_info(local_results)
+        T = self.get_local_results()
+        dist.all_reduce(T, op=dist.ReduceOp.SUM)
+        if self.rank == 0:
+            self.gather_layer_info(T)
 
-    def gather_layer_info(self, local_results):
+    def gather_layer_info(self, T):
         """
         """
-        gathered = [None] * self.world_size
-        dist.all_gather_object(gathered, local_results)
         if self.rank == 0:
-            for p in gathered:
-                for layer_name, data in p.items():
-                    self.layer_info[layer_name]['alpha_mode'].append(data['alpha_mode'])
-                    self.layer_info[layer_name]['beta_mode'].append(data['beta_mode'])
-                    self.layer_info[layer_name]['alpha'].append(data['alpha'])
-                    self.layer_info[layer_name]['beta'].append(data['beta'])
-                    self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
-                    self.layer_info[layer_name]['dbeta'].append(data['dbeta'])
-                    self.layer_info[layer_name]['rho'].append(data['rho'])
-                    self.layer_info[layer_name]['rate_decay_alpha'].append(data['rate_decay_alpha'])
-                    self.layer_info[layer_name]['rate_decay_beta'].append(data['rate_decay_beta'])
-                    self.layer_info[layer_name]['loss'].append(data['avg_loss'])
-                    self.layer_info[layer_name]['rank'].append(data['nr_rank'])
-                    self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
-                    self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
-                    self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
+            for name, i in self.name2idx.items():
+                row = T[i]
+                info = self.layer_info[name]
+                info['alpha_mode'].append(self.ADMM_solvers[0].alpha_solver.mode)
+                info['beta_mode'].append(self.ADMM_solvers[0].beta_solver.mode)
+                info['alpha'].append(row[0].item())
+                info['beta'].append(row[1].item())
+                info['dalpha'].append(row[2].item())
+                info['dbeta'].append(row[3].item())
+                info['rho'].append(row[4].item())
+                info['rate_decay_alpha'].append(row[5].item())
+                info['rate_decay_beta'].append(row[6].item())
+                info['loss'].append(row[7].item())
+                info['rank'].append(int(row[8].item()))
+                info['nonzero'].append(int(row[9].item()))
+                info['total_rank'].append(int(row[10].item()))
+                info['total_elements'].append(int(row[11].item()))
 
-    def gather_results(self, local_results):
-        """Gather dicts from all ranks to rank 0"""
-        gathered = [None] * self.world_size
-        dist.all_gather_object(gathered, local_results)
-        if self.rank == 0:
-            for p in gathered:
-                for layer_name, data in p.items():
-                    self.LL[layer_name] = data['L'].to('cpu')
-                    self.SS[layer_name] = data['S'].to('cpu')
-                    self.YY[layer_name] = data['Y'].to('cpu')
-                    self.layer_info[layer_name]['alpha'].append(data['alpha'])
-                    self.layer_info[layer_name]['beta'].append(data['beta'])
-                    self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
-                    self.layer_info[layer_name]['dbeta'].append(data['dbeta'])
-                    self.layer_info[layer_name]['rho'].append(data['rho'])
-                    self.layer_info[layer_name]['rate_decay'].append(data['rate_decay'])
-                    self.layer_info[layer_name]['loss'].append(data['avg_loss'])
-                    self.layer_info[layer_name]['rank'].append(data['nr_rank'])
-                    self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
-                    self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
-                    self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
+    # def gather_results(self, local_results):
+    #     """Gather dicts from all ranks to rank 0"""
+    #     gathered = [None] * self.world_size
+    #     dist.all_gather_object(gathered, local_results)
+    #     if self.rank == 0:
+    #         for p in gathered:
+    #             for layer_name, data in p.items():
+    #                 self.LL[layer_name] = data['L'].to('cpu')
+    #                 self.SS[layer_name] = data['S'].to('cpu')
+    #                 self.YY[layer_name] = data['Y'].to('cpu')
+    #                 self.layer_info[layer_name]['alpha'].append(data['alpha'])
+    #                 self.layer_info[layer_name]['beta'].append(data['beta'])
+    #                 self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
+    #                 self.layer_info[layer_name]['dbeta'].append(data['dbeta'])
+    #                 self.layer_info[layer_name]['rho'].append(data['rho'])
+    #                 self.layer_info[layer_name]['rate_decay'].append(data['rate_decay'])
+    #                 self.layer_info[layer_name]['loss'].append(data['avg_loss'])
+    #                 self.layer_info[layer_name]['rank'].append(data['nr_rank'])
+    #                 self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
+    #                 self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
+    #                 self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
     
     def get_global_loss(self, log_loss):
         """
@@ -420,7 +434,6 @@ class SALADTrainer():
         """
         with torch.no_grad():
             dist.all_reduce(log_loss, op=dist.ReduceOp.SUM)
-            # log_loss = log_loss / self.world_size
             log_loss = log_loss / self.world_size
         return log_loss.item()
 
@@ -474,64 +487,64 @@ class SALADTrainer():
         atomic_pickle_dump(MATRIX, os.path.join(path_folder, "matrix.pkl"))
         atomic_pickle_dump(self.layer_info, os.path.join(path_folder, "layer_info.pkl"))
 
-    def get_local_single_weight(self,
-                                target: str='L'):
-        """
-        Get local single weight for the current rank.
-        Returns:
-            dict with layer names and their corresponding weights.
-        """
-        local_weights = {}
-        for solver in self.ADMM_solvers:
-            if solver.layer_gpu_map == self.rank:
-                if target == 'L':
-                    local_weights[solver.layer_name] = solver.L.to('cpu')
-                elif target == 'S':
-                    local_weights[solver.layer_name] = solver.S.to('cpu')
-                elif target == 'Y':
-                    local_weights[solver.layer_name] = solver.Y.to('cpu')
-        return local_weights
+    # def get_local_single_weight(self,
+    #                             target: str='L'):
+    #     """
+    #     Get local single weight for the current rank.
+    #     Returns:
+    #         dict with layer names and their corresponding weights.
+    #     """
+    #     local_weights = {}
+    #     for solver in self.ADMM_solvers:
+    #         if solver.layer_gpu_map == self.rank:
+    #             if target == 'L':
+    #                 local_weights[solver.layer_name] = solver.L.to('cpu')
+    #             elif target == 'S':
+    #                 local_weights[solver.layer_name] = solver.S.to('cpu')
+    #             elif target == 'Y':
+    #                 local_weights[solver.layer_name] = solver.Y.to('cpu')
+    #     return local_weights
 
-    def gather_single_weight(self, local_weights, target: str='L'):
-        """Gather dicts from all ranks to rank 0"""
-        gathered = [None] * self.world_size
-        dist.all_gather_object(gathered, local_weights)
-        if self.rank == 0:
-            for p in gathered:
-                for layer_name, data in p.items():
-                    if target == 'L':
-                        self.LL[layer_name] = data.to('cpu')  # L
-                    elif target == 'S':
-                        self.SS[layer_name] = data.to('cpu')  # S
-                    elif target == 'Y':
-                        self.YY[layer_name] = data.to('cpu')  # Y
+    # def gather_single_weight(self, local_weights, target: str='L'):
+    #     """Gather dicts from all ranks to rank 0"""
+    #     gathered = [None] * self.world_size
+    #     dist.all_gather_object(gathered, local_weights)
+    #     if self.rank == 0:
+    #         for p in gathered:
+    #             for layer_name, data in p.items():
+    #                 if target == 'L':
+    #                     self.LL[layer_name] = data.to('cpu')  # L
+    #                 elif target == 'S':
+    #                     self.SS[layer_name] = data.to('cpu')  # S
+    #                 elif target == 'Y':
+    #                     self.YY[layer_name] = data.to('cpu')  # Y
     
-    def broadcast_single_weight(self, target: str='L'):
-        """
-        Broadcast weights from rank 0 to all ranks.
-        Returns:
-            L, S, Y: broadcasted weights
-        """
-        if target == 'L':
-            brd = self.LL
-        elif target == 'S':
-            brd = self.SS
-        elif target == 'Y':
-            brd = self.YY
-        dist.broadcast_object_list([brd], src=0)
-        return brd
+    # def broadcast_single_weight(self, target: str='L'):
+    #     """
+    #     Broadcast weights from rank 0 to all ranks.
+    #     Returns:
+    #         L, S, Y: broadcasted weights
+    #     """
+    #     if target == 'L':
+    #         brd = self.LL
+    #     elif target == 'S':
+    #         brd = self.SS
+    #     elif target == 'Y':
+    #         brd = self.YY
+    #     dist.broadcast_object_list([brd], src=0)
+    #     return brd
 
-    def get_local_weights(self):
-        """
-        Get local weights for the current rank.
-        Returns:
-            dict with layer names and their corresponding weights.
-        """
-        local_weights = {}
-        for solver in self.ADMM_solvers:
-            if solver.layer_gpu_map == self.rank:
-                local_weights[solver.layer_name] = (solver.L.to('cpu'), solver.S.to('cpu'), solver.Y.to('cpu'))
-        return local_weights
+    # def get_local_weights(self):
+    #     """
+    #     Get local weights for the current rank.
+    #     Returns:
+    #         dict with layer names and their corresponding weights.
+    #     """
+    #     local_weights = {}
+    #     for solver in self.ADMM_solvers:
+    #         if solver.layer_gpu_map == self.rank:
+    #             local_weights[solver.layer_name] = (solver.L.to('cpu'), solver.S.to('cpu'), solver.Y.to('cpu'))
+    #     return local_weights
     
     def gather_weights(self, local_weights):
         """Gather dicts from all ranks to rank 0"""
@@ -540,39 +553,41 @@ class SALADTrainer():
         if self.rank == 0:
             for p in gathered:
                 for layer_name, data in p.items():
-                    self.LL[layer_name] = data[0].to('cpu')  # L
-                    self.SS[layer_name] = data[1].to('cpu')  # S
-                    self.YY[layer_name] = data[2].to('cpu')  # Y
+                    self.LL[layer_name] = data['L'].to('cpu')  # L
+                    self.SS[layer_name] = data['S'].to('cpu')  # S
+                    self.YY[layer_name] = data['Y'].to('cpu')  # Y
 
     def sync_weights(self):
         """
         Synchronize weights across all ranks.
         This is called after the optimizer step.
         """
-        local_weights = self.get_local_weights()
-        self.gather_weights(local_weights)
-        self.LL, self.SS, self.YY = self.broadcast_weights()
+        local_results = {}
+        for solver in self.ADMM_solvers:
+            if solver.layer_gpu_map == self.rank:
+                local_results[solver.layer_name] = solver.results
+        self.gather_weights(local_results)
 
-    def broadcast_weights(self):
-        """
-        Broadcast weights from rank 0 to all ranks.
-        Returns:
-            L, S, Y: broadcasted weights
-        """
-        brd = [self.LL, 
-               self.SS, 
-               self.YY]
-        dist.broadcast_object_list(brd, src=0)
-        return brd[0], brd[1], brd[2]
+    # def broadcast_weights(self):
+    #     """
+    #     Broadcast weights from rank 0 to all ranks.
+    #     Returns:
+    #         L, S, Y: broadcasted weights
+    #     """
+    #     brd = [self.LL, 
+    #            self.SS, 
+    #            self.YY]
+    #     dist.broadcast_object_list(brd, src=0)
+    #     return brd[0], brd[1], brd[2]
     
-    def sync_results(self):
-        """
-        Synchronize results across all ranks.
-        This is called after the optimizer step.
-        """
-        local_results = self.get_local_results()
-        self.gather_results(local_results)
-        self.LL, self.SS, self.YY = self.broadcast_weights()
+    # def sync_results(self):
+    #     """
+    #     Synchronize results across all ranks.
+    #     This is called after the optimizer step.
+    #     """
+    #     local_results = self.get_local_results()
+    #     self.gather_results(local_results)
+    #     self.LL, self.SS, self.YY = self.broadcast_weights()
         
     def get_local_results(self):
         """
@@ -580,11 +595,11 @@ class SALADTrainer():
         Returns:
             dict with layer names and their corresponding results.
         """
-        local_results = {}
+        T = 0
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                local_results[solver.layer_name] = solver.results
-        return local_results
+                T += solver.T
+        return T
     
     def update_ADMM_single_step(self, target: str='L'):
         """ Update the low-rank component L for all layers.
@@ -604,19 +619,23 @@ class SALADTrainer():
                 elif target == 'beta':
                     solver.update_beta()
                 elif target == 'save':
+                    # save the results
                     solver.cal_results()
+                elif target == 'weight':
+                    # update the weights
+                    solver.cal_weights()
 
-    def sync_single_weight(self, target: str='L'):
-        """ Synchronize the low-rank component L across all ranks.
-        """
-        local_weights = self.get_local_single_weight(target=target)
-        self.gather_single_weight(local_weights, target=target)
-        if target == 'L':
-            self.LL = self.broadcast_single_weight(target=target)
-        elif target == 'S':
-            self.SS = self.broadcast_single_weight(target=target)
-        elif target == 'Y':
-            self.YY = self.broadcast_single_weight(target=target)
+    # def sync_single_weight(self, target: str='L'):
+    #     """ Synchronize the low-rank component L across all ranks.
+    #     """
+    #     local_weights = self.get_local_single_weight(target=target)
+    #     self.gather_single_weight(local_weights, target=target)
+    #     if target == 'L':
+    #         self.LL = self.broadcast_single_weight(target=target)
+    #     elif target == 'S':
+    #         self.SS = self.broadcast_single_weight(target=target)
+    #     elif target == 'Y':
+    #         self.YY = self.broadcast_single_weight(target=target)
 
     def update_ADMM_rho(self): 
         """ Update the penalty parameter rho for all layers.
@@ -793,6 +812,7 @@ class SALADTrainer():
                         print(f'Train: {self.timers["train"].total:.1f}s | Avg Train: {self.timers["train"].avg():.1f}s | S: {self.timers["S"].total:.1f}s | L: {self.timers["L"].total:.1f}s | Y: {self.timers["Y"].total:.1f}s | Sync: {self.timers["sync"].total:.1f}s | Save: {self.timers["save"].total:.1f}s')
                         for key in self.timers:
                             self.timers[key].reset()
+                    
                     self.print_info(epoch, 
                                     num_epochs,
                                     self.num_freq,
@@ -804,6 +824,8 @@ class SALADTrainer():
                                     self.lr_scheduler.get_last_lr()[0])
                     
                     if path_folder is not None and epoch % self.save_interval == 0:
+                        self.update_ADMM_single_step(target='weight')
+                        self.sync_weights()
                         self.save_results(path_folder)
 
                 ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
