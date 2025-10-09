@@ -18,4 +18,6 @@ request_memory  = 85000
 request_gpus    = 5
 requirements = (CUDAGlobalMemoryMb > 70000 && CUDAGlobalMemoryMb < 100000)
 
+getenv          = True
+
 queue 1
