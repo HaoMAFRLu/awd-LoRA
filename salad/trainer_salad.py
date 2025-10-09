@@ -53,6 +53,7 @@ class SALADTrainer():
             "L": SimpleTimer("L"),
             "Y": SimpleTimer("Y"),
             "sync": SimpleTimer("sync"),
+            "save": SimpleTimer("save"),
         }
 
         if self.is_wandb and self.rank == 0:
@@ -160,11 +161,10 @@ class SALADTrainer():
             self.ADMM_solvers.append(solver)
         
         # after initialization, sync the initial weights
-        self.LL = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
-        self.SS = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
-        self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
-        
-        self.sync_weights()
+        # self.LL = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
+        # self.SS = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
+        # self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
+        # self.sync_weights()
 
     @staticmethod    
     def canon(name: str) -> str:
@@ -269,17 +269,17 @@ class SALADTrainer():
         return rank, world
 
 
-    def get_diff_per_layer(self) -> dict:
+    def get_diff_per_rank(self) -> dict:
         """Get the difference X - L - S for each layer."""
         diff = 0.0
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
                 diff += solver.get_diff(solver.L, solver.S, solver.Y)
-            else:
-                diff += solver.get_diff(self.LL[solver.layer_name].to(self.device),
-                                        self.SS[solver.layer_name].to(self.device),
-                                        self.YY[solver.layer_name].to(self.device))
-        return diff/len(self.ADMM_solvers)
+            # else:
+            #     diff += solver.get_diff(self.LL[solver.layer_name].to(self.device),
+            #                             self.SS[solver.layer_name].to(self.device),
+            #                             self.YY[solver.layer_name].to(self.device))
+        return diff
 
     def get_gradient_per_layer(self) -> dict:
         """Get the gradient term for each layer."""
@@ -297,7 +297,9 @@ class SALADTrainer():
         loss = self.ddp_model(**batch, labels=labels).loss
         # get the loss for each layer, (X - L - S)
         # update ema_r and ema_s for updating rho
-        avg_diff = self.get_diff_per_layer()
+        diff_per_rank = self.get_diff_per_rank()
+        dist.all_reduce(diff_per_rank, op=dist.ReduceOp.SUM)
+        global_avg_diff = diff_per_rank.item() / len(self.cfg_layers)
         # calculate the penalty loss of each layer
         # X with gradient -> rho/2 * (X - L - S + Y/rho)^2
         # only used for coupled gradient
@@ -335,7 +337,7 @@ class SALADTrainer():
         # broadcast the penalty loss
         global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
         # broadcast the avg_diff
-        global_avg_diff = self.get_global_loss(avg_diff.detach())
+        # global_avg_diff = self.get_global_loss(avg_diff.detach())
         return global_avg_loss, global_avg_loss_penalty, global_avg_diff
 
     def get_penalty_loss(self):
@@ -343,11 +345,11 @@ class SALADTrainer():
         loss = 0.0
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                loss += solver.get_penalty(solver.L, solver.S, solver.Y)
-            else:
-                loss += solver.get_penalty(self.LL[solver.layer_name].to(self.device),
-                                           self.SS[solver.layer_name].to(self.device),
-                                           self.YY[solver.layer_name].to(self.device))
+                loss += self.world_size * solver.get_penalty(solver.L, solver.S, solver.Y)
+            # else:
+            #     loss += solver.get_penalty(self.LL[solver.layer_name].to(self.device),
+            #                                self.SS[solver.layer_name].to(self.device),
+            #                                self.YY[solver.layer_name].to(self.device))
         return loss
     
     def sync_layer_info(self):
@@ -597,7 +599,7 @@ class SALADTrainer():
                     solver.update_beta()
                 elif target == 'save':
                     solver.cal_results()
-    
+
     def sync_single_weight(self, target: str='L'):
         """ Synchronize the low-rank component L across all ranks.
         """
@@ -759,9 +761,13 @@ class SALADTrainer():
                     self.update_ADMM_single_step(target='Y')
 
                 with self.timers['sync']:
-                    self.sync_single_weight(target='S')
-                    self.sync_single_weight(target='L')
-                    self.sync_single_weight(target='Y')
+                    # self.sync_single_weight(target='S')
+                    # self.sync_single_weight(target='L')
+                    # self.sync_single_weight(target='Y')
+                    # self.sync_all_weights()
+                    pass
+                
+                with self.timers['save']:
                     self.update_ADMM_single_step(target='save')
                     self.sync_layer_info()
 
@@ -777,6 +783,10 @@ class SALADTrainer():
                 
                 # print and save results
                 if self.rank == 0:
+                    if self.is_monitor:
+                        print(f'Train: {self.timers["train"].total:.1f}s | Avg Train: {self.timers["train"].avg():.1f}s | S: {self.timers["S"].total:.1f}s | L: {self.timers["L"].total:.1f}s | Y: {self.timers["Y"].total:.1f}s | Sync: {self.timers["sync"].total:.1f}s | Save: {self.timers["save"].total:.1f}s')
+                        for key in self.timers:
+                            self.timers[key].reset()
                     self.print_info(epoch, 
                                     num_epochs,
                                     self.num_freq,
@@ -789,22 +799,18 @@ class SALADTrainer():
                     if path_folder is not None:
                         self.save_results(path_folder)
 
-                    if self.is_monitor:
-                        print(f'Train: {self.timers["train"].total:.1f}s | Avg Train: {self.timers["train"].avg():.1f}s | S: {self.timers["S"].total:.1f}s | L: {self.timers["L"].total:.1f}s | Y: {self.timers["Y"].total:.1f}s | Sync: {self.timers["sync"].total:.1f}s')
-                        for key in self.timers:
-                            self.timers[key].reset()
-                
                 ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
             
             else:
                 if self.is_asyn:
-                    self.update_ADMM_single_step(target='beta')
+                    pass
+                    # self.update_ADMM_single_step(target='beta')
                     
-                    self.update_ADMM_single_step(target='S')
-                    self.update_ADMM_single_step(target='Y')
+                    # self.update_ADMM_single_step(target='S')
+                    # self.update_ADMM_single_step(target='Y')
 
-                    self.sync_single_weight(target='S')
-                    self.sync_single_weight(target='Y')
+                    # self.sync_single_weight(target='S')
+                    # self.sync_single_weight(target='Y')
 
         dist.destroy_process_group()
         if self.is_wandb and self.rank == 0:
