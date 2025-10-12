@@ -241,15 +241,15 @@ if __name__ == "__main__":
     # cfg_version = 'llama_9m'
     # file = '20251009_205606'
 
-    # cfg_version = 'llama_60m'
+    cfg_version = 'llama_60m'
     # file = '20251006_143955'
-    # file = '20251005_130200'
+    file = '20251005_130200'
 
-    # cfg_version = 'llama_130m'
-    # file = '20251007_112541'
+    cfg_version = 'llama_130m'
+    file = '20251007_112541'
 
-    cfg_version = 'llama_350m'
-    file = '20251010_001003'
+    # cfg_version = 'llama_350m'
+    # file = '20251010_001003'
 
     rank_cfg = {
         'o_proj': 0.20,
