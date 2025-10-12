@@ -253,10 +253,10 @@ if __name__ == "__main__":
     # file = '20251010_001003'
 
     rank_cfg = {
-        'o_proj': 0.20,
-        'q_proj': 0.20,
-        'k_proj': 0.20,
-        'v_proj': 0.20,
+        'o_proj': 0.15,
+        'q_proj': 0.15,
+        'k_proj': 0.15,
+        'v_proj': 0.15,
         'gate_proj': 0.35,
         'down_proj': 0.35,
         'up_proj': 0.35
