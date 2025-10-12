@@ -42,7 +42,7 @@ def main(cfg_version: str,
     data = get_data(cfg['seed_for_shuffle'])
 
     ddp_trainer = SALADTrainer(model, data, cfg, path_folder)
-    ddp_trainer.train(path_folder=None)
+    ddp_trainer.train(path_folder=path_folder)
     
 if __name__ == "__main__":
     cfg_version = 'llama_350m'

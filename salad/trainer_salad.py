@@ -16,8 +16,7 @@ class SALADTrainer():
     def __init__(self, 
                  model: nn.Module,
                  data: datasets.Dataset,
-                 config: dict,
-                 path_folder: str=None) -> None:
+                 config: dict) -> None:
         """
         Args:
             model: the nn.Module to train
@@ -50,15 +49,15 @@ class SALADTrainer():
         self.rank, self.world_size = self._init_distributed()
 
         if self.rank == 0:
-            self.path_folder = path_folder
+            # self.path_folder = path_folder
             print(f'Total rank: {self.world_size}')
-        else:
-            self.path_folder = None
+        # else:
+        #     self.path_folder = None
 
         # broadcast the path folder to all ranks
-        path_folder = [self.path_folder]
-        dist.broadcast_object_list(path_folder, src=0)
-        self.path_folder = path_folder[0]
+        # path_folder = [self.path_folder]
+        # dist.broadcast_object_list(path_folder, src=0)
+        # self.path_folder = path_folder[0]
 
         self.timers = {
             "train": SimpleTimer("train"),
@@ -758,8 +757,8 @@ class SALADTrainer():
 
     def train(self, path_folder: str=None):
         # switch to train mode     
-        if path_folder is None:
-            path_folder = self.path_folder
+        # if path_folder is None:
+        #     path_folder = self.path_folder
             
         self.ddp_model.train()
         num_it = 0
