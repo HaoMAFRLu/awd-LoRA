@@ -210,7 +210,7 @@ def main(cfg_version: str,
     #     layer_name = sorted_layers[i][0]
     #     rank_quantile_partial[layer_name] = rank_quantile_energy[layer_name]
 
-    ex_layers = get_ex_layers(layers, model, LL, SS, nr_remove)
+    ex_layers = get_ex_layers(layers, model, LL, SS, nr_remove[0])
 
     evaluator = CrossEvaluator(model_type=cfg_version,
                                model=model,
