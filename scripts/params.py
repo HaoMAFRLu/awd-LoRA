@@ -38,7 +38,7 @@ lm_head_params = {
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.02,
+        'rate_decay': 0.035,
     },
     'beta_dict': {
         'init': 1e-7,
@@ -67,7 +67,7 @@ attn_o_proj_params = {
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.02,
+        'rate_decay': 0.035,
     },
     'beta_dict': {
         'init': 1e-7,
@@ -96,7 +96,7 @@ attn_q_proj_params = {
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.02,
+        'rate_decay': 0.035,
     },
     'beta_dict': {
         'init': 1e-7,
@@ -125,7 +125,7 @@ attn_k_proj_params = {
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.02,
+        'rate_decay': 0.035,
     },
     'beta_dict': {
         'init': 1e-7,
@@ -154,7 +154,7 @@ attn_v_proj_params = {
     'alpha_dict': {
         'init': 1e-7,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.02,
+        'rate_decay': 0.035,
     },
     'beta_dict': {
         'init': 1e-7,
