@@ -132,7 +132,19 @@ def main(cfg_version: str,
     model = get_model(path_cfg_model)
 
     load_model(model, os.path.join(path_folder, 'model.pth'))
-    LL, SS = get_lowspa_layers(os.path.join(path_folder, 'matrix.pkl'))
+    # list all files in the folder
+    # and load dictionary LL and SS from all files starting with 'matrix_'
+    # at last, combine them into one dictionary
+    LL = {}
+    SS = {}
+    files = os.listdir(path_folder)
+    rank_files = [f for f in files if f.startswith('matrix')]
+    for f in rank_files:
+        LL_part, SS_part = get_lowspa_layers(os.path.join(path_folder, f))
+        for key in LL_part:
+            LL[key] = LL_part[key]
+            SS[key] = SS_part[key]
+    # LL, SS = get_lowspa_layers(os.path.join(path_folder, 'matrix.pkl'))
 
     # get the tokenizer
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
@@ -219,8 +231,8 @@ def main(cfg_version: str,
         pickle.dump(data, f)
 
 if __name__ == "__main__":
-    cfg_version = 'llama_9m'
-    file = '20251009_205606'
+    # cfg_version = 'llama_9m'
+    # file = '20251009_205606'
 
     # cfg_version = 'llama_60m'
     # file = '20251006_143955'
@@ -229,11 +241,14 @@ if __name__ == "__main__":
     # cfg_version = 'llama_130m'
     # file = '20251007_112541'
 
+    cfg_version = 'llama_350m'
+    file = '20251010_001936'
+
     rank_cfg = {
-        'o_proj': 0.30,
-        'q_proj': 0.30,
-        'k_proj': 0.30,
-        'v_proj': 0.30,
+        'o_proj': 0.20,
+        'q_proj': 0.20,
+        'k_proj': 0.20,
+        'v_proj': 0.20,
         'gate_proj': 0.35,
         'down_proj': 0.35,
         'up_proj': 0.35
