@@ -171,6 +171,11 @@ class CrossEvaluator():
         Returns:
             Dictionary with evaluation results.
         """
+        for i in range(len(self.rank_quantile_partial_list)):
+            rank_quantile_partial = self.rank_quantile_partial_list[i]
+            eval_results[f'par_lowrank_L_with_S_{i}'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, rank_quantile_partial) 
+            eval_results[f'nr_par_lowrank_L_with_S_{i}'] = self.cal_nr_params(self.total_params, rank_quantile_partial, self.rate_sparsity, self.layer_dim)
+            
         eval_results['X'] = self._eval_original(dataloader)
         eval_results['nr_X'] = self.total_params
         eval_results['X_without_S'] = None # self._eval_orginal_without_sparsity(dataloader)
@@ -189,10 +194,7 @@ class CrossEvaluator():
         eval_results['nr_lowrank_L_with_S_specify'] = self.cal_nr_params(self.total_params, self.rank_quantile_specify, self.rate_sparsity, self.layer_dim)
         # eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
         
-        for i in range(len(self.rank_quantile_partial_list)):
-            rank_quantile_partial = self.rank_quantile_partial_list[i]
-            eval_results[f'par_lowrank_L_with_S_{i}'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, rank_quantile_partial) 
-            eval_results[f'nr_par_lowrank_L_with_S_{i}'] = self.cal_nr_params(self.total_params, rank_quantile_partial, self.rate_sparsity, self.layer_dim)
+        
     
         return eval_results
     

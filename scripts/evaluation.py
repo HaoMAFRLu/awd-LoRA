@@ -196,8 +196,9 @@ def main(cfg_version: str,
 
         rank_diff[key] = rank_quantile_energy[key] - rank_quantile_specify[key]
 
-    rank_quantile_partial = copy.deepcopy(rank_quantile_specify)
-    rank_quantile_partial_list = [rank_quantile_partial] * len(nr_remove)
+    rank_quantile_partial_list = [
+        copy.deepcopy(rank_quantile_specify) for _ in range(len(nr_remove))
+    ]
     # sort according to rank diff
     sorted_layers = sorted(rank_diff.items(), key=lambda item: item[1], reverse=True)
     for i in range(len(nr_remove)):
