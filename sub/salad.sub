@@ -9,9 +9,9 @@ arguments       = \
 
 initialdir      = /lustre/home/hma2/projects/awd-LoRA
 
-log             = jobs0/task$(Process).log
-error           = jobs0/task$(Process).err
-output          = jobs0/task$(Process).out
+log             = jobs/task$(Process).log
+error           = jobs/task$(Process).err
+output          = jobs/task$(Process).out
 
 request_cpus    = 8
 request_memory  = 100000
