@@ -41,11 +41,11 @@ def main(cfg_version: str,
     model = get_model(path_cfg_model)
     data = get_data(cfg['seed_for_shuffle'])
 
-    ddp_trainer = SALADTrainer(model, data, cfg)
-    ddp_trainer.train(path_folder=path_folder)
+    ddp_trainer = SALADTrainer(model, data, cfg, path_folder)
+    ddp_trainer.train(path_folder=None)
     
 if __name__ == "__main__":
-    cfg_version = 'llama_350m'
+    cfg_version = 'llama_9m'
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
     main(cfg_version, path_cfg, path_cfg_model)

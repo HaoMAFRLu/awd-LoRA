@@ -114,7 +114,7 @@ def get_ex_layers(layers: list, model, LL: dict, SS: dict, nr_remove: int) -> li
 
 def main(cfg_version: str,
          path_folder: str,
-         nr_remove: int,
+         nr_remove: list,
          rank_cfg: dict) -> None:
     # load the config
     path_cfg = os.path.join(path_folder, cfg_version+'.yaml')
@@ -197,11 +197,18 @@ def main(cfg_version: str,
         rank_diff[key] = rank_quantile_energy[key] - rank_quantile_specify[key]
 
     rank_quantile_partial = copy.deepcopy(rank_quantile_specify)
+    rank_quantile_partial_list = [rank_quantile_partial] * len(nr_remove)
     # sort according to rank diff
     sorted_layers = sorted(rank_diff.items(), key=lambda item: item[1], reverse=True)
-    for i in range(nr_remove):
-        layer_name = sorted_layers[i][0]
-        rank_quantile_partial[layer_name] = rank_quantile_energy[layer_name]
+    for i in range(len(nr_remove)):
+        _nr_remove = nr_remove[i]
+        for j in range(_nr_remove):
+            layer_name = sorted_layers[j][0]
+            rank_quantile_partial_list[i][layer_name] = rank_quantile_energy[layer_name]
+
+    # for i in range(nr_remove):
+    #     layer_name = sorted_layers[i][0]
+    #     rank_quantile_partial[layer_name] = rank_quantile_energy[layer_name]
 
     ex_layers = get_ex_layers(layers, model, LL, SS, nr_remove)
 
@@ -217,7 +224,7 @@ def main(cfg_version: str,
                                rank_quantile_target=rank_quantile_target,
                                rank_quantile_energy=rank_quantile_energy,
                                rank_quantile_specify=rank_quantile_specify,
-                               rank_quantile_partial=rank_quantile_partial,
+                               rank_quantile_partial_list=rank_quantile_partial_list,
                                rate_sparsity=rate_sparsity,
                                layer_dim=layer_dim,
                                batch_size=10)
@@ -242,7 +249,7 @@ if __name__ == "__main__":
     # file = '20251007_112541'
 
     cfg_version = 'llama_350m'
-    file = '20251010_001936'
+    file = '20251010_001003'
 
     rank_cfg = {
         'o_proj': 0.20,
@@ -254,5 +261,5 @@ if __name__ == "__main__":
         'up_proj': 0.35
     }
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
-    main(cfg_version, path_folder, nr_remove=15, rank_cfg=rank_cfg)
+    main(cfg_version, path_folder, nr_remove=[5, 10, 15], rank_cfg=rank_cfg)
     

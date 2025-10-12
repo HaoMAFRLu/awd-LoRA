@@ -178,7 +178,7 @@ if __name__ == "__main__":
     cfg_llama_350m = dict(
         name='llama_350m',
         seed=42,
-        lr=0.003,
+        lr=0.001,
         gradient='coupled',  # or decoupled
         is_asyn=False,
         is_init=False,
@@ -189,7 +189,7 @@ if __name__ == "__main__":
         weight_decay=0.0,
         num_freq=40,
         seed_for_shuffle=42,
-        num_total_iters=128000,
+        num_total_iters=124000,
         batch_size=256,
         max_length=256,
         warmup_steps=2200,

@@ -25,7 +25,7 @@ class CrossEvaluator():
                  rank_quantile_target: dict=None,
                  rank_quantile_energy: dict=None,
                  rank_quantile_specify: dict=None,
-                 rank_quantile_partial: dict=None,
+                 rank_quantile_partial_list: list=None,
                  rate_sparsity: dict=None,
                  layer_dim: dict=None,
                  batch_size: int=10) -> None:
@@ -56,7 +56,7 @@ class CrossEvaluator():
         self.rank_quantile_energy = rank_quantile_energy
         self.rank_quantile_target = rank_quantile_target
         self.rank_quantile_specify = rank_quantile_specify
-        self.rank_quantile_partial = rank_quantile_partial
+        self.rank_quantile_partial_list = rank_quantile_partial_list
         self.rate_sparsity = rate_sparsity
         self.layer_dim = layer_dim
 
@@ -188,8 +188,12 @@ class CrossEvaluator():
         eval_results['lowrank_L_with_S_specify'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify)  # specified rate
         eval_results['nr_lowrank_L_with_S_specify'] = self.cal_nr_params(self.total_params, self.rank_quantile_specify, self.rate_sparsity, self.layer_dim)
         # eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
-        eval_results['par_lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_partial) if self.is_partial else eval_results['lowrank_L_with_S']
-        eval_results['nr_par_lowrank_L_with_S'] = self.cal_nr_params(self.total_params, self.rank_quantile_partial, self.rate_sparsity, self.layer_dim) if self.is_partial else eval_results['nr_lowrank_L_with_S']
+        
+        for i in range(len(self.rank_quantile_partial_list)):
+            rank_quantile_partial = self.rank_quantile_partial_list[i]
+            eval_results[f'par_lowrank_L_with_S_{i}'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, rank_quantile_partial) 
+            eval_results[f'nr_par_lowrank_L_with_S_{i}'] = self.cal_nr_params(self.total_params, rank_quantile_partial, self.rate_sparsity, self.layer_dim)
+    
         return eval_results
     
     def opt_copy(self,
