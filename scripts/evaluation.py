@@ -250,18 +250,18 @@ if __name__ == "__main__":
     # file = '20251006_223931'
 
     cfg_version = 'llama_350m'
-    file = '20251012_115249'
+    file = '20251012_115809'
 
     rank_cfg = {
-        'o_proj': 0.20,
-        'q_proj': 0.20,
-        'k_proj': 0.20,
-        'v_proj': 0.20,
+        'o_proj': 0.25,
+        'q_proj': 0.25,
+        'k_proj': 0.25,
+        'v_proj': 0.25,
         'gate_proj': 0.35,
         'down_proj': 0.35,
         'up_proj': 0.35
     }
 
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
-    main(cfg_version, path_folder, nr_remove=[5, 10, 15], rank_cfg=rank_cfg)
+    main(cfg_version, path_folder, nr_remove=[3, 6, 9], rank_cfg=rank_cfg)
     
