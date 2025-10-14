@@ -5,7 +5,7 @@ error  = jobs_eval/task$(Process).err
 output = jobs_eval/task$(Process).out
 log    = jobs_eval/task$(Process).log
 request_gpus = 1
-request_memory = 65536
+request_memory = 100000
 request_cpus = 1
 requirements = (CUDAGlobalMemoryMb > 70000 && CUDAGlobalMemoryMb < 100000)
 queue

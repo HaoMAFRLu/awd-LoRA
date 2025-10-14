@@ -242,25 +242,25 @@ if __name__ == "__main__":
     # cfg_version = 'llama_9m'
     # file = '20251009_205606'
 
-    cfg_version = 'llama_60m'
+    # cfg_version = 'llama_60m'
     # file = '20251006_143955'
     # file = '20251005_130200'
 
-    cfg_version = 'llama_130m'
-    file = '20251006_223931'
+    # cfg_version = 'llama_130m'
+    # file = '20251006_223931'
 
-    # cfg_version = 'llama_350m'
-    # file = '20251010_001003'
+    cfg_version = 'llama_350m'
+    file = '20251012_114123'
 
     rank_cfg = {
-        'o_proj': 0.30,
-        'q_proj': 0.30,
-        'k_proj': 0.30,
-        'v_proj': 0.30,
+        'o_proj': 0.20,
+        'q_proj': 0.20,
+        'k_proj': 0.20,
+        'v_proj': 0.20,
         'gate_proj': 0.35,
         'down_proj': 0.35,
         'up_proj': 0.35
     }
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
-    main(cfg_version, path_folder, nr_remove=[5, 10, 15], rank_cfg=rank_cfg)
+    main(cfg_version, path_folder, nr_remove=[10, 20, 30], rank_cfg=rank_cfg)
     
