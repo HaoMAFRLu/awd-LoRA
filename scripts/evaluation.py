@@ -250,7 +250,7 @@ if __name__ == "__main__":
     # file = '20251006_223931'
 
     cfg_version = 'llama_350m'
-    file = '20251012_115809'
+    file = '20251012_114123'
 
     rank_cfg = {
         'o_proj': 0.20,
@@ -261,6 +261,7 @@ if __name__ == "__main__":
         'down_proj': 0.35,
         'up_proj': 0.35
     }
+
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder, nr_remove=[5, 10, 15], rank_cfg=rank_cfg)
     
