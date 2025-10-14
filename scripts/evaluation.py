@@ -180,19 +180,19 @@ def main(cfg_version: str,
         rank_quantile_energy[key] = rank / len(s)
 
         if key.endswith('o_proj'):
-            rank_quantile_specify[key] = rank_cfg['o_proj']
+            rank_quantile_specify[key] = min(rank_cfg['o_proj'], rank_quantile_energy[key])
         elif key.endswith('q_proj'):
-            rank_quantile_specify[key] = rank_cfg['q_proj']
+            rank_quantile_specify[key] = min(rank_cfg['q_proj'], rank_quantile_energy[key])
         elif key.endswith('k_proj'):
-            rank_quantile_specify[key] = rank_cfg['k_proj']
+            rank_quantile_specify[key] = min(rank_cfg['k_proj'], rank_quantile_energy[key])
         elif key.endswith('v_proj'):
-            rank_quantile_specify[key] = rank_cfg['v_proj']
+            rank_quantile_specify[key] = min(rank_cfg['v_proj'], rank_quantile_energy[key])
         elif key.endswith('gate_proj'):
-            rank_quantile_specify[key] = rank_cfg['gate_proj']
+            rank_quantile_specify[key] = min(rank_cfg['gate_proj'], rank_quantile_energy[key])
         elif key.endswith('down_proj'): 
-            rank_quantile_specify[key] = rank_cfg['down_proj']
+            rank_quantile_specify[key] = min(rank_cfg['down_proj'], rank_quantile_energy[key])
         elif key.endswith('up_proj'):
-            rank_quantile_specify[key] = rank_cfg['up_proj']
+            rank_quantile_specify[key] = min(rank_cfg['up_proj'], rank_quantile_energy[key])
 
         rank_diff[key] = rank_quantile_energy[key] - rank_quantile_specify[key]
 
@@ -250,16 +250,16 @@ if __name__ == "__main__":
     # file = '20251006_223931'
 
     cfg_version = 'llama_350m'
-    file = '20251012_120507'
+    file = '20251012_115809'
 
     rank_cfg = {
-        'o_proj': 0.20,
-        'q_proj': 0.20,
-        'k_proj': 0.20,
-        'v_proj': 0.20,
-        'gate_proj': 0.35,
-        'down_proj': 0.35,
-        'up_proj': 0.35
+        'o_proj': 0.30,
+        'q_proj': 0.30,
+        'k_proj': 0.30,
+        'v_proj': 0.30,
+        'gate_proj': 0.40,
+        'down_proj': 0.40,
+        'up_proj': 0.40
     }
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     main(cfg_version, path_folder, nr_remove=[10, 20, 30], rank_cfg=rank_cfg)
