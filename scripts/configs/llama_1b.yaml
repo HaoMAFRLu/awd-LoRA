@@ -1,0 +1,4230 @@
+seed: 42
+name: llama_1b
+num_total_iters: 254000
+num_freq: 40
+gradient: coupled
+is_asyn: false
+is_init: false
+is_wandb: true
+is_monitor: true
+save_interval: 50
+is_clip: !!float '1'
+max_length: 256
+seed_for_shuffle: 42
+batch_size: 256
+num_workers: 0
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.001
+    betas:
+    - 0.9
+    - 0.95
+    eps: 0.00000001
+    weight_decay: !!float '0'
+layers:
+- name: layers.0.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.0.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.0.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.0.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.0.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.0.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.0.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.1.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.1.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.1.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.1.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.1.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.1.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.1.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.2.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.2.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.2.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.2.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.2.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.2.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.2.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.3.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.3.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.3.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.3.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.3.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.3.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.3.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.4.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.4.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.4.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.4.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.4.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.4.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.4.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.5.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.5.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.5.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.5.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.5.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.5.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.5.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.6.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.6.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.6.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.6.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.6.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.6.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.6.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.7.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.7.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.7.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.7.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.7.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.7.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.7.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.8.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.8.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.8.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.8.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.8.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.8.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.8.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.9.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.9.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.9.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.9.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.9.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.9.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.9.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.10.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.10.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.10.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.10.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.10.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.10.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.10.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.11.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.11.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.11.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.11.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.11.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.11.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.11.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.12.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.12.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.12.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.12.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.12.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.12.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.12.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.13.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.13.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.13.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.13.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.13.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.13.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.13.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.14.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.14.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.14.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.14.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.14.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.14.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.14.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.15.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.15.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.15.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.15.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.15.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.15.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.15.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.16.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.16.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.16.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.16.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.16.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.16.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.16.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.17.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.17.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.17.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.17.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.17.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.17.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.17.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.18.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.18.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.18.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.18.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.18.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.18.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.18.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.19.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.19.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.19.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.19.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.19.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.19.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.19.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.20.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.20.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.20.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.20.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.20.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.20.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.20.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.21.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.21.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.21.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.21.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.21.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.21.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.21.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.22.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.22.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.22.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.22.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.22.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.22.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.22.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.23.self_attn.o_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.23.self_attn.q_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.23.self_attn.k_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.23.self_attn.v_proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.23.mlp.gate_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.23.mlp.down_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: layers.23.mlp.up_proj
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.04
+    beta_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.0000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
