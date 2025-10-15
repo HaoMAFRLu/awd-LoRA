@@ -1,6 +1,6 @@
 seed: 42
 name: llama_1b
-num_total_iters: 203200
+num_total_iters: 214000
 num_freq: 40
 gradient: coupled
 is_asyn: false
@@ -11,7 +11,7 @@ save_interval: 50
 is_clip: !!float '1'
 max_length: 256
 seed_for_shuffle: 42
-batch_size: 320
+batch_size: 304
 num_workers: 0
 scheduler:
   name: cosine

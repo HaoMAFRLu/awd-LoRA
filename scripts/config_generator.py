@@ -189,8 +189,8 @@ if __name__ == "__main__":
         weight_decay=0.0,
         num_freq=40,
         seed_for_shuffle=42,
-        num_total_iters=203200,
-        batch_size=320,
+        num_total_iters=214000,  # 254000
+        batch_size=304,
         max_length=256,
         warmup_steps=2200,
         num_workers=0,
