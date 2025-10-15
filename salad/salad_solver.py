@@ -126,15 +126,15 @@ class SALAD():
                  Y: torch.Tensor) -> torch.Tensor:  
         """Get the difference X - L - S for the layer."""
         loss_r = self._get_diff(self.X_with_grad.detach(), L, S)
-        loss_s = self.get_loss_pre_term(L, S)
         
-        if self.ema_r is None:
-            self.ema_r = loss_r.item()
-            self.ema_s = loss_s.item()
-        else:
-            self.ema_r = self.gamma * self.ema_r + (1 - self.gamma) * loss_r.item()
-            self.ema_s = self.gamma * self.ema_s + (1 - self.gamma) * loss_s.item()
-
+        # loss_s = self.get_loss_pre_term(L, S)
+        # if self.ema_r is None:
+        #     self.ema_r = loss_r.item()
+        #     self.ema_s = loss_s.item()
+        # else:
+        #     self.ema_r = self.gamma * self.ema_r + (1 - self.gamma) * loss_r.item()
+        #     self.ema_s = self.gamma * self.ema_s + (1 - self.gamma) * loss_s.item()
+        
         return loss_r
         
     def reset(self):
