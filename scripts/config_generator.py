@@ -178,7 +178,7 @@ if __name__ == "__main__":
     cfg_llama_1b = dict(
         name='llama_1b',
         seed=42,
-        lr=0.001,
+        lr=0.0005,
         gradient='coupled',  # or decoupled
         is_asyn=False,
         is_init=False,
