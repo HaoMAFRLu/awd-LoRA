@@ -36,7 +36,7 @@ lm_head_params = {
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.15,  # Rate of sparsity for the layer
     'alpha_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.035,
     },
@@ -65,7 +65,7 @@ attn_o_proj_params = {
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.2,
     },
@@ -94,7 +94,7 @@ attn_q_proj_params = {
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.2,
     },
@@ -123,7 +123,7 @@ attn_k_proj_params = {
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.2,
     },
@@ -152,7 +152,7 @@ attn_v_proj_params = {
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.2,
     },
@@ -181,7 +181,7 @@ mlp_gate_proj_params = {
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.2,
     },
@@ -210,7 +210,7 @@ mlp_down_proj_params = {
     'rate_rank':      0.15,  # Rate of rank reduction for the layer
     'rate_sparsity':  0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.2,
     },
@@ -239,7 +239,7 @@ mlp_up_proj_params = {
     'rate_rank':     0.15,  # Rate of rank reduction for the layer
     'rate_sparsity': 0.05,  # Rate of sparsity for the layer
     'alpha_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.2,
     },
