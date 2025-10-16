@@ -16,9 +16,7 @@ output          = jobs/task$(Process).out
 request_cpus    = 8
 request_memory  = 100000
 request_gpus    = 8
-requirements = \
-    (CUDACapability >= 8.9 && CUDACapability < 9.1) && \
-    (CUDAGlobalMemoryMb >= 94208 && CUDAGlobalMemoryMb <= 98304)
+requirements = (CUDACapability >= 8.9 && CUDACapability < 9.1) 
 
 getenv          = True
 
