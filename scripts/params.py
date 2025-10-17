@@ -67,10 +67,10 @@ attn_o_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.1,
     },
     'beta_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.2,
     },
@@ -99,7 +99,7 @@ attn_q_proj_params = {
         'rate_decay': 0.1,
     },
     'beta_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.2,
     },
@@ -128,7 +128,7 @@ attn_k_proj_params = {
         'rate_decay': 0.1,
     },
     'beta_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.2,
     },
@@ -157,7 +157,7 @@ attn_v_proj_params = {
         'rate_decay': 0.1,
     },
     'beta_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.2,
     },
@@ -183,10 +183,10 @@ mlp_gate_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.4,
+        'rate_decay': 0.1,
     },
     'beta_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.2,
     },
@@ -212,10 +212,10 @@ mlp_down_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.8,
+        'rate_decay': 0.1,
     },
     'beta_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.2,
     },
@@ -241,10 +241,10 @@ mlp_up_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.1,
     },
     'beta_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.2,
     },
