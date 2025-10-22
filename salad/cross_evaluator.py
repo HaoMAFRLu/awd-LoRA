@@ -175,23 +175,35 @@ class CrossEvaluator():
             rank_quantile_partial = self.rank_quantile_partial_list[i]
             eval_results[f'par_lowrank_L_with_S_{i}'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, rank_quantile_partial) 
             eval_results[f'nr_par_lowrank_L_with_S_{i}'] = self.cal_nr_params(self.total_params, rank_quantile_partial, self.rate_sparsity, self.layer_dim)
-            
+            print(f"Evaluation for partial low-rank + sparsity model {i} done.")
+
+
         eval_results['X'] = self._eval_original(dataloader)
         eval_results['nr_X'] = self.total_params
+        print("Evaluation for original model done.")
+
         eval_results['X_without_S'] = None # self._eval_orginal_without_sparsity(dataloader)
         eval_results['lowrank_X_without_S'] = None # self._eval_original_lowrank_without_sparsity(dataloader)
+        print("Evaluation for original model without sparsity done.")
+
         eval_results['L'] = None # self._eval_lowrank(dataloader)
         eval_results['lowrank_L'] = None # self._eval_lowrank_lowrank(dataloader)
+        print("Evaluation for low-rank model done.")
+
         # eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)  # 99.9 energy
         # eval_results['par_L_with_S'] = self._eval_par_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
         eval_results['L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
         eval_results['nr_L_with_S'] = self.cal_nr_params(self.total_params, self.rank_quantile_energy, self.rate_sparsity, self.layer_dim)
-        
+        print("Evaluation for low-rank + sparsity model done.")
+
         eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_target)  # target rate
         eval_results['nr_lowrank_L_with_S'] = self.cal_nr_params(self.total_params, self.rank_quantile_target, self.rate_sparsity, self.layer_dim)
-        
+        print("Evaluation for low-rank (target rate) + sparsity model done.")
+
         eval_results['lowrank_L_with_S_specify'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify)  # specified rate
         eval_results['nr_lowrank_L_with_S_specify'] = self.cal_nr_params(self.total_params, self.rank_quantile_specify, self.rate_sparsity, self.layer_dim)
+        print("Evaluation for low-rank (specified rate) + sparsity model done.")
+        
         # eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
         
         
