@@ -183,6 +183,7 @@ if __name__ == "__main__":
     model_type = 'llama_1b'
     files = [
              '20251016_233939',
+             '20251017_085037',
             ]
 
     # model_type = 'llama_350m'
