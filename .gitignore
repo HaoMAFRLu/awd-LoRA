@@ -36,3 +36,14 @@
 
 # ignore wandb
 /wandb
+
+# ignore adaptive wavelets
+/adaptive-wavelets
+
+# ignore apex
+/apex
+
+# ignore apex
+/apex
+
+
