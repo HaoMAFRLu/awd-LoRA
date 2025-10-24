@@ -242,9 +242,8 @@ if __name__ == "__main__":
     # cfg_version = 'llama_9m'
     # file = '20251009_205606'
 
-    # cfg_version = 'llama_60m'
-    # file = '20251006_143955'
-    # file = '20251005_130200'
+    cfg_version = 'llama_60m'
+    file = '20251005_130200'
 
     # cfg_version = 'llama_130m'
     # file = '20251006_223931'
@@ -252,8 +251,8 @@ if __name__ == "__main__":
     # cfg_version = 'llama_350m'
     # file = '20251012_120507'
 
-    cfg_version = 'llama_1b'
-    file = '20251017_153038'
+    # cfg_version = 'llama_1b'
+    # file = '20251017_153038'
 
     # setting for 350m
     # rank_cfg = {
