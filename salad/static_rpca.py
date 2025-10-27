@@ -33,16 +33,18 @@ class StaticRPCA:
         if self.rank == 0:
             all_layers = [f'layers.{i}.{layer_type}' for i in range(self.nr_layers) for layer_type in LAYER_TYPE]
             # split the layers among the ranks
-            self.layers_per_rank = [[] for _ in range(self.world_size)]
+            layers_per_rank = [[] for _ in range(self.world_size)]
             for idx, layer_name in enumerate(all_layers):
-                self.layers_per_rank[idx % self.world_size].append(layer_name)
+                layers_per_rank[idx % self.world_size].append(layer_name)
         else:
-            self.layers_per_rank = None
+            layers_per_rank = None
 
 
         self.ddp_model = DDP(model.cuda(), device_ids=[torch.cuda.current_device()])
-        dist.broadcast_object_list(self.layers_per_rank, src=0)
-        self.assigned_layers = self.layers_per_rank[self.rank]
+
+        layers_per_rank = [layers_per_rank]
+        dist.broadcast_object_list(layers_per_rank, src=0)
+        self.assigned_layers = layers_per_rank[0][self.rank]
 
         
     def _init_distributed(self):
