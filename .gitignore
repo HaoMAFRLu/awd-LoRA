@@ -46,4 +46,5 @@
 # ignore apex
 /apex
 
-
+# ignore hf_cache
+/hf_cache

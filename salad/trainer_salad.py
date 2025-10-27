@@ -102,7 +102,7 @@ class SALADTrainer():
             for entry in self.cfg_layers:
                 name = entry['name']
                 params = entry['params']
-                W = self.get_weight(self.model, name)
+                W = get_weight(self.model, name)
                 rate_rank = params.get('rate_rank', 0.5)
                 # truncate the rank of X
                 U, s, Vt = torch.linalg.svd(W, full_matrices=False)
@@ -166,7 +166,7 @@ class SALADTrainer():
             params = entry['params']
             solver = SALAD(name, 
                            params, 
-                           self.get_weight(self.ddp_model, name), 
+                           get_weight(self.ddp_model, name), 
                            len(self.cfg_layers),
                            is_full=name in self.assigned_layers)
             solver.layer_gpu_map = self.rank if name in self.assigned_layers else -1
@@ -231,26 +231,6 @@ class SALADTrainer():
         params = _params.get('params', {})
         return name, params
     
-    @staticmethod
-    def _get_weight(model: torch.nn.Module, layer_name: str) -> torch.Tensor:
-        sub = model.get_submodule(layer_name)
-        return sub.weight
-
-    def get_weight(self, model: torch.nn.Module, layer_name: str) -> torch.Tensor:
-        candidates = [
-            f"module.model.{layer_name}",
-            f"module.{layer_name}",
-            f"model.{layer_name}",
-            layer_name
-        ]
-
-        for candidate in candidates:
-            try:
-                return self._get_weight(model, candidate)
-            except (KeyError, AttributeError):
-                continue
-
-        raise KeyError(f"Weight not found for layer '{layer_name}'. Tried: {candidates}")
 
     @staticmethod
     def get_cfg_layers(config: dict,

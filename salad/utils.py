@@ -387,9 +387,25 @@ def print_setting(cfg: dict, lvl=0) -> None:
             else:
                 logger.info(f"{' ' * lvl}{key}: {value}")
 
-def get_weight(model: torch.nn.Module, layer_name: str) -> torch.Tensor:
+def _get_weight(model: torch.nn.Module, layer_name: str) -> torch.Tensor:
     sub = model.get_submodule(layer_name)
     return sub.weight
+
+def get_weight(model: torch.nn.Module, layer_name: str) -> torch.Tensor:
+    candidates = [
+        f"module.model.{layer_name}",
+        f"module.{layer_name}",
+        f"model.{layer_name}",
+        layer_name
+    ]
+
+    for candidate in candidates:
+        try:
+            return _get_weight(model, candidate)
+        except (KeyError, AttributeError):
+            continue
+
+    raise KeyError(f"Weight not found for layer '{layer_name}'. Tried: {candidates}")
 
 def hf_login_once():
     os.environ.setdefault("HF_HOME", "/lustre/home/hma2/hf")
