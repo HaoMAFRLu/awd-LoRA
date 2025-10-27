@@ -27,5 +27,5 @@ def main(MODEL_NAME: str) -> None:
     static_rpca.destroy()
 
 if __name__ == "__main__":
-    MODEL_NAME = "meta-llama/Llama-3.2-1B"
+    MODEL_NAME = "meta-llama/Llama-3.2-3B"
     main(MODEL_NAME)
