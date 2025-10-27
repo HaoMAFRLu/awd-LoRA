@@ -24,7 +24,7 @@ ROOT =  get_parent_path(lvl=1)
 MODEL_TYPE = 'llama_60m'
 FILE = '20251006_092303'
 LAYER = 0
-LAYER_TYPE = 'o_proj'  # 'o_proj', 'q_proj', 'k_proj', 'v_proj', 'gate_proj', 'down_proj', 'up_proj'
+LAYER_TYPE = 'down_proj'  # 'o_proj', 'q_proj', 'k_proj', 'v_proj', 'gate_proj', 'down_proj', 'up_proj'
 
 layer_name = f'layers.{LAYER}.self_attn.{LAYER_TYPE}' if LAYER_TYPE in ['o_proj', 'q_proj', 'k_proj', 'v_proj'] else f'layers.{LAYER}.mlp.{LAYER_TYPE}'
 
@@ -39,6 +39,8 @@ model = get_model(path_cfg_model)
 # load the original model weights X
 load_model(model, os.path.join(path_folder, 'model.pth'))
 
+X = get_weight(model, 'model.'+layer_name).data.to(device)
+
 LL = {}
 SS = {}
 files = os.listdir(path_folder)
@@ -52,25 +54,34 @@ for f in rank_files:
 L = LL[layer_name].to(device)
 S = SS[layer_name].to(device)
 
-X = L + S
+L_S = L + S
 
 # A0, E0 = rpca.ealm.fit_torch(X, device=device, epsilon1=1e-3, epsilon2=1e-2)
-A, E = rpca.ialm.fit_torch(X, device=device, epsilon1=1e-4, epsilon2=1e-2)
+A0, E0 = rpca.ialm.fit_torch(X, device=device, epsilon1=1e-2, epsilon2=1e-2)
+A1, E1 = rpca.ialm.fit_torch(L_S, device=device, epsilon1=1e-2, epsilon2=1e-2)
 
-X_loss = torch.linalg.norm(X - (L + S), ord='fro')
-L_loss = torch.linalg.norm(L - A, ord='fro')
-S_loss = torch.linalg.norm(S - E, ord='fro')
+X_loss1 = torch.linalg.norm(X - (A0 + E0), ord='fro')
+X_loss2 = torch.linalg.norm(L_S - (A1 + E1), ord='fro')
+
+L_loss1 = torch.linalg.norm(L - A0, ord='fro')
+L_loss2 = torch.linalg.norm(L - A1, ord='fro')
+
+S_loss1 = torch.linalg.norm(S - E0, ord='fro')
+S_loss2 = torch.linalg.norm(S - E1, ord='fro')
 
 # get the number of rank of L
-rank_L = torch.linalg.matrix_rank(L).item()
-rank_A = torch.linalg.matrix_rank(A).item()
+rank_L = get_rank(L, energy_quantile=0.999)
+rank_A0 = get_rank(A0, energy_quantile=0.999)
+rank_A1 = get_rank(A1, energy_quantile=0.999)
 # get the sparsity of S
-sparsity_S = (S.abs() < 1e-5).sum().item() / S.numel()
-sparsity_E = (E.abs() < 1e-5).sum().item() / E.numel()  
+sparsity_S = (S.abs() < 1.7e-2).sum().item() / S.numel()
+sparsity_E0 = (E0.abs() < 1.7e-2).sum().item() / E0.numel()
+sparsity_E1 = (E1.abs() < 1.7e-2).sum().item() / E1.numel()
 
-print(f'X loss (Frobenius norm): {X_loss.item():.6f}')
-print(f'L loss (Frobenius norm): {L_loss.item():.6f}')
-print(f'S loss (Frobenius norm): {S_loss.item():.6f}')
 
-print(f'Rank of L: {rank_L}, Rank of A: {rank_A}')
-print(f'Sparsity of S: {sparsity_S*100:.2f}%, Sparsity of E: {sparsity_E*100:.2f}%')
+print(f'For layer {layer_name}:')
+print(f'Rank of L: {rank_L}, Rank of A0: {rank_A0}, Rank of A1: {rank_A1}')
+print(f'Sparsity of S: {sparsity_S*100:.2f}%, Sparsity of E0: {sparsity_E0*100:.2f}%, Sparsity of E1: {sparsity_E1*100:.2f}%')
+print(f'Loss on X decomposition: Method0 {X_loss1:.4f}, Method1 {X_loss2:.4f}')
+print(f'Loss on L recovery: Method0 {L_loss1:.4f}, Method1 {L_loss2:.4f}')
+print(f'Loss on S recovery: Method0 {S_loss1:.4f}, Method1 {S_loss2:.4f}')

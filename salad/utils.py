@@ -527,3 +527,11 @@ def get_ex_layers(layers: list, model, LL: dict, SS: dict, nr_remove: int) -> li
         ex_layers.append(sorted_layers[i][0])
 
     return ex_layers
+
+def get_rank(X: torch.Tensor, 
+             energy_quantile: float=0.999) -> int:
+    """Get the rank of the matrix X based on the energy quantile."""
+    _, s, _ = torch.linalg.svd(X, full_matrices=False)
+    energy = torch.cumsum(s, dim=0) / torch.sum(s)
+    rank = torch.sum(energy < energy_quantile).item() + 1
+    return rank
