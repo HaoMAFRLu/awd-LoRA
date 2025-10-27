@@ -14,7 +14,7 @@ LAYER_TYPE = ['self_attn.q_proj', 'self_attn.k_proj',
 class StaticRPCA:
     def __init__(self,
                  model: torch.nn.Module,
-                 path_folder: str,):
+                 path_folder: str=None) -> None:
         self.path_folder = path_folder
         self.rank, self.world_size = self._init_distributed()
 

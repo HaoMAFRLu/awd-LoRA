@@ -67,12 +67,12 @@ attn_o_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.06,
+        'rate_decay': 0.10,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.2,
+        'rate_decay': 0.04,
     },
     'rho_dict':            {
         'rho':           1e-6,
@@ -96,12 +96,12 @@ attn_q_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.06,
+        'rate_decay': 0.10,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.2,
+        'rate_decay': 0.04,
     },
     'rho_dict':            {
         'rho':           1e-6,
@@ -125,12 +125,12 @@ attn_k_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.06,
+        'rate_decay': 0.10,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.2,
+        'rate_decay': 0.04,
     },
     'rho_dict':            {
         'rho':           1e-6,
@@ -154,12 +154,12 @@ attn_v_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.06,
+        'rate_decay': 0.10,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.2,
+        'rate_decay': 0.04,
     },
     'rho_dict':            {
         'rho':           1e-6,
@@ -183,12 +183,12 @@ mlp_gate_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.06,
+        'rate_decay': 0.10,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.2,
+        'rate_decay': 0.04,
     },
     'rho_dict':            {
         'rho':           1e-6,
@@ -212,12 +212,12 @@ mlp_down_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.06,
+        'rate_decay': 0.10,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.2,
+        'rate_decay': 0.04,
     },
     'rho_dict':            {
         'rho':           1e-6,
@@ -241,12 +241,12 @@ mlp_up_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.06,
+        'rate_decay': 0.10,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.2,
+        'rate_decay': 0.04,
     },
     'rho_dict':            {
         'rho':           1e-6,
