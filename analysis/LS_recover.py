@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from salad.utils import *
 from salad.register import get_model
 from salad.static_rpca import StaticRPCA
+
 hf_login_once()
 ROOT = get_parent_path(lvl=1)
 

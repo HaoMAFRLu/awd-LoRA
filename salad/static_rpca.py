@@ -4,9 +4,8 @@ import torch
 import torch.distributed as dist
 from loguru import logger
 
-import rpca.ialm
-
 from salad.utils import *
+from salad.ialm import fit_torch
 
 LAYER_TYPE = ['self_attn.q_proj', 'self_attn.k_proj', 
               'self_attn.v_proj', 'self_attn.o_proj',
@@ -78,11 +77,11 @@ class StaticRPCA:
             X = L + S
             m, n = X.shape
 
-            L_, S_ = rpca.ialm.fit_torch(X, lambda_ = 1.0 / np.sqrt(max(m, n)),
-                                         device=self.device, 
-                                         dtype=torch.float32, 
-                                         epsilon1=1e-2, 
-                                         epsilon2=1e-2)
+            L_, S_ = fit_torch(X, lambda_ = 1.0 / np.sqrt(max(m, n)),
+                                device=self.device, 
+                                dtype=torch.float32, 
+                                epsilon1=1e-2, 
+                                epsilon2=1e-2)
             
             _, sv, _ = torch.linalg.svd(L_, full_matrices=False)
             svs[layer_name] = sv.to('cpu')
@@ -98,11 +97,12 @@ class StaticRPCA:
         for layer_name in self.assigned_layers:
             X = get_weight(self.ddp_model, layer_name).detach().to(torch.float32).to(self.device)
             m, n = X.shape
-            L, S = rpca.ialm.fit_torch(X, lambda_ = 1.0 / np.sqrt(max(m, n)),
-                                       device=self.device, 
-                                       dtype=torch.float32, 
-                                       epsilon1=1e-2, 
-                                       epsilon2=1e-2)
+            L, S = fit_torch(X, lambda_ = 1.0 / np.sqrt(max(m, n)),
+                            device=self.device, 
+                            dtype=torch.float32, 
+                            epsilon1=1e-2, 
+                            epsilon2=1e-2)
+            
             _, sv, _ = torch.linalg.svd(L, full_matrices=False)
             svs[layer_name] = sv.to('cpu')
             SS[layer_name] = S.to('cpu')

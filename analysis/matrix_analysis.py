@@ -9,13 +9,12 @@ from transformers import AutoTokenizer
 from torch.nn.parallel import DistributedDataParallel as DDP
 import numpy as np
 
-import rpca.ealm
-import rpca.ialm
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from salad.utils import *
 from salad.register import get_model, get_data
 from salad.cross_evaluator import CrossEvaluator
+from salad.ialm import fit_torch
+
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f'Using device: {device}')
@@ -57,8 +56,8 @@ S = SS[layer_name].to(device)
 L_S = L + S
 
 # A0, E0 = rpca.ealm.fit_torch(X, device=device, epsilon1=1e-3, epsilon2=1e-2)
-A0, E0 = rpca.ialm.fit_torch(X, device=device, epsilon1=1e-2, epsilon2=1e-2)
-A1, E1 = rpca.ialm.fit_torch(L_S, device=device, epsilon1=1e-2, epsilon2=1e-2)
+A0, E0 = fit_torch(X, device=device, epsilon1=1e-2, epsilon2=1e-2)
+A1, E1 = fit_torch(L_S, device=device, epsilon1=1e-2, epsilon2=1e-2)
 
 X_loss1 = torch.linalg.norm(X - (A0 + E0), ord='fro')
 X_loss2 = torch.linalg.norm(L_S - (A1 + E1), ord='fro')
