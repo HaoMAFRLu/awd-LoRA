@@ -55,7 +55,7 @@ S = SS[layer_name].to(device)
 X = L + S
 
 # A0, E0 = rpca.ealm.fit_torch(X, device=device, epsilon1=1e-3, epsilon2=1e-2)
-A, E = rpca.ialm.fit_torch(X, device=device, epsilon1=1e-3, epsilon2=1e-2)
+A, E = rpca.ialm.fit_torch(X, device=device, epsilon1=1e-4, epsilon2=1e-2)
 
 X_loss = torch.linalg.norm(X - (L + S), ord='fro')
 L_loss = torch.linalg.norm(L - A, ord='fro')
