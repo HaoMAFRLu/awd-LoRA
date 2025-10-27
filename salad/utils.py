@@ -17,7 +17,7 @@ import time, random
 import wandb
 from torch.nn.parallel import DistributedDataParallel as DDP
 import io
-from register import get_data
+from salad.register import get_data
 
 def mkdir(path: Path) -> None:
     """Check if the folder exists and create it if it does not."""
