@@ -498,6 +498,19 @@ def load_model(model, pth):
 
     return model
 
+def get_rank_sparsity(pth: str) -> tuple:
+    """Load data from the files"""
+    orig = torch.storage._load_from_bytes
+    try:
+        torch.storage._load_from_bytes = lambda b: torch.load(
+            io.BytesIO(b), map_location='cpu', weights_only=False
+        )
+        with open(pth, 'rb') as f:
+            obj = pickle.load(f) 
+    finally:
+        torch.storage._load_from_bytes = orig
+    return obj['svs'], obj['SS']
+
 def get_lowspa_layers(pth: str) -> tuple:
     """Load data from the files"""
     orig = torch.storage._load_from_bytes
