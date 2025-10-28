@@ -257,12 +257,13 @@ if __name__ == "__main__":
     cfg_llama_130m = dict(
         name='llama_130m',
         seed=42,
-        lr=0.001,
+        lr=0.003,
         gradient='coupled',  # or decoupled
         is_asyn=False,
         is_init=False,
         is_wandb=True,
         is_monitor=True,
+        save_interval=50,
         min_lr_ratio=0.1,
         weight_decay=0.0,
         num_freq=20,
@@ -369,4 +370,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_60m)
+    generate_config(**cfg_llama_130m)

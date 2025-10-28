@@ -45,7 +45,7 @@ def main(cfg_version: str,
     ddp_trainer.train(path_folder=path_folder)
     
 if __name__ == "__main__":
-    cfg_version = 'llama_60m'
+    cfg_version = 'llama_130m'
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
     main(cfg_version, path_cfg, path_cfg_model)
