@@ -266,7 +266,8 @@ if __name__ == "__main__":
             # '20251006_092303',    # best so far
             '20251027_103219',
             '20251027_223855',
-            '20251027_172600'
+            '20251027_172600',
+            '20251028_001027',   # best so far, only 1.1B tokens
              ]
     main(model_type=model_type,
          files=files)
