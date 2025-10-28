@@ -144,7 +144,7 @@ if __name__ == "__main__":
     # file = '20251009_205606'
 
     cfg_version = 'llama_60m'
-    file = '20251027_172600'
+    file = '20251028_001027'
 
     # cfg_version = 'llama_130m'
     # file = '20251007_134341'
