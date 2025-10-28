@@ -40,7 +40,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -65,7 +65,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -90,7 +90,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -115,7 +115,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -140,7 +140,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -165,7 +165,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -190,7 +190,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -215,7 +215,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -240,7 +240,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -265,7 +265,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -290,7 +290,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -315,7 +315,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -340,7 +340,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -365,7 +365,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -390,7 +390,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -415,7 +415,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -440,7 +440,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -465,7 +465,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -490,7 +490,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -515,7 +515,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -540,7 +540,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -565,7 +565,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -590,7 +590,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -615,7 +615,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -640,7 +640,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -665,7 +665,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -690,7 +690,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -715,7 +715,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -740,7 +740,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -765,7 +765,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -790,7 +790,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -815,7 +815,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -840,7 +840,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -865,7 +865,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -890,7 +890,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -915,7 +915,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -940,7 +940,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -965,7 +965,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -990,7 +990,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1015,7 +1015,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1040,7 +1040,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1065,7 +1065,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1090,7 +1090,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1115,7 +1115,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1140,7 +1140,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1165,7 +1165,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1190,7 +1190,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1215,7 +1215,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1240,7 +1240,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1265,7 +1265,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1290,7 +1290,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1315,7 +1315,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1340,7 +1340,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1365,7 +1365,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1390,7 +1390,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1415,7 +1415,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1440,7 +1440,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1465,7 +1465,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1490,7 +1490,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1515,7 +1515,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1540,7 +1540,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1565,7 +1565,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1590,7 +1590,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1615,7 +1615,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1640,7 +1640,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1665,7 +1665,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1690,7 +1690,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1715,7 +1715,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1740,7 +1740,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1765,7 +1765,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1790,7 +1790,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1815,7 +1815,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1840,7 +1840,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1865,7 +1865,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1890,7 +1890,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1915,7 +1915,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1940,7 +1940,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1965,7 +1965,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -1990,7 +1990,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -2015,7 +2015,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -2040,7 +2040,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -2065,7 +2065,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -2090,7 +2090,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
@@ -2115,7 +2115,7 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.18
+      rate_decay: 0.2
     beta_dict:
       init: !!float '0'
       mode: adaptive
