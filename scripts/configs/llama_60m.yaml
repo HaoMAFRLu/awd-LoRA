@@ -46,7 +46,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -71,7 +71,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -96,7 +96,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -121,7 +121,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -146,7 +146,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -171,7 +171,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -196,7 +196,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -221,7 +221,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -246,7 +246,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -271,7 +271,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -296,7 +296,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -321,7 +321,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -346,7 +346,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -371,7 +371,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -396,7 +396,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -421,7 +421,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -446,7 +446,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -471,7 +471,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -496,7 +496,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -521,7 +521,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -546,7 +546,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -571,7 +571,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -596,7 +596,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -621,7 +621,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -646,7 +646,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -671,7 +671,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -696,7 +696,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -721,7 +721,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -746,7 +746,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -771,7 +771,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -796,7 +796,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -821,7 +821,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -846,7 +846,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -871,7 +871,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -896,7 +896,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -921,7 +921,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -946,7 +946,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -971,7 +971,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -996,7 +996,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1021,7 +1021,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1046,7 +1046,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1071,7 +1071,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1096,7 +1096,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1121,7 +1121,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1146,7 +1146,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1171,7 +1171,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1196,7 +1196,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1221,7 +1221,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1246,7 +1246,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1271,7 +1271,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1296,7 +1296,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1321,7 +1321,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1346,7 +1346,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1371,7 +1371,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1396,7 +1396,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
@@ -1421,7 +1421,7 @@ layers:
       mode: adaptive
       rate_decay: 0.04
     rho_dict:
-      rho: 0.0000001
+      rho: 0.000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
