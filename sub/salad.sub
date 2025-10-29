@@ -16,8 +16,7 @@ output          = jobs2/task$(Process).out
 request_cpus    = 5
 request_memory  = 100000
 request_gpus    = 5
-# requirements = (CUDACapability >= 8.9 && CUDACapability < 9.1) # H100 
-requirements = (CUDACapability >= 8.0 && CUDACapability < 9.0)  # A100
+requirements = (CUDACapability >= 8.0 && CUDACapability < 9.0) 
 
 getenv          = True
 
