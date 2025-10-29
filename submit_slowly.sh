@@ -18,5 +18,5 @@ while IFS=" " read -r arg1 arg2; do
          "$SUBFILE"
 
     INDEX=$((INDEX + 1))
-    sleep 90
+    sleep 100
 done < "$PARAMS"
