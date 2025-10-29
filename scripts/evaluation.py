@@ -147,7 +147,7 @@ if __name__ == "__main__":
     # file = '20251028_001027'
 
     cfg_version = 'llama_130m'
-    file = '20251028_232735'
+    file = '20251029_085332'
 
     # cfg_version = 'llama_350m'
     # file = '20251012_120507'
@@ -179,5 +179,5 @@ if __name__ == "__main__":
 
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     # main(cfg_version, path_folder, nr_remove=[3, 6, 9], rank_cfg=rank_cfg)
-    main(cfg_version, path_folder, nr_remove=[32, 34, 36], rank_cfg=rank_cfg)  # this setting is only for 130m model
+    main(cfg_version, path_folder, nr_remove=[30, 32, 34], rank_cfg=rank_cfg)  # this setting is only for 130m model
     
