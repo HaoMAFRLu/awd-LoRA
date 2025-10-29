@@ -1,0 +1,18 @@
+universe        = vanilla
+executable      = /bin/bash
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs_batch/task.log
+output          = jobs_batch/task.out
+error           = jobs_batch/task.err
+
+request_cpus    = 5
+request_memory  = 100000
+request_gpus    = 5
+
+requirements    = (CUDACapability >= 8.0 && CUDACapability < 9.0)
+
+getenv          = True
+
+queue
