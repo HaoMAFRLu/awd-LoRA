@@ -179,5 +179,5 @@ if __name__ == "__main__":
 
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
     # main(cfg_version, path_folder, nr_remove=[3, 6, 9], rank_cfg=rank_cfg)
-    main(cfg_version, path_folder, nr_remove=[30, 32, 34], rank_cfg=rank_cfg)  # this setting is only for 130m model
+    main(cfg_version, path_folder, nr_remove=[35, 40, 45], rank_cfg=rank_cfg)  # this setting is only for 130m model
     
