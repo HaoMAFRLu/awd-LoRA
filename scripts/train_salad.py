@@ -45,7 +45,8 @@ def main(cfg_version: str,
     set_seed(seed)
 
     folder_name = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path_folder = os.path.join(root, 'data', 'salad', cfg_version, folder_name)
+    # path_folder = os.path.join(root, 'data', 'salad', cfg_version, folder_name)
+    path_folder = os.path.join(root, 'data', 'ablation', cfg_version, folder_name)
     mkdir(path_folder)
     shutil.copytree(os.path.join(root, 'salad'), 
                     os.path.join(path_folder, 'salad'), 

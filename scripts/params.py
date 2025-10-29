@@ -46,7 +46,7 @@ lm_head_params = {
         'rate_decay': 0.02,
     },
     'rho_dict':            {
-        'rho':           1e-6,
+        'rho':           1e-7,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
