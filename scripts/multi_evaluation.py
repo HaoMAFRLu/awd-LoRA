@@ -153,7 +153,7 @@ if __name__ == "__main__":
         'up_proj': 0.35
     }
 
-    _path = os.path.join(root, 'data', 'ablation', cfg_version)
+    _path = os.path.join(root, 'data', 'ablation1', cfg_version)
     files = os.listdir(_path)
     for file in files:
         print(f'Processing folder: {file}')
