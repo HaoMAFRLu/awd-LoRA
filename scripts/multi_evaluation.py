@@ -156,6 +156,9 @@ if __name__ == "__main__":
     _path = os.path.join(root, 'data', 'ablation', cfg_version)
     files = os.listdir(_path)
     for file in files:
+        print(f'Processing folder: {file}')
         path_folder = os.path.join(_path, file)
         main(cfg_version, path_folder, nr_remove=[3, 6, 9], rank_cfg=rank_cfg)
+        print(f'Finished folder: {file}')
+        print('-------------------------')
     
