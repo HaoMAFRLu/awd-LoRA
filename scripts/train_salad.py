@@ -20,7 +20,8 @@ root = get_parent_path(lvl=1)
 
 def parse_args():
     parser = argparse.ArgumentParser()
-
+    
+    parser.add_argument('--rho', type=float, default=None, help='Rho')
     parser.add_argument('--alpha_rate', type=float, default=None, help='Alpha Rate')
     parser.add_argument('--beta_rate', type=float, default=None, help='Beta Rate')
 
@@ -29,6 +30,7 @@ def parse_args():
 def main(cfg_version: str, 
          path_cfg: str,
          path_cfg_model: str,
+         rho: float,
          alpha_rate: float,
          beta_rate: float) -> None:
     
@@ -36,8 +38,9 @@ def main(cfg_version: str,
     with open(path_cfg) as f:
         cfg = yaml.safe_load(f)
     
-    if alpha_rate is not None and beta_rate is not None:
+    if rho is not None and alpha_rate is not None and beta_rate is not None:
         for layer in cfg['layers']:
+            layer['params']['rho_dict']['rho'] = rho
             layer['params']['alpha_dict']['rate_decay'] = alpha_rate
             layer['params']['beta_dict']['rate_decay'] = beta_rate 
 
@@ -46,7 +49,7 @@ def main(cfg_version: str,
 
     folder_name = datetime.now().strftime("%Y%m%d_%H%M%S")
     # path_folder = os.path.join(root, 'data', 'salad', cfg_version, folder_name)
-    path_folder = os.path.join(root, 'data', 'ablation1', cfg_version, folder_name)
+    path_folder = os.path.join(root, 'data', 'ablation', cfg_version, folder_name)
     mkdir(path_folder)
     shutil.copytree(os.path.join(root, 'salad'), 
                     os.path.join(path_folder, 'salad'), 
@@ -70,9 +73,8 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     args = parse_args()
 
-    cfg_version = 'llama_60m'
+    cfg_version = 'llama_130m'
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
 
-
-    main(cfg_version, path_cfg, path_cfg_model, args.alpha_rate, args.beta_rate)
+    main(cfg_version, path_cfg, path_cfg_model, args.rho, args.alpha_rate, args.beta_rate)

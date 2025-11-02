@@ -9,12 +9,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.general import *
 
 root = get_parent_path(lvl=1)
-file = os.path.join(root, 'params.txt')
+file = os.path.join(root, 'batch_params.txt')
 
-wave = ['0.001', '0.01', '0.1']
-attr = ['1.0', '2.0', '3.0', '4.0', '5.0']
+rho = ['1e-6', '1e-7', '1e-8']
+alpha = ['5e-3', '5e-2', '5e-1']
+beta = ['5e-4', '5e-3', '5e-2']
 
-combinations = [(a, b) for a in wave for b in attr]
+combinations = [(a, b, c) for a in rho for b in alpha for c in beta]
 
 with open(file, 'w') as f:
     for combo in combinations:
