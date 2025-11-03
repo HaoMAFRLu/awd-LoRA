@@ -9,6 +9,9 @@ import seaborn as sns
 import pandas as pd
 from matplotlib.ticker import FixedLocator, FixedFormatter
 from matplotlib.patches import Patch
+from matplotlib import cm, colors
+from matplotlib.lines import Line2D
+import matplotlib.patheffects as pe
 
 def get_loss_row(file: str, 
                  data_type: str, 
@@ -145,9 +148,51 @@ def build_item(
         rho, 
         alpha, 
         beta,
-        data: dict,  # {layer_name: {'rank': [...], 'sparsity': [...], 'loss': [...]}, ...}
-        layer_names: list
+        data: dict,              # {layer_name: {'rank': [...], 'sparsity': [...], 'loss': [...]}, ...}
+        layer_names: list,
+        eval_dict: dict,         # 新增：评测结果字典
+        target_keys: list,       # 新增：目标 key 列表（会先映射再取值）
+        key_word_map: dict       # 新增：target_key -> 实际 eval key 的映射
     ) -> pd.DataFrame:
+    """
+    在原始每行记录的基础上，额外写入（对每个 mapped_key 复制一份）：
+      - eval_key:   映射后的 key
+      - ppl:        eval_dict[mapped_key]['ppl']（若不存在则 NaN）
+      - n_params:   eval_dict['nr+' + mapped_key] 或 eval_dict['nr_' + mapped_key]（若不存在则 NaN）
+    """
+    import numpy as np
+    import pandas as pd
+
+    # -------- 预处理：把 target_keys 映射为 eval 中实际的 key，并取出 ppl / n_params --------
+    mapped_infos = []
+    if not isinstance(target_keys, (list, tuple)):
+        target_keys = [target_keys]
+
+    for tk in target_keys:
+        mk = key_word_map.get(tk, tk)
+        ppl = np.nan
+        n_params = np.nan
+        if isinstance(eval_dict, dict):
+            # ppl: 支持 eval_dict[mk]['ppl']
+            v = eval_dict.get(mk, {})
+            if isinstance(v, dict):
+                ppl = v.get('ppl', np.nan)
+            # n_params: 支持 'nr+mk' 或 'nr_mk'
+            if f"nr+{mk}" in eval_dict:
+                n_params = eval_dict.get(f"nr+{mk}", np.nan)
+            elif f"nr_{mk}" in eval_dict:
+                n_params = eval_dict.get(f"nr_{mk}", np.nan)
+        mapped_infos.append(dict(
+            eval_key=str(mk),
+            ppl=ppl if ppl is not None else np.nan,
+            n_params=n_params if n_params is not None else np.nan,
+        ))
+
+    # 如果一个都没取到，也放一个占位，避免上游崩
+    if not mapped_infos:
+        mapped_infos = [dict(eval_key="unknown", ppl=np.nan, n_params=np.nan)]
+
+    # -------- 常规逐层统计（对每个 mapped_key 复制一份） --------
     rows = []
     for name in layer_names:
         if name not in data:
@@ -155,41 +200,49 @@ def build_item(
         layer_idx, block, sub = parse_from_name(name)
         for metric_key in ('rank', 'loss', 'sparsity'):
             val = get_layer_stats(data, name, metric_key)
-            rows.append(dict(
-                exp_id=exp_id,
-                rho=float(rho), 
-                alpha=float(alpha), 
-                beta=float(beta),
-                layer=name,
-                layer_idx=layer_idx,
-                block=block,
-                subcomp=sub,
-                metric=metric_key,
-                value=float(val),
-            ))
+            for info in mapped_infos:
+                rows.append(dict(
+                    exp_id=exp_id,
+                    rho=float(rho), 
+                    alpha=float(alpha), 
+                    beta=float(beta),
+                    layer=name,
+                    layer_idx=layer_idx,
+                    block=block,
+                    subcomp=sub,
+                    metric=metric_key,
+                    value=float(val),
+                    # 评测信息（随 eval_key 复制）
+                    eval_key=info["eval_key"],
+                    ppl=float(info["ppl"]) if info["ppl"] is not None else np.nan,
+                    n_params=float(info["n_params"]) if info["n_params"] is not None else np.nan,
+                ))
     base = pd.DataFrame(rows)
 
-    # -------- 新增：扩展出 scope 视图（layer / subcomp / block / all）---------
-    # 复制每行数据，分别标注 scope_type 与 scope_name
+    # -------- 扩展出 scope 视图（layer / subcomp / block / all）---------
     scope_records = []
     for r in base.itertuples(index=False):
-        rdict = r._asdict() if hasattr(r, "_asdict") else dict(r._mapping)  # 兼容性
-        # layer 作用域：按层号聚合
+        rdict = r._asdict() if hasattr(r, "_asdict") else dict(r._mapping)
+
+        # layer 作用域
         rec = dict(rdict)
         rec["scope_type"] = "layer"
         rec["scope_name"] = str(rec["layer_idx"])
         scope_records.append(rec)
-        # subcomp 作用域：按子组件聚合
+
+        # subcomp 作用域
         rec = dict(rdict)
         rec["scope_type"] = "subcomp"
         rec["scope_name"] = str(rec["subcomp"])
         scope_records.append(rec)
-        # block 作用域：按块名聚合
+
+        # block 作用域
         rec = dict(rdict)
         rec["scope_type"] = "block"
         rec["scope_name"] = str(rec["block"])
         scope_records.append(rec)
-        # all 作用域：全局（所有层一起）
+
+        # all 作用域
         rec = dict(rdict)
         rec["scope_type"] = "all"
         rec["scope_name"] = "all"
@@ -197,15 +250,12 @@ def build_item(
 
     df = pd.DataFrame(scope_records)
 
-    # -------- 保持/完善数据类型 ----------
-    for c in ["rho","alpha","beta","value"]:
+    # -------- 类型整理 ----------
+    for c in ["rho","alpha","beta","value","ppl","n_params"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-    for c in ["exp_id","layer","block","subcomp","metric","scope_type","scope_name"]:
+    for c in ["exp_id","layer","block","subcomp","metric","scope_type","scope_name","eval_key"]:
         df[c] = df[c].astype("category")
-    # layer_idx 保持可空整数，便于排序与缺失兼容
     df["layer_idx"] = pd.to_numeric(df["layer_idx"], errors="coerce").astype("Int64")
-
-    # 给 scope_type 固定顺序，方便 Facet 稳定
     df["scope_type"] = df["scope_type"].cat.set_categories(["all","block","subcomp","layer"], ordered=True)
 
     return df
@@ -245,6 +295,7 @@ def plot_violin_grid(
     save_prefix="violin_grids",
     height=3.6,
     y_ranges: dict = None,        # e.g. dict(loss=(0,20), rank=(0,1), sparsity=(0,1))
+    path: str = None,
 ):
 
     y_ranges = y_ranges or dict(loss=(0,10), rank=(0,1), sparsity=(0,0.6))
@@ -400,8 +451,13 @@ def plot_violin_grid(
 
             plt.subplots_adjust(top=0.90, bottom=0.18, right=0.92)
             g.fig.suptitle(f"{metric} | scope={scope_type}", y=0.98)
-            plt.show()
-
+            if path is None:
+                plt.show()
+            else:
+                path_file = os.path.join(path, f"{scope_type}_{metric}.png")
+                g.fig.set_size_inches(16, 8) 
+                plt.savefig(path_file, dpi=300)
+                plt.close()
         return
 
     # ================= 旧逻辑：指定了 scope_name 或 scope_type == 'all' =================
@@ -431,7 +487,8 @@ def plot_violin_grid(
                 row="beta_cat", col="alpha_cat",
                 margin_titles=True, sharey=False,
                 col_wrap=max_cols if max_cols and dd["alpha_cat"].nunique() > max_cols else None,
-                height=3.0
+                height=height,
+                aspect=1.6,
             )
 
             def _map_violin(data, color=None, **kwargs):
@@ -459,4 +516,259 @@ def plot_violin_grid(
 
             plt.subplots_adjust(top=0.88)
             g.fig.suptitle(f"{metric.upper()} | scope: {scope_type}({name})")
-            plt.show()
+            if path is None:
+                plt.show()
+            else:
+                path_file = os.path.join(path, f"{scope_type}_{metric}.png")
+                g.fig.set_size_inches(16, 8) 
+                plt.savefig(path_file, dpi=300)
+                plt.close()
+
+
+
+def plot_ppl_grid(
+    df: pd.DataFrame,
+    *,
+    eval_order: list = None,        # 指定 x 轴 target key 的顺序（eval_key）；None 自动
+    rho_whitelist=None,             # 仅保留这些 rho；None 表示全部
+    height: float = 3.6,            # 每个子图高度
+    max_cols: int = 6,              # Facet col_wrap
+    y_range: tuple = (25, 100),          # 固定 ppl 范围，如 (0, 50)；None 自适应
+    marker_size: float = 150,        # 散点大小
+    marker_alpha: float = 0.9,      # 散点透明度
+    cmap_name: str = "viridis",     # 连续色图，用于 n_params（深色=大）
+    title_prefix: str = "",         # 图标题前缀
+    label_fontsize: int = 8,        # 🔹参数文本字号
+    label_offset_frac: float = 10.0, # 🔹参数文本上移（相对 y 轴跨度的比例）
+    yscale: str = "linear",        # y 轴尺度，"linear" 或 "log"
+    path: str = None,              # 保存路径；None 则显示不保存
+):
+    # ---------- 基础检查 ----------
+    d = df.copy()
+    needed = {"alpha", "beta", "rho", "eval_key", "ppl", "n_params"}
+    missing = [c for c in needed if c not in d.columns]
+    if missing:
+        raise ValueError(f"DataFrame 缺少必要列: {missing}")
+
+    # ---------- 过滤 rho ----------
+    if rho_whitelist is not None:
+        rho_set = set(float(x) for x in rho_whitelist)
+        d = d[d["rho"].apply(lambda x: float(x) in rho_set)]
+    if d.empty:
+        print("[WARN] 过滤后数据为空。")
+        return
+
+    # ---------- 先把 eval_key 变为普通字符串，避免 groupby category 扩展组合 ----------
+    d["eval_key"] = d["eval_key"].astype(str)
+
+    # ---------- 聚合：对每个 (alpha,beta,rho,eval_key) 求 ppl/n_params 的均值 ----------
+    # observed=True 只对“观测到”的类别组合分组，避免未来 pandas 默认变更导致警告/错误
+    d = (
+        d.groupby(["alpha", "beta", "rho", "eval_key"], observed=True, as_index=False)
+         .agg(ppl=("ppl", "mean"), n_params=("n_params", "mean"))
+    )
+
+    # ---------- 类别准备（会创建 alpha_cat、beta_cat、rho_cat） ----------
+    d, alpha_labels, beta_labels = _ensure_categories(d)
+
+    # ---------- x 轴 eval_key 顺序 ----------
+    if eval_order is None:
+        # 默认按出现顺序（保序去重）
+        eval_order = list(dict.fromkeys(d["eval_key"].tolist()))
+    d["eval_key"] = pd.Categorical(d["eval_key"], categories=eval_order, ordered=True)
+
+    # ---------- ρ 顺序 ----------
+    rho_levels = list(np.sort(d["rho"].dropna().unique()))
+    d["rho_cat"] = pd.Categorical(d["rho"], categories=rho_levels, ordered=True)
+
+    # ---------- 参数量单位转为百万 M ----------
+    d["n_params"] = d["n_params"].astype(float) / 1e6
+
+    # ---------- 连续颜色映射：n_params 深色=大 ----------
+    n_vals = d["n_params"].astype(float).replace([np.inf, -np.inf], np.nan).dropna()
+    if len(n_vals) == 0:
+        n_min, n_max = 0.0, 1.0
+    else:
+        n_min, n_max = float(n_vals.min()), float(n_vals.max())
+        if n_min == n_max:
+            n_max = n_min + 1.0
+    norm = colors.Normalize(vmin=n_min, vmax=n_max)
+    cmap = cm.get_cmap(cmap_name)
+
+    # ---------- 形状映射：rho ----------
+    marker_pool = ['o','s','^','D','P','X','v','<','>','h','*']
+    if len(rho_levels) > len(marker_pool):
+        reps = int(np.ceil(len(rho_levels) / len(marker_pool)))
+        marker_pool = (marker_pool * reps)[:len(rho_levels)]
+    rho_marker = {lvl: marker_pool[i] for i, lvl in enumerate(rho_levels)}
+
+    # ---------- Facet 网格 ----------
+    g = sns.FacetGrid(
+        d,
+        row="beta_cat",
+        col="alpha_cat",
+        margin_titles=True,
+        sharey=(y_range is not None),  # 固定 y_range 时各子图共享 y
+        col_wrap=max_cols if max_cols and d["alpha_cat"].nunique() > max_cols else None,
+        height=height,
+        aspect=1.6,
+    )
+
+    # ---------- 绘制函数（单个子图） ----------
+    def _map_scatter(data, color=None, **kwargs):
+        ax = plt.gca()
+
+        # x = eval_key（分类，定位到 0..K-1）
+        if hasattr(data["eval_key"], "cat"):
+            cats = list(data["eval_key"].cat.categories)
+        else:
+            cats = sorted(data["eval_key"].unique(), key=str)
+        cat_to_x = {c: i for i, c in enumerate(cats)}
+
+        # 为不同 rho 做轻微水平偏移，避免重叠
+        present_rhos = [r for r in rho_levels if r in set(data["rho_cat"].dropna().tolist())]
+        K = max(1, len(present_rhos))
+        max_offset = 0.18
+        offsets = np.linspace(-max_offset, max_offset, K)
+        rho_to_offset = {r: offsets[i] for i, r in enumerate(present_rhos)}
+
+        # 逐点绘制
+        for _, row in data.iterrows():
+            x0 = cat_to_x[row["eval_key"]]
+            off = rho_to_offset.get(row["rho_cat"], 0.0)
+            x = x0 + off
+            y = row["ppl"]
+            # 颜色取决于 n_params
+            cval = cmap(norm(float(row["n_params"])) if pd.notnull(row["n_params"]) else 0.0)
+            # 形状取决于 rho
+            marker = rho_marker.get(row["rho_cat"], 'o')
+            ax.scatter(
+                x, y,
+                s=marker_size,
+                c=[cval],
+                marker=marker,
+                alpha=marker_alpha,
+                edgecolors="black",
+                linewidths=0.5,
+                zorder=3
+            )
+            # 在点的中间/略上方标注参数个数（单位 M，保留两位小数）
+            try:
+                y_min, y_max = ax.get_ylim()
+                # y_offset = (y_max - y_min) * float(label_offset_frac)
+                y_offset = label_offset_frac
+            except Exception:
+                y_offset = 0.0
+
+            ppl_val = float(row["ppl"]) if pd.notnull(row["ppl"]) else np.nan
+            param_val = float(row["n_params"]) if pd.notnull(row["n_params"]) else np.nan
+
+
+            label = f"{ppl_val:.1f}\n{param_val:.0f}" if not np.isnan(ppl_val) and not np.isnan(param_val) else "NaN"
+
+            ax.text(
+                x, y + y_offset,
+                label,
+                ha="center", 
+                va="bottom",
+                fontsize=label_fontsize, 
+                weight="light",
+                linespacing=1.2, 
+                color="black",
+                zorder=4,
+                path_effects=[pe.withStroke(linewidth=0.5, )]  # 白色描边防遮挡
+            )
+
+
+        # x 轴刻度与标签（固定在分类中心）
+        ax.xaxis.set_major_locator(FixedLocator(list(range(len(cats)))))
+        ax.xaxis.set_major_formatter(FixedFormatter([str(c) for c in cats]))
+        ax.grid(True, axis="y", alpha=0.2, zorder=0)
+
+    g.map_dataframe(_map_scatter)
+
+    # ---------- 统一坐标轴标题隐藏，行列标题显示 α/β ----------
+    g.set_axis_labels("", "")
+    try:
+        g.set_titles(row_template=r"$\beta$={row_name:.6g}", col_template=r"$\alpha$={col_name:.6g}")
+    except Exception:
+        g.set_titles(row_template=r"$\beta$={row_name}", col_template=r"$\alpha$={col_name}")
+
+    # ---------- Tick 可见性：左列显示 y，底行显示 x；可选固定 y 范围 ----------
+    axes = g.axes if g.axes is not None else np.array([])
+    axes = np.atleast_2d(axes)
+    n_rows, n_cols = axes.shape if axes.size else (0, 0)
+
+    for r in range(n_rows):
+        for c in range(n_cols):
+            ax = axes[r, c]
+            if ax is None:
+                continue
+            ax.tick_params(axis="y", which="both", labelleft=(c == 0))
+            is_bottom = (r == n_rows - 1)
+            ax.tick_params(axis="x", which="both", labelbottom=is_bottom)
+            if is_bottom:
+                for lab in ax.get_xticklabels():
+                    lab.set_rotation(60)
+                    lab.set_ha("right")
+            if y_range is not None:
+                ax.set_ylim(*y_range)
+            
+            ax.set_yscale(yscale)
+
+    # ---------- 仅在最右上角子图添加 ρ 图例（marker 形状） ----------
+    legend_ax = None
+    if n_rows > 0 and n_cols > 0:
+        legend_ax = axes[0, -1]  # 第一行最右列
+    if legend_ax is None:
+        for _ax in axes.flat:
+            if _ax is not None:
+                legend_ax = _ax
+                break
+    if legend_ax is not None:
+        handles = [
+            Line2D([0], [0],
+                   marker=rho_marker[lvl], color="black",
+                   markerfacecolor="white", markeredgecolor="black",
+                   markersize=7, linestyle="None", label=str(lvl))
+            for lvl in rho_levels
+        ]
+        lgd = legend_ax.legend(
+            handles, [str(lvl) for lvl in rho_levels],
+            # title="ρ",
+            loc="upper right",
+            frameon=True,
+            fontsize=9,
+        )
+        if lgd.get_title():
+            lgd.get_title().set_fontsize(10)
+
+    # ---------- 右侧添加 colorbar（参数数量，单位 M，保留两位小数） ----------
+    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+
+    # 先压缩主图区域，为右侧空出空间
+    plt.subplots_adjust(top=0.90, bottom=0.20, right=0.90)  # <-- 原来是 right=0.92
+
+    # 在最右侧绘制 colorbar
+    cbar = g.fig.colorbar(
+        sm,
+        ax=g.axes.ravel().tolist(),
+        orientation="vertical",
+        fraction=0.02,   # 增宽一点
+        pad=0.04         # 往右移一点
+    )
+    cbar.set_label("Nr. Prms(M)", fontsize=10)
+    cbar.ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
+
+    # ---------- 标题与边距 ----------
+    prefix = (title_prefix + " | ") if title_prefix else ""
+    g.fig.suptitle(f"PPL and Nr. Parameters", y=0.98)
+
+    if path is None:
+        plt.show()
+    else:
+        path_file = os.path.join(path, f"ppl_grid.png")
+        g.fig.set_size_inches(16, 8) 
+        plt.savefig(path_file, dpi=300)
+        plt.close()
