@@ -276,11 +276,11 @@ if __name__ == "__main__":
     # cfg_version = 'llama_9m'
     # file = '20251009_205606'
 
-    cfg_version = 'llama_60m'
-    file = '20251028_001027'
+    # cfg_version = 'llama_60m'
+    # file = '20251028_001027'
 
-    # cfg_version = 'llama_130m'
-    # file = '20251006_223931'
+    cfg_version = 'llama_130m'
+    file = '20251006_223931'
 
     # cfg_version = 'llama_350m'
     # file = '20251012_120507'
