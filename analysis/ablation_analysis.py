@@ -122,7 +122,7 @@ def main(MODEL_TYPE: str,
 
 
 if __name__ == "__main__":
-    MODEL_TYPE = 'llama_130m'
+    MODEL_TYPE = 'llama_60m'
     FOLDERS = ['ablation']
     files = []
 

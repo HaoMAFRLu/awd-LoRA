@@ -1,5 +1,5 @@
 executable = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
-arguments = -u scripts/evaluation.py
+arguments = -u scripts/multi_evaluation.py
 initialdir = /lustre/home/hma2/projects/awd-LoRA
 
 error  = jobs_eval/task$(Process).err

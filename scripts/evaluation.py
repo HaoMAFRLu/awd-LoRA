@@ -136,18 +136,18 @@ def main(cfg_version: str,
         'eval_train_results': evaluator.eval_train_results,
         'eval_test_results': evaluator.eval_test_results
     }
-    with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
+    with open(os.path.join(path_folder, 'eval_results_fix.pkl'), 'wb') as f:
         pickle.dump(data, f)
 
 if __name__ == "__main__":
     # cfg_version = 'llama_9m'
     # file = '20251009_205606'
 
-    # cfg_version = 'llama_60m'
-    # file = '20251028_001027'
+    cfg_version = 'llama_60m'
+    file = '20251028_001027'
 
-    cfg_version = 'llama_130m'
-    file = '20251029_085332'
+    # cfg_version = 'llama_130m'
+    # file = '20251029_085332'
 
     # cfg_version = 'llama_350m'
     # file = '20251012_120507'
@@ -178,6 +178,6 @@ if __name__ == "__main__":
     }
 
     path_folder = os.path.join(root, 'data', 'salad', cfg_version, file)
-    # main(cfg_version, path_folder, nr_remove=[3, 6, 9], rank_cfg=rank_cfg)
-    main(cfg_version, path_folder, nr_remove=[35, 40, 45], rank_cfg=rank_cfg)  # this setting is only for 130m model
+    main(cfg_version, path_folder, nr_remove=[3, 6, 9], rank_cfg=rank_cfg)
+    # main(cfg_version, path_folder, nr_remove=[35, 40, 45], rank_cfg=rank_cfg)  # this setting is only for 130m model
     

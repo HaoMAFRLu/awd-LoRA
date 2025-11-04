@@ -628,7 +628,7 @@ def plot_ppl_grid(
         # 为不同 rho 做轻微水平偏移，避免重叠
         present_rhos = [r for r in rho_levels if r in set(data["rho_cat"].dropna().tolist())]
         K = max(1, len(present_rhos))
-        max_offset = 0.18
+        max_offset = 0.30
         offsets = np.linspace(-max_offset, max_offset, K)
         rho_to_offset = {r: offsets[i] for i, r in enumerate(present_rhos)}
 
