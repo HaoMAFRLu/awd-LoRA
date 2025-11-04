@@ -564,3 +564,18 @@ def get_rank(X: torch.Tensor,
     energy = torch.cumsum(s, dim=0) / torch.sum(s)
     rank = torch.sum(energy < energy_quantile).item() + 1
     return rank
+
+def cal_nr_params(total_params: int,
+                  rank_quantile: dict,
+                  rate_sparsity: dict,
+                  layer_dim: dict) -> int:
+    """Calculate the number of parameters after low-rank approximation and sparsity."""
+    nr_params = total_params
+    for key in rank_quantile:
+        row, col = layer_dim[key]
+        # how many parameters are reduced due to low-rank approximation
+        rank = int(min(row, col) * rank_quantile[key])
+        nr_params -= (row * col - (row + col) * rank)
+        # how many parameters are reduced due to sparsity
+        nr_params += int(row * col * rate_sparsity[key])
+    return nr_params

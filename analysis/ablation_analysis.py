@@ -113,7 +113,7 @@ def main(MODEL_TYPE: str,
         df_all,
         eval_order=[key_word_map[k] for k in target_keys],
         yscale='log',
-        y_range=(20, 400),
+        y_range=(15, 400),
         path=path_fig,
     )
 
@@ -122,7 +122,7 @@ def main(MODEL_TYPE: str,
 
 
 if __name__ == "__main__":
-    MODEL_TYPE = 'llama_60m'
+    MODEL_TYPE = 'llama_130m'
     FOLDERS = ['ablation']
     files = []
 

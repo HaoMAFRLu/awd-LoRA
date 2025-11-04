@@ -538,7 +538,7 @@ def plot_ppl_grid(
     marker_alpha: float = 0.9,      # 散点透明度
     cmap_name: str = "viridis",     # 连续色图，用于 n_params（深色=大）
     title_prefix: str = "",         # 图标题前缀
-    label_fontsize: int = 8,        # 🔹参数文本字号
+    label_fontsize: int = 6,        # 🔹参数文本字号
     label_offset_frac: float = 10.0, # 🔹参数文本上移（相对 y 轴跨度的比例）
     yscale: str = "linear",        # y 轴尺度，"linear" 或 "log"
     path: str = None,              # 保存路径；None 则显示不保存

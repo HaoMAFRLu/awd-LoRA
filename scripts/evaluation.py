@@ -73,7 +73,7 @@ def main(cfg_version: str,
         _S = SS[key]
         layer_dim[key] = _L.shape
 
-        rate_sparsity[key] = torch.sum(_S != 0).item() / _S.numel()
+        rate_sparsity[key] = torch.sum(_S != 0).item() / _S.numel()  # actually it is density
 
         _, s, _ = torch.linalg.svd(_L, full_matrices=False)
         energy = torch.cumsum(s, dim=0) / torch.sum(s)
