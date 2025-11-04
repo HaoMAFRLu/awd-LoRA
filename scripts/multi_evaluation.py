@@ -70,10 +70,11 @@ def main(cfg_version: str,
     # param_add = {}
     # energy_add = {}
 
-    total_params_model = sum(p.numel() for p in model.parameters())
-    param_diff = [total_params_model - p * 1e6 for p in params_tgt]
+    nr_params_model = sum(p.numel() for p in model.parameters())
 
-    total_params_rank = 0
+    nr_params_layers = 0
+    nr_params_L = 0
+    nr_params_S = 0
 
     for key in energy_quantile:
         _L = LL[key]
@@ -89,50 +90,40 @@ def main(cfg_version: str,
         rank = torch.sum(energy < energy_quantile[key]).item() + 1
         rank_quantile_energy[key] = rank / len(s)
 
-        total_params_rank += int(rank * (row + col))
+        nr_params_layers += row * col
+        nr_params_L += int(rank * (row + col))
+        nr_params_S += int(torch.sum(_S != 0).item())
 
-        # if key.endswith('o_proj'):
-        #     rank_quantile_specify[key] = min(rank_cfg['o_proj'], rank_quantile_energy[key])
-        # elif key.endswith('q_proj'):
-        #     rank_quantile_specify[key] = min(rank_cfg['q_proj'], rank_quantile_energy[key])
-        # elif key.endswith('k_proj'):
-        #     rank_quantile_specify[key] = min(rank_cfg['k_proj'], rank_quantile_energy[key])
-        # elif key.endswith('v_proj'):
-        #     rank_quantile_specify[key] = min(rank_cfg['v_proj'], rank_quantile_energy[key])
-        # elif key.endswith('gate_proj'):
-        #     rank_quantile_specify[key] = min(rank_cfg['gate_proj'], rank_quantile_energy[key])
-        # elif key.endswith('down_proj'): 
-        #     rank_quantile_specify[key] = min(rank_cfg['down_proj'], rank_quantile_energy[key])
-        # elif key.endswith('up_proj'):
-        #     rank_quantile_specify[key] = min(rank_cfg['up_proj'], rank_quantile_energy[key])
+    nr_params_head = nr_params_model - nr_params_layers
+    nr_params_total = nr_params_head + nr_params_L + nr_params_S  # the number of parameters with low-rank + sparse
 
-        # rank_diff[key] = rank_quantile_energy[key] - rank_quantile_specify[key]
-        # # if replace this layer with energy rank, how many parameters are added or reduced
-        # rank_original = int(min(row, col) * rank_quantile_specify[key])
-        # rank_new = int(min(row, col) * rank_quantile_energy[key])
-
-        # nr_params_original = rank_original * (row + col)
-        # nr_params_new = rank_new * (row + col)
-
-        # param_add[key] = nr_params_new - nr_params_original
-        # energy_add[key] = sum(s[rank_original:rank_new].tolist()) if rank_new > rank_original else 0.0
+    # how many parameters to reduce to reach the target
+    param_diff = [nr_params_total - tgt * 1e6 for tgt in params_tgt]
 
     rank_quantile_partial_list = []
 
     for _params in param_diff:
-        ratio = 1 - _params / total_params_rank
-        rank_quantile_partial = {}
-        for key, value in rank_quantile_energy.items():
-            rank_quantile_partial[key] = value * ratio
-        rank_quantile_partial_list.append(rank_quantile_partial)
+        if _params <= 0:
+            rank_quantile_partial_list.append(copy.deepcopy(rank_quantile_energy))  # no parameter reduction needed
+        elif _params >= nr_params_L: 
+            # all L params need to be removed
+            rank_quantile_partial = {}
+            for key in rank_quantile_energy:
+                rank_quantile_partial[key] = 0.0
+            rank_quantile_partial_list.append(rank_quantile_partial)
+        elif _params > 0 and _params < nr_params_L:
+            ratio = 1 - _params / nr_params_L
+            rank_quantile_partial = {}
+            for key, value in rank_quantile_energy.items():
+                rank_quantile_partial[key] = ratio * value
+            rank_quantile_partial_list.append(rank_quantile_partial)
 
-    # sort according to rank diff
-    # sorted_layers = sorted(rank_diff.items(), key=lambda item: item[1], reverse=True)
-    # for i in range(len(nr_remove)):
-    #     _nr_remove = nr_remove[i]
-    #     for j in range(_nr_remove):
-    #         layer_name = sorted_layers[j][0]
-    #         rank_quantile_partial_list[i][layer_name] = rank_quantile_energy[layer_name]
+    # nr_params = cal_nr_params(nr_params_model, rank_quantile_energy, rate_sparsity, layer_dim)
+    # print(f'Original number of parameters: {nr_params/1e6:.2f}M')
+
+    # for rank_quantile in rank_quantile_partial_list:
+    #     nr_params = cal_nr_params(nr_params_model, rank_quantile, rate_sparsity, layer_dim)
+    #     print(f'Calculated number of parameters: {nr_params/1e6:.2f}M')
 
     evaluator = CrossEvaluator(model_type=cfg_version,
                                model=model,
@@ -155,19 +146,19 @@ def main(cfg_version: str,
         'eval_train_results': evaluator.eval_train_results,
         'eval_test_results': evaluator.eval_test_results
     }
-    with open(os.path.join(path_folder, 'eval_results_fix.pkl'), 'wb') as f:
+    with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
         pickle.dump(data, f)
 
 if __name__ == "__main__":
 
     params_tgt = { # target number of parameters for different model sizes
-        'llama_60m': [49, 46, 44],
-        'llama_130m': [99, 97, 94],
-        'llama_350m': [199, 194, 185],
-        'llama_1b': [669, 646, 609],
+        'llama_60m': [49.5, 46.5, 44.5],
+        'llama_130m': [99.5, 97.5, 94.5],
+        'llama_350m': [199.5, 194.5, 185.5],
+        'llama_1b': [669.5, 646.5, 609.5],
     }
 
-    cfg_version = 'llama_130m'
+    cfg_version = 'llama_60m'
 
     rank_cfg = {
         'o_proj': 0.20,
@@ -182,9 +173,10 @@ if __name__ == "__main__":
     _path = os.path.join(root, 'data', 'ablation', cfg_version)
     files = os.listdir(_path)
 
-    # files = ['20251029_161451']
-
+    # files = ['20251029_161851']
+    nr = 0
     for file in files:
+        nr += 1
         print(f'Processing folder: {file}')
         path_folder = os.path.join(_path, file)
         main(cfg_version, 
@@ -192,5 +184,5 @@ if __name__ == "__main__":
              params_tgt[cfg_version], 
              rank_cfg=rank_cfg)
         print(f'Finished folder: {file}')
-        print('-------------------------')
+        print(f'----------{nr}/{len(files)}----------') 
     

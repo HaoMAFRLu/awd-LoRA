@@ -136,7 +136,7 @@ def main(cfg_version: str,
         'eval_train_results': evaluator.eval_train_results,
         'eval_test_results': evaluator.eval_test_results
     }
-    with open(os.path.join(path_folder, 'eval_results_fix.pkl'), 'wb') as f:
+    with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
         pickle.dump(data, f)
 
 if __name__ == "__main__":
