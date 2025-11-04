@@ -2,9 +2,9 @@ executable = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
 arguments = -u scripts/multi_evaluation.py
 initialdir = /lustre/home/hma2/projects/awd-LoRA
 
-error  = jobs_eval1/task$(Process).err
-output = jobs_eval1/task$(Process).out
-log    = jobs_eval1/task$(Process).log
+error  = jobs_eval2/task$(Process).err
+output = jobs_eval2/task$(Process).out
+log    = jobs_eval2/task$(Process).log
 
 request_gpus = 1
 request_memory = 100000

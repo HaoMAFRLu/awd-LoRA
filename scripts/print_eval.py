@@ -162,7 +162,7 @@ def main(model_type: str, files: list) -> None:
                f"X",  
                f"L+S", 
             #    f"LoR(L)+S", 
-               f"spe LoR(L)+S", 
+            #    f"spe LoR(L)+S", 
                f'par LoR(L)+S_0', 
                f'par LoR(L)+S_1', 
                f'par LoR(L)+S_2']
@@ -223,9 +223,9 @@ if __name__ == "__main__":
 
     # model_type = 'llama_60m'
     # files = [
-            # '20251005_130200',   # best so far, 2.2B tokens
-            # '20251006_092303',   # best so far, 2.2B tokens
-            # '20251028_001027',   # best so far, only 1.1B tokens
-            #  ]
+    #         # '20251005_130200',   # best so far, 2.2B tokens
+    #         # '20251006_092303',   # best so far, 2.2B tokens
+    #         '20251028_001027',   # best so far, only 1.1B tokens
+    #          ]
     main(model_type=model_type,
          files=files)

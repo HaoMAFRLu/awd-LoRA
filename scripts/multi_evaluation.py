@@ -158,7 +158,7 @@ if __name__ == "__main__":
         'llama_1b': [669.5, 646.5, 609.5],
     }
 
-    cfg_version = 'llama_130m'
+    cfg_version = 'llama_350m'
 
     rank_cfg = {
         'o_proj': 0.20,
@@ -170,7 +170,8 @@ if __name__ == "__main__":
         'up_proj': 0.25
     }
 
-    _path = os.path.join(root, 'data', 'ablation', cfg_version)
+    FOLDER = 'salad'
+    _path = os.path.join(root, 'data', FOLDER, cfg_version)
     files = os.listdir(_path)
 
     # files = ['20251029_161851']
