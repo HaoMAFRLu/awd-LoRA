@@ -159,9 +159,13 @@ def main(model_type: str, files: list) -> None:
     #            f"LoR(L)+S", f"par LoR(L)+S"]
     
     headers = [f"model", f"dataset", f"metric", 
-               f"X",  f"L+S", f"LoR(L)+S", 
-               f"spe LoR(L)+S", f'par LoR(L)+S_0', 
-               f'par LoR(L)+S_1', f'par LoR(L)+S_2']
+               f"X",  
+               f"L+S", 
+            #    f"LoR(L)+S", 
+               f"spe LoR(L)+S", 
+               f'par LoR(L)+S_0', 
+               f'par LoR(L)+S_1', 
+               f'par LoR(L)+S_2']
     
     rows = []
     for file in files:
@@ -180,15 +184,15 @@ def main(model_type: str, files: list) -> None:
 
 
 if __name__ == "__main__":
-    model_type = 'llama_1b'
-    files = [
-             '20251016_233939',  # best so far
+    # model_type = 'llama_1b'
+    # files = [
+    #          '20251016_233939',  # best so far
     #          '20251017_085037',
     #          '20251017_153038',
-            ]
+            # ]
 
-    # model_type = 'llama_350m'
-    # files = [
+    model_type = 'llama_350m'
+    files = [
     #          '20251010_001936',
     #          '20251010_001003',
     #          '20251010_000505',
@@ -196,8 +200,8 @@ if __name__ == "__main__":
     #          '20251012_114642',
     #          '20251012_115249',
     #          '20251012_115809',
-            #  '20251012_120507'   # best so far
-            # ]  
+             '20251012_120507'   # best so far
+            ]  
 
 
     # model_type = 'llama_130m'

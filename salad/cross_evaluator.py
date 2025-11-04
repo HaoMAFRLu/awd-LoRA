@@ -20,7 +20,6 @@ class CrossEvaluator():
                  LL: dict=None,
                  SS: dict=None,
                  layers: list=None,
-                 ex_layers: list=[],
                  pad_idx: int=0,
                  rank_quantile_target: dict=None,
                  rank_quantile_energy: dict=None,
@@ -64,13 +63,6 @@ class CrossEvaluator():
         self.SS = SS if SS is not None else {}
         self.layers = layers if layers is not None else []
         
-        if len(ex_layers) > 0:
-            self.is_partial = True
-            self.partial_layers = [layer for layer in self.layers if layer not in ex_layers]
-        else:
-            self.is_partial = False
-            self.partial_layers = []
-
         self.model_layers = get_linear_layers_name(self.model) if model is not None else []
         
         self.eval_train_results = {}
@@ -117,12 +109,12 @@ class CrossEvaluator():
         self.opt_add(self.model, self.layers, self.SS)
         return self.evaluate_one_step(self.model, dataloader)
     
-    def _eval_par_lowrank_sparsity(self, dataloader) -> dict:
-        """Evaluate the partial low-rank model with sparsity."""
-        self.opt_copy(self.model_sd, self.model, self.layers)
-        self.opt_replace(self.model, self.partial_layers, self.LL)
-        self.opt_add(self.model, self.partial_layers, self.SS)
-        return self.evaluate_one_step(self.model, dataloader)
+    # def _eval_par_lowrank_sparsity(self, dataloader) -> dict:
+    #     """Evaluate the partial low-rank model with sparsity."""
+    #     self.opt_copy(self.model_sd, self.model, self.layers)
+    #     self.opt_replace(self.model, self.partial_layers, self.LL)
+    #     self.opt_add(self.model, self.partial_layers, self.SS)
+    #     return self.evaluate_one_step(self.model, dataloader)
 
     def _eval_lowrank_lowrank_sparsity(self, dataloader, rank_quantile) -> dict:
         """Evaluate the low-rank model with low-rank approximation and sparsity."""
@@ -141,9 +133,9 @@ class CrossEvaluator():
     def _eval_par_lowrank_lowrank_sparsity(self, dataloader, rank_quantile) -> dict:
         """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
         self.opt_copy(self.model_sd, self.model, self.layers)  # copy the original model
-        self.opt_replace(self.model, self.partial_layers, self.LL)  # replace partial layers with low-rank matrices L
-        self.opt_lowrank(self.model, self.partial_layers, rank_quantile)
-        self.opt_add(self.model, self.partial_layers, self.SS)  # add sparse components S
+        self.opt_replace(self.model, self.layers, self.LL)  # replace partial layers with low-rank matrices L
+        self.opt_lowrank(self.model, self.layers, rank_quantile)
+        self.opt_add(self.model, self.layers, self.SS)  # add sparse components S
         return self.evaluate_one_step(self.model, dataloader)
     
     @torch.no_grad()        
@@ -157,12 +149,12 @@ class CrossEvaluator():
         """
         for i in range(len(self.rank_quantile_partial_list)):
             rank_quantile_partial = self.rank_quantile_partial_list[i]
-            # eval_results[f'par_lowrank_L_with_S_{i}'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, rank_quantile_partial) 
+            eval_results[f'par_lowrank_L_with_S_{i}'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, rank_quantile_partial) 
             eval_results[f'nr_par_lowrank_L_with_S_{i}'] = cal_nr_params(self.total_params, rank_quantile_partial, self.rate_sparsity, self.layer_dim)
             print(f"Evaluation for partial low-rank + sparsity model {i} done.")
 
 
-        # eval_results['X'] = self._eval_original(dataloader)
+        eval_results['X'] = self._eval_original(dataloader)
         eval_results['nr_X'] = self.total_params
         print("Evaluation for original model done.")
 
@@ -176,22 +168,20 @@ class CrossEvaluator():
 
         # eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)  # 99.9 energy
         # eval_results['par_L_with_S'] = self._eval_par_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
-        # eval_results['L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
+        eval_results['L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
         eval_results['nr_L_with_S'] = cal_nr_params(self.total_params, self.rank_quantile_energy, self.rate_sparsity, self.layer_dim)
         print("Evaluation for low-rank + sparsity model done.")
 
-        # eval_results['lowrank_L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_target)  # target rate
-        eval_results['nr_lowrank_L_with_S'] = cal_nr_params(self.total_params, self.rank_quantile_target, self.rate_sparsity, self.layer_dim)
+        eval_results['lowrank_L_with_S'] = None # self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_target)  # target rate
+        eval_results['nr_lowrank_L_with_S'] = None # cal_nr_params(self.total_params, self.rank_quantile_target, self.rate_sparsity, self.layer_dim)
         print("Evaluation for low-rank (target rate) + sparsity model done.")
 
-        # eval_results['lowrank_L_with_S_specify'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify)  # specified rate
-        eval_results['nr_lowrank_L_with_S_specify'] = cal_nr_params(self.total_params, self.rank_quantile_specify, self.rate_sparsity, self.layer_dim)
+        eval_results['lowrank_L_with_S_specify'] = None # self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify)  # specified rate
+        eval_results['nr_lowrank_L_with_S_specify'] = None # cal_nr_params(self.total_params, self.rank_quantile_specify, self.rate_sparsity, self.layer_dim)
         print("Evaluation for low-rank (specified rate) + sparsity model done.")
         
         # eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
         
-        
-    
         return eval_results
     
     def opt_copy(self,
