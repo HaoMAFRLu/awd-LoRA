@@ -141,7 +141,7 @@ def main(cfg_version: str,
 
 if __name__ == "__main__":
 
-    cfg_version = 'llama_130m'
+    cfg_version = 'llama_60m'
 
     rank_cfg = {
         'o_proj': 0.25,
