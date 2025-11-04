@@ -200,11 +200,11 @@ if __name__ == "__main__":
     #         ]  
 
 
-    model_type = 'llama_130m'
-    files = [
+    # model_type = 'llama_130m'
+    # files = [
             #  '20251006_143955',
             #  '20251006_140135',
-             '20251006_223931',  # best so far
+            #  '20251006_223931',  # best so far
             #  '20251006_210512',
             #  '20251007_104751',
             #  '20251007_130520',
@@ -214,14 +214,14 @@ if __name__ == "__main__":
             # '20251028_202804',
             # '20251028_202947',
             # '20251028_232735',
-            '20251029_085332',  
-            ]
+            # '20251029_085332',  
+            # ]
 
-    # model_type = 'llama_60m'
-    # files = [
+    model_type = 'llama_60m'
+    files = [
             # '20251005_130200',   # best so far, 2.2B tokens
             # '20251006_092303',   # best so far, 2.2B tokens
-            # '20251028_001027',   # best so far, only 1.1B tokens
-            #  ]
+            '20251028_001027',   # best so far, only 1.1B tokens
+             ]
     main(model_type=model_type,
          files=files)
