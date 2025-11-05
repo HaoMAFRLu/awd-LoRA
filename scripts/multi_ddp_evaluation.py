@@ -124,11 +124,11 @@ if __name__ == "__main__":
     files = sorted(files)
     my_files = files[rank::world_size]
 
-    if rank == 0:
-        my_files = ['20251029_162352']
-        # my_files = ['20251009_205606']
-    else:
-        my_files = []   
+    # if rank == 0:
+    #     my_files = ['20251029_162352']
+    #     # my_files = ['20251009_205606']
+    # else:
+    #     my_files = []   
 
     if not my_files:
         print(f"[rank {rank}] No file assigned. Exit.")
