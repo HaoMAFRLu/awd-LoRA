@@ -111,9 +111,9 @@ if __name__ == "__main__":
         'llama_1b':   [669.5, 646.5, 609.5],
     }
     
-    MODEL_TYPE = 'llama_60m'
-    FOLDERS = ['salad', 'ablation']
-    gamma_list = [0.95, 0.9, 0.85]
+    MODEL_TYPE = 'llama_350m'
+    FOLDERS = ['ablation']
+    gamma_list = [1.0, 0.95]
 
     rank, world_size = ddp_setup()
     files = []
@@ -124,11 +124,11 @@ if __name__ == "__main__":
     files = sorted(files)
     my_files = files[rank::world_size]
 
-    if rank == 0:
-        my_files = ['20251029_162352']
-        # my_files = ['20251009_205606']
-    else:
-        my_files = []   
+    # if rank == 0:
+    #     my_files = ['20251029_162352']
+    #     # my_files = ['20251009_205606']
+    # else:
+    #     my_files = []   
 
     if not my_files:
         print(f"[rank {rank}] No file assigned. Exit.")
