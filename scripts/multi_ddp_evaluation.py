@@ -113,7 +113,7 @@ if __name__ == "__main__":
     
     MODEL_TYPE = 'llama_60m'
     FOLDERS = ['salad', 'ablation']
-    gamma_list = [1.0, 0.99, 0.98, 0.97]
+    gamma_list = [0.95, 0.9, 0.85]
 
     rank, world_size = ddp_setup()
     files = []
