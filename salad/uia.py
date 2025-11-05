@@ -3,6 +3,10 @@ the number of ranks and sparsity level for each layer automatically.
 """
 import sys, os
 import torch
+import numpy as np
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from salad.utils import *
 
 class UIA():
     def __init__(self,
@@ -71,34 +75,105 @@ class UIA():
         # calculate the total number of parameters with low-rank + sparse
         self.nr_params_total = self.nr_params_rest + self.nr_params_L + self.nr_params_S
 
-    def _allocate_rank(self,
-                       params_tgt: float):
-        """Allocate ranks for each layer to meet the target number of parameters.
+    def allocate_L_and_S(self,
+                         params_to_reduce: int,
+                         component: str='L') -> dict:
+        """Allocate ranks or sparsity levels for each layer.
         Args:
-            params_tgt (float): target number of parameters (in million)
+            params_to_reduce (int): number of parameters to reduce
+            component (str): 'L' for low-rank component, 'S' for sparse component
         Returns:
-            rank_quantile_uia (dict): allocated rank quantile for each layer
+            rank_quantile_uia (dict): allocated rank quantile or density for each layer
         """        
-        # how many parameters to reduce to reach the target
-        param_diff = self.nr_params_total - params_tgt * 1e6
+        rank_quantile_uia = {}
+        if component == 'L':
+            quantiles = self.rank_quantile_energy
+            params_capacity = self.nr_params_L
+        elif component == 'S':   # component == 'S'
+            quantiles = self.rate_density
+            params_capacity = self.nr_params_S
+        else:
+            raise ValueError("component should be either 'L' or 'S'.")
+        
+        ratio = 1 - params_to_reduce / params_capacity
+        ratio = np.clip(ratio, 0.0, 1.0)
 
-    def allocate(self,
-                 params_tgt: float,
-                 strategy: str):
+        for key, value in quantiles.items():
+            rank_quantile_uia[key] = value * ratio
+        return rank_quantile_uia
+
+    def allocate_params(self,
+                        params_tgt: float,
+                        gamma: float=1.0) -> tuple:
         """Allocate ranks and sparsity levels for each layer.
         Args:
             params_tgt (float): target number of parameters (in million)
-            strategy (str): allocation strategy
+            gamma (float): adjustment factor for rank allocation, 1.0 means 
+            reducing all low-rank components
+        Returns:
+            params_diff_L (int): number of parameters to reduce for low-rank components
+            params_diff_S (int): number of parameters to reduce for sparse components
+        """
+        # params target < total params, which means reduction is needed
+        params_diff = self.nr_params_total - params_tgt * 1e6  # how many parameters to reduce
+        # allocate the parameters for low-rank components and sparse components
+        params_diff_L = int(params_diff * gamma)
+        params_diff_S = params_diff - params_diff_L
+        # whether it has enough parameters to reduce in L and S
+        params_reduce_capacity_L = self.nr_params_L - params_diff_L
+        params_reduce_capacity_S = self.nr_params_S - params_diff_S
+
+        if params_reduce_capacity_L < 0 and params_reduce_capacity_S < 0: # not enough parameters to reduce
+            # reduce all low-rank and sparse components
+            params_diff_L = self.nr_params_L
+            params_diff_S = self.nr_params_S
+        elif params_reduce_capacity_L < 0 and params_reduce_capacity_S >= 0:
+            # reduce all low-rank components
+            params_diff_L = self.nr_params_L
+            # move the remaining reduction to sparse components
+            params_diff_S = min(self.nr_params_S, params_diff_S - params_reduce_capacity_L)
+        elif params_reduce_capacity_L >= 0 and params_reduce_capacity_S < 0:
+            # reduce all sparse components
+            params_diff_S = self.nr_params_S
+            # move the remaining reduction to low-rank components
+            params_diff_L = min(self.nr_params_L, params_diff_L - params_reduce_capacity_S)
+        else:   
+            # both have enough parameters to reduce
+            params_diff_L = params_diff_L
+            params_diff_S = params_diff_S
+
+        return params_diff_L, params_diff_S
+
+    def allocate(self,
+                 params_tgt: float,
+                 gamma: float=1.0):
+        """Allocate ranks and sparsity levels for each layer.
+        Args:
+            params_tgt (float): target number of parameters (in million)
+            gamma (float): adjustment factor for rank allocation, 1.0 means 
+            reducing all low-rank components
         Returns:
             rank_quantile_uia (dict): allocated rank quantile for each layer
             rate_density (dict): allocated density for each layer
         """
-        if params_tgt >= self.nr_params_total: # no reduction needed
-            rank_quantile_uia = self.rank_quantile_energy
-            rate_density = self.rate_density
-            return rank_quantile_uia, rate_density
+        assert 0<=gamma<=1.0, "gamma should be between 0 and 1."
         
-        if strategy == None:
-            # Reduce all low-rank components
-            return _allocate_rank(params_tgt)
+        if params_tgt >= self.nr_params_total: # no reduction needed
+            return self.rank_quantile_energy, self.rate_density
+        
+        params_diff_L, params_diff_S = self.allocate_params(params_tgt, gamma)
 
+        # allocate ranks for each layer
+        return self.allocate_L_and_S(params_diff_L, 'L'), self.allocate_L_and_S(params_diff_S, 'S')
+
+    def check_params(self,
+                     rank_quantile: dict,
+                     rate_density: dict) -> int:
+        """Check the number of parameters given allocated ranks and sparsity levels.
+        Args:
+            rank_quantile_uia (dict): allocated rank quantile for each layer
+            rate_density (dict): allocated density for each layer
+        Returns:
+            nr_params_total_uia (int): total number of parameters with allocated ranks and sparsity
+        """ 
+        return cal_nr_params(self.nr_params_model, rank_quantile, rate_density, self.dim)
