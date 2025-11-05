@@ -138,7 +138,10 @@ class CrossEvaluator():
                 _SS[key] = S
                 continue
             # get the threshold
-            threshold = torch.topk(torch.abs(S_flat), nr_nonzero_target, largest=True).values[-1]
+            if nr_nonzero_target == 0:
+                threshold = torch.max(torch.abs(S_flat)) + 1.0  # set threshold higher than max value
+            else:
+                threshold = torch.topk(torch.abs(S_flat), nr_nonzero_target, largest=True).values[-1]
             S_sparse = torch.where(torch.abs(S) >= threshold, S, torch.zeros_like(S))
             _SS[key] = S_sparse
         return _SS
@@ -155,7 +158,6 @@ class CrossEvaluator():
     @torch.no_grad()
     def eval_original_model(self, dataloader) -> dict:
         """Evaluate the original model."""
-        print("Evaluation for original model done.")
         return self._eval_original(dataloader)
 
     @torch.no_grad()        
@@ -308,6 +310,7 @@ class CrossEvaluator():
         if self.model is not None:
             self.model_results_train = self.eval_original_model(self.train_loader) 
             self.model_results_test = self.eval_original_model(self.test_loader)
+            print('Original model evaluation done.')
     
     def collect_single_results(self,
                                rank_quantile: dict,
@@ -317,8 +320,8 @@ class CrossEvaluator():
             self.fullrank_results_train_params = cal_nr_params(self.total_params, rank_quantile, rate_density, self.layer_dim)
             self.fullrank_results_test = self._eval_lowrank_sparsity(self.test_loader)
             self.fullrank_results_test_params = cal_nr_params(self.total_params, rank_quantile, rate_density, self.layer_dim)
-
-
+            print('Full-rank + sparsity model evaluation done.')
+    
     def collect_results(self,
                         rank_quantile_list: list,
                         rate_density_list: list) -> None:
@@ -328,8 +331,8 @@ class CrossEvaluator():
             Dictionary with evaluation results.
         """
         if self.model is not None:
-            self.eval_train_results = self.eval_model(self.train_loader, rank_quantile_list, rate_density_list) 
-            self.eval_test_results = self.eval_model(self.test_loader, rank_quantile_list, rate_density_list)
+            self.eval_train_results = self.eval_model(rank_quantile_list, rate_density_list, self.train_loader) 
+            self.eval_test_results = self.eval_model(rank_quantile_list, rate_density_list, self.test_loader)
         
         self.eval_train_results['X'] = self.model_results_train
         self.eval_test_results['X'] = self.model_results_test
