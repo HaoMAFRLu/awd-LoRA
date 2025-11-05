@@ -286,7 +286,7 @@ if __name__ == "__main__":
     # file = '20251012_120507'
 
     cfg_version = 'llama_1b'
-    file = '20251016_233939'
+    file = '20251017_085037'
 
     # setting for 350m
     # rank_cfg = {
