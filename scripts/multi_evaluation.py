@@ -158,7 +158,7 @@ if __name__ == "__main__":
         'llama_1b': [669.5, 646.5, 609.5],
     }
 
-    cfg_version = 'llama_130m'
+    cfg_version = 'llama_60m'
 
     rank_cfg = {
         'o_proj': 0.20,
