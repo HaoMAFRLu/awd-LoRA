@@ -77,9 +77,9 @@ def main(cfg_version: str,
                                layer_dim=uia.dim,
                                batch_size=10)
    
-    # evaluator.collect_single_results(uia.rank_quantile_energy,
-    #                                  uia.rate_density)  # evaluate the full-rank + sparsity model and store the results
-    # evaluator.collect_model_results()  # evaluate the original model and store the results
+    evaluator.collect_single_results(uia.rank_quantile_energy,
+                                     uia.rate_density)  # evaluate the full-rank + sparsity model and store the results
+    evaluator.collect_model_results()  # evaluate the original model and store the results
     
     for gamma in gamma_list:
         rank_quantile_list = []
