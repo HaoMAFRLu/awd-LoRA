@@ -21,11 +21,6 @@ class CrossEvaluator():
                  SS: dict=None,
                  layers: list=None,
                  pad_idx: int=0,
-                 rank_quantile_target: dict=None,
-                 rank_quantile_energy: dict=None,
-                 rank_quantile_specify: dict=None,
-                 rank_quantile_partial_list: list=None,
-                 rate_sparsity: dict=None,
                  layer_dim: dict=None,
                  batch_size: int=10) -> None:
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -52,11 +47,6 @@ class CrossEvaluator():
 
         self.train_loader = train_loader
         self.test_loader = test_loader
-        self.rank_quantile_energy = rank_quantile_energy
-        self.rank_quantile_target = rank_quantile_target
-        self.rank_quantile_specify = rank_quantile_specify
-        self.rank_quantile_partial_list = rank_quantile_partial_list
-        self.rate_sparsity = rate_sparsity
         self.layer_dim = layer_dim
 
         self.LL = LL if LL is not None else {}
@@ -77,31 +67,31 @@ class CrossEvaluator():
         self.opt_copy(self.model_sd, self.model, self.layers)
         return self.evaluate_one_step(self.model, dataloader)
    
-    def _eval_orginal_without_sparsity(self, dataloader) -> dict:
-        """Evaluate the original model without sparsity."""
-        # evaluate the original model, X - S
-        self.opt_copy(self.model_sd, self.model, self.layers)
-        self.opt_remove(self.model, self.layers, self.SS)
-        return self.evaluate_one_step(self.model, dataloader)
+    # def _eval_orginal_without_sparsity(self, dataloader) -> dict:
+    #     """Evaluate the original model without sparsity."""
+    #     # evaluate the original model, X - S
+    #     self.opt_copy(self.model_sd, self.model, self.layers)
+    #     self.opt_remove(self.model, self.layers, self.SS)
+    #     return self.evaluate_one_step(self.model, dataloader)
          
-    def _eval_original_lowrank_without_sparsity(self, dataloader) -> dict:
-        """Evaluate the original model with low-rank approximation without sparsity."""
-        # evaluate the original model, 90% low-rank approximation of (X - S)
-        self.opt_copy(self.model_sd, self.model, self.layers)
-        self.opt_remove(self.model, self.layers, self.SS)
-        self.opt_lowrank(self.model, self.layers, self.rank_quantile)
-        return self.evaluate_one_step(self.model, dataloader)
+    # def _eval_original_lowrank_without_sparsity(self, dataloader) -> dict:
+    #     """Evaluate the original model with low-rank approximation without sparsity."""
+    #     # evaluate the original model, 90% low-rank approximation of (X - S)
+    #     self.opt_copy(self.model_sd, self.model, self.layers)
+    #     self.opt_remove(self.model, self.layers, self.SS)
+    #     self.opt_lowrank(self.model, self.layers, self.rank_quantile)
+    #     return self.evaluate_one_step(self.model, dataloader)
         
-    def _eval_lowrank(self, dataloader) -> dict:
-        """Evaluate the low-rank model."""
-        self.opt_replace(self.model, self.layers, self.LL)
-        return self.evaluate_one_step(self.model, dataloader)
+    # def _eval_lowrank(self, dataloader) -> dict:
+    #     """Evaluate the low-rank model."""
+    #     self.opt_replace(self.model, self.layers, self.LL)
+    #     return self.evaluate_one_step(self.model, dataloader)
      
-    def _eval_lowrank_lowrank(self, dataloader) -> dict:
-        """Evaluate the low-rank model with low-rank approximation."""
-        self.opt_replace(self.model, self.layers, self.LL)
-        self.opt_lowrank(self.model, self.layers, self.rank_quantile)
-        return self.evaluate_one_step(self.model, dataloader)
+    # def _eval_lowrank_lowrank(self, dataloader) -> dict:
+    #     """Evaluate the low-rank model with low-rank approximation."""
+    #     self.opt_replace(self.model, self.layers, self.LL)
+    #     self.opt_lowrank(self.model, self.layers, self.rank_quantile)
+    #     return self.evaluate_one_step(self.model, dataloader)
           
     def _eval_lowrank_sparsity(self, dataloader) -> dict:
         """Evaluate the low-rank model with sparsity."""
@@ -116,12 +106,12 @@ class CrossEvaluator():
     #     self.opt_add(self.model, self.partial_layers, self.SS)
     #     return self.evaluate_one_step(self.model, dataloader)
 
-    def _eval_lowrank_lowrank_sparsity(self, dataloader, rank_quantile) -> dict:
-        """Evaluate the low-rank model with low-rank approximation and sparsity."""
-        self.opt_replace(self.model, self.layers, self.LL)
-        self.opt_lowrank(self.model, self.layers, rank_quantile)
-        self.opt_add(self.model, self.layers, self.SS)
-        return self.evaluate_one_step(self.model, dataloader)
+    # def _eval_lowrank_lowrank_sparsity(self, dataloader, rank_quantile) -> dict:
+    #     """Evaluate the low-rank model with low-rank approximation and sparsity."""
+    #     self.opt_replace(self.model, self.layers, self.LL)
+    #     self.opt_lowrank(self.model, self.layers, rank_quantile)
+    #     self.opt_add(self.model, self.layers, self.SS)
+    #     return self.evaluate_one_step(self.model, dataloader)
 
     # def _eval_par_lowrank_lowrank_sparsity(self, dataloader) -> dict:
     #     """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
@@ -130,33 +120,62 @@ class CrossEvaluator():
     #     self.opt_add(self.model, self.layers, self.SS)
     #     return self.evaluate_one_step(self.model, dataloader)
 
-    def _eval_par_lowrank_lowrank_sparsity(self, dataloader, rank_quantile) -> dict:
+    def re_sparse(self, SS: dict, rate_density: dict) -> dict:
+        """Re-sparsify the sparse components based on the target rate density.
+        Args:
+            SS (dict): original sparse components
+            rate_density (dict): target rate density for each layer
+        Returns:
+            _SS (dict): re-sparsified sparse components
+        """
+        _SS = {}
+        for key in SS:
+            S = SS[key]
+            S_flat = S.view(-1)
+            nr_total = S_flat.shape[0]
+            nr_nonzero_target = int(nr_total * rate_density[key])
+            if nr_nonzero_target >= nr_total:
+                _SS[key] = S
+                continue
+            # get the threshold
+            threshold = torch.topk(torch.abs(S_flat), nr_nonzero_target, largest=True).values[-1]
+            S_sparse = torch.where(torch.abs(S) >= threshold, S, torch.zeros_like(S))
+            _SS[key] = S_sparse
+        return _SS
+
+    def _eval_par_lowrank_lowrank_sparsity(self, dataloader, rank_quantile, rate_density) -> dict:
         """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
         self.opt_copy(self.model_sd, self.model, self.layers)  # copy the original model
         self.opt_replace(self.model, self.layers, self.LL)  # replace partial layers with low-rank matrices L
         self.opt_lowrank(self.model, self.layers, rank_quantile)
-        self.opt_add(self.model, self.layers, self.SS)  # add sparse components S
+        _SS = self.re_sparse(self.SS, rate_density)
+        self.opt_add(self.model, self.layers, _SS)  # add sparse components S
         return self.evaluate_one_step(self.model, dataloader)
     
+    @torch.no_grad()
+    def eval_original_model(self, dataloader) -> dict:
+        """Evaluate the original model."""
+        print("Evaluation for original model done.")
+        return self._eval_original(dataloader)
+
     @torch.no_grad()        
     def eval_model(self,
-                   eval_results: dict,
+                   rank_quantile_list: list,
+                   rate_density_list: list,
                    dataloader) -> dict:
         """
         Evaluate the lowspa model.
         Returns:
             Dictionary with evaluation results.
         """
-        for i in range(len(self.rank_quantile_partial_list)):
-            rank_quantile_partial = self.rank_quantile_partial_list[i]
-            eval_results[f'par_lowrank_L_with_S_{i}'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, rank_quantile_partial) 
-            eval_results[f'nr_par_lowrank_L_with_S_{i}'] = cal_nr_params(self.total_params, rank_quantile_partial, self.rate_sparsity, self.layer_dim)
+        eval_results = {}
+
+        for i in range(len(rank_quantile_list)):
+            rank_quantile = rank_quantile_list[i]
+            rate_density = rate_density_list[i]
+            eval_results[f'par_lowrank_L_with_S_{i}'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, rank_quantile, rate_density) 
+            eval_results[f'nr_par_lowrank_L_with_S_{i}'] = cal_nr_params(self.total_params, rank_quantile, rate_density, self.layer_dim)
             print(f"Evaluation for partial low-rank + sparsity model {i} done.")
-
-
-        eval_results['X'] = self._eval_original(dataloader)
-        eval_results['nr_X'] = self.total_params
-        print("Evaluation for original model done.")
 
         eval_results['X_without_S'] = None # self._eval_orginal_without_sparsity(dataloader)
         eval_results['lowrank_X_without_S'] = None # self._eval_original_lowrank_without_sparsity(dataloader)
@@ -168,8 +187,8 @@ class CrossEvaluator():
 
         # eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)  # 99.9 energy
         # eval_results['par_L_with_S'] = self._eval_par_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
-        eval_results['L_with_S'] = self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
-        eval_results['nr_L_with_S'] = cal_nr_params(self.total_params, self.rank_quantile_energy, self.rate_sparsity, self.layer_dim)
+        eval_results['L_with_S'] = None # self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
+        eval_results['nr_L_with_S'] = None # cal_nr_params(self.total_params, self.rank_quantile_energy, self.rate_sparsity, self.layer_dim)
         print("Evaluation for low-rank + sparsity model done.")
 
         eval_results['lowrank_L_with_S'] = None # self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_target)  # target rate
@@ -181,9 +200,9 @@ class CrossEvaluator():
         print("Evaluation for low-rank (specified rate) + sparsity model done.")
         
         # eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
-        
         return eval_results
     
+    @torch.no_grad()        
     def opt_copy(self,
                  model_source: nn.Module,
                  model_target: nn.Module,
@@ -191,6 +210,7 @@ class CrossEvaluator():
         """Copy the weights from source model to target model for specified layers."""
         model_target.load_state_dict(model_source, strict=True)
     
+    @torch.no_grad()        
     def opt_lowrank(self, 
                     model: nn.Module, 
                     layers: list,
@@ -212,6 +232,7 @@ class CrossEvaluator():
             else:
                 print(f"Warning: Layer {layer_name} not found in model for low-rank optimization.")
 
+    @torch.no_grad()        
     def opt_add(self,
                 model: nn.Module,
                 layers: list,
@@ -225,6 +246,7 @@ class CrossEvaluator():
             else:
                 print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
 
+    @torch.no_grad()        
     def opt_replace(self,
                     model: nn.Module,
                     layers: list,
@@ -238,6 +260,7 @@ class CrossEvaluator():
             else:
                 print(f"Warning: Low-rank component for layer {layer_name} not found in LL dictionary.")
 
+    @torch.no_grad()        
     def opt_remove(self,
                    model: nn.Module,
                    layers: list,
@@ -251,6 +274,7 @@ class CrossEvaluator():
             else:
                 print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
 
+    @torch.no_grad()        
     def evaluate_one_step(self,
                           model: nn.Module,
                           dataloader,
@@ -280,16 +304,39 @@ class CrossEvaluator():
             return {'avg_loss': loss_list, 
                     'ppl': np.exp(loss_list[-1])}  # Return average loss and perplexity
 
+    def collect_model_results(self) -> None:
+        if self.model is not None:
+            self.model_results_train = self.eval_original_model(self.train_loader) 
+            self.model_results_test = self.eval_original_model(self.test_loader)
     
-    def collect_results(self):
+    def collect_single_results(self,
+                               rank_quantile: dict,
+                               rate_density: dict) -> None:
+        if self.model is not None:
+            self.fullrank_results_train =  self._eval_lowrank_sparsity(self.train_loader) 
+            self.fullrank_results_train_params = cal_nr_params(self.total_params, rank_quantile, rate_density, self.layer_dim)
+            self.fullrank_results_test = self._eval_lowrank_sparsity(self.test_loader)
+            self.fullrank_results_test_params = cal_nr_params(self.total_params, rank_quantile, rate_density, self.layer_dim)
+
+
+    def collect_results(self,
+                        rank_quantile_list: list,
+                        rate_density_list: list) -> None:
         """
         Collect results from the lowspa model.
         Returns:
             Dictionary with evaluation results.
         """
         if self.model is not None:
-            self.eval_train_results = self.eval_model(self.eval_train_results, self.train_loader) 
-            self.eval_test_results = self.eval_model(self.eval_test_results, self.test_loader)
+            self.eval_train_results = self.eval_model(self.train_loader, rank_quantile_list, rate_density_list) 
+            self.eval_test_results = self.eval_model(self.test_loader, rank_quantile_list, rate_density_list)
+        
+        self.eval_train_results['X'] = self.model_results_train
+        self.eval_test_results['X'] = self.model_results_test
+        self.eval_train_results['nr_X'] = self.total_params
+        self.eval_test_results['nr_X'] = self.total_params
 
-
-                 
+        self.eval_train_results['L_with_S'] = self.fullrank_results_train
+        self.eval_train_results['nr_L_with_S'] = self.fullrank_results_train_params
+        self.eval_test_results['L_with_S'] = self.fullrank_results_test
+        self.eval_test_results['nr_L_with_S'] = self.fullrank_results_test_params

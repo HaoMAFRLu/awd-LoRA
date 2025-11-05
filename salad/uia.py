@@ -85,7 +85,7 @@ class UIA():
         Returns:
             rank_quantile_uia (dict): allocated rank quantile or density for each layer
         """        
-        rank_quantile_uia = {}
+        uia = {}
         if component == 'L':
             quantiles = self.rank_quantile_energy
             params_capacity = self.nr_params_L
@@ -99,8 +99,8 @@ class UIA():
         ratio = np.clip(ratio, 0.0, 1.0)
 
         for key, value in quantiles.items():
-            rank_quantile_uia[key] = value * ratio
-        return rank_quantile_uia
+            uia[key] = value * ratio
+        return uia
 
     def allocate_params(self,
                         params_tgt: float,
@@ -115,7 +115,7 @@ class UIA():
             params_diff_S (int): number of parameters to reduce for sparse components
         """
         # params target < total params, which means reduction is needed
-        params_diff = self.nr_params_total - params_tgt * 1e6  # how many parameters to reduce
+        params_diff = self.nr_params_total - params_tgt     # how many parameters to reduce
         # allocate the parameters for low-rank components and sparse components
         params_diff_L = int(params_diff * gamma)
         params_diff_S = params_diff - params_diff_L
@@ -156,6 +156,7 @@ class UIA():
             rank_quantile_uia (dict): allocated rank quantile for each layer
             rate_density (dict): allocated density for each layer
         """
+        params_tgt = int(params_tgt * 1e6)
         assert 0<=gamma<=1.0, "gamma should be between 0 and 1."
         
         if params_tgt >= self.nr_params_total: # no reduction needed
