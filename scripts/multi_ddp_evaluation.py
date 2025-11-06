@@ -40,10 +40,15 @@ def main(cfg_version: str,
     batch_size = cfg['batch_size']
     set_seed(seed)
 
+    # print current device
+    print(f'[rank {rank}] Current device: {torch.cuda.current_device()}')
+    device = torch.device(f'cuda:{torch.cuda.current_device()}')
+
     # get the model and load the checkpoint
     print(f'[rank {rank}] Loading model...')
     model = get_model(path_cfg_model)
     load_model(model, os.path.join(path_folder, 'model.pth'))
+    model.to(device)
     print(f'[rank {rank}] Model loaded.')
     # list all files in the folder
     # and load dictionary LL and SS from all files starting with 'matrix_'
