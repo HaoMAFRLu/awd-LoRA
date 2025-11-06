@@ -147,6 +147,9 @@ if __name__ == "__main__":
     files = sorted(files)
     # my_files = files[rank::world_size]
     my_files = files[2]
+    
+    if isinstance(my_files, str):
+        my_files = [my_files]
 
     # if rank == 0:
     #     # my_files = ['20251029_162352']
