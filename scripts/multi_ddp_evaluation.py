@@ -41,8 +41,9 @@ def main(cfg_version: str,
     set_seed(seed)
 
     # print current device
+    torch.cuda.set_device(rank % torch.cuda.device_count())
+    device = torch.device(f'cuda:{rank % torch.cuda.device_count()}')
     print(f'[rank {rank}] Current device: {torch.cuda.current_device()}')
-    device = torch.device(f'cuda:{torch.cuda.current_device()}')
 
     # get the model and load the checkpoint
     print(f'[rank {rank}] Loading model...')
