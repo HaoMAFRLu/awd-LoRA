@@ -136,7 +136,9 @@ if __name__ == "__main__":
     FOLDERS = ['ablation']
     gamma_list = [1.0, 0.95]
 
-    rank, world_size = ddp_setup()
+    # rank, world_size = ddp_setup()
+    rank = 0
+
     files = []
     for FOLDER in FOLDERS:
         _path = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
@@ -144,7 +146,7 @@ if __name__ == "__main__":
 
     files = sorted(files)
     # my_files = files[rank::world_size]
-    my_files = files[2:4]
+    my_files = files[2]
 
     # if rank == 0:
     #     # my_files = ['20251029_162352']
@@ -153,9 +155,9 @@ if __name__ == "__main__":
     # else:
     #     my_files = []   
 
-    if not my_files:
-        print(f"[rank {rank}] No file assigned. Exit.")
-        sys.exit(0)
+    # if not my_files:
+    #     print(f"[rank {rank}] No file assigned. Exit.")
+    #     sys.exit(0)
 
     nr = 0
     for file in my_files:
