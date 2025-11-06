@@ -71,8 +71,14 @@ def main(cfg_version: str,
                               tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
     print(f'[rank {rank}] Data loaders ready.')
 
+
+    print(f'[rank {rank}] Read layers...')
     layers = [entry['name'] for entry in cfg['layers']]
+    print(f'[rank {rank}] Layers read.')
+
+    print(f'[rank {rank}] Setting up UIA...')
     uia = UIA(LL, SS, model)
+    print(f'[rank {rank}] UIA ready.')
 
     print(f'[rank {rank}] Setting up evaluator...')
     evaluator = CrossEvaluator(model_type=cfg_version,
