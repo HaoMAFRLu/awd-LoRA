@@ -13,6 +13,7 @@ from salad.utils import *
 from salad.register import get_model, get_data
 from salad.cross_evaluator import CrossEvaluator
 from salad.uia import UIA
+from salad.simple_timer import SimpleTimer
 
 root = get_parent_path(lvl=1)
 
@@ -25,7 +26,8 @@ def ddp_setup():
 def main(cfg_version: str,
          path_folder: str,
          params_tgt: list,
-         gamma_list: list) -> None:
+         gamma_list: list,
+         rank: int=0) -> None:
     # load the config
     path_cfg = os.path.join(path_folder, cfg_version+'.yaml')
     path_cfg_model = os.path.join(path_folder, cfg_version+'_model.json')
@@ -76,11 +78,24 @@ def main(cfg_version: str,
                                SS=SS,
                                layer_dim=uia.dim,
                                batch_size=10)
-   
-    evaluator.collect_single_results(uia.rank_quantile_energy,
-                                     uia.rate_density)  # evaluate the full-rank + sparsity model and store the results
-    evaluator.collect_model_results()  # evaluate the original model and store the results
     
+    timers = {
+        'energy': SimpleTimer('energy'),
+        'original': SimpleTimer('original')
+    }
+
+    print(f'[rank {rank}] Collecting results for full-rank + sparsity model...')
+    with timers['energy']:
+        evaluator.collect_single_results(uia.rank_quantile_energy,
+                                        uia.rate_density)  # evaluate the full-rank + sparsity model and store the results
+    print(f'[rank {rank}] Energy-based evaluation time: {timers["energy"].total/60:.1f} mins.')
+
+    print(f'[rank {rank}] Collecting results for original model...')
+    with timers['original']:
+        evaluator.collect_model_results()  # evaluate the original model and store the results
+    print(f'[rank {rank}] Original model evaluation time: {timers["original"].total/60:.1f} mins.')    
+
+
     for gamma in gamma_list:
         rank_quantile_list = []
         rate_density_list = []
@@ -95,11 +110,12 @@ def main(cfg_version: str,
             print(f'Number of parameters: {nr_params/1e6:.2f} Million')
         
         evaluator.collect_results(rank_quantile_list, rate_density_list)
+
         data = {
             'eval_train_results': evaluator.eval_train_results,
             'eval_test_results': evaluator.eval_test_results
         }
-        with open(os.path.join(path_folder, 'new_eval_results_'+str(gamma)+'.pkl'), 'wb') as f:
+        with open(os.path.join(path_folder, 'test_eval_results_'+str(gamma)+'.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
 if __name__ == "__main__":
@@ -112,7 +128,7 @@ if __name__ == "__main__":
     }
     
     MODEL_TYPE = 'llama_350m'
-    FOLDERS = ['ablation', 'salad']
+    FOLDERS = ['ablation']
     gamma_list = [1.0, 0.95]
 
     rank, world_size = ddp_setup()
@@ -124,11 +140,12 @@ if __name__ == "__main__":
     files = sorted(files)
     my_files = files[rank::world_size]
 
-    # if rank == 0:
-    #     my_files = ['20251029_162352']
-    #     # my_files = ['20251009_205606']
-    # else:
-    #     my_files = []   
+    if rank == 0:
+        # my_files = ['20251029_162352']
+        my_files = ['20251104_130755']    
+        # my_files = ['20251009_205606']
+    else:
+        my_files = []   
 
     if not my_files:
         print(f"[rank {rank}] No file assigned. Exit.")
@@ -148,7 +165,8 @@ if __name__ == "__main__":
         main(MODEL_TYPE,
              path_folder,
              params_tgt[MODEL_TYPE],
-             gamma_list=gamma_list)
+             gamma_list=gamma_list,
+             rank=rank)
 
         print(f'[rank {rank}] Finished folder: {file}')
         print(f'[rank {rank}] ----------{nr}/{len(my_files)}----------')
