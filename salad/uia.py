@@ -12,7 +12,8 @@ class UIA():
     def __init__(self,
                  LL: dict,
                  SS: dict,
-                 model):
+                 model: torch.nn.Module,
+                 rank: int=0) -> None:
         """Allocate ranks and sparsity levels for each layer given target parameters.
         Args:
             params_tgt (float): target number of parameters (in million)
@@ -20,6 +21,7 @@ class UIA():
             SS (dict): sparse matrices for each layer
             model: the original model
         """
+        self.rank = rank
         self.LL = LL
         self.SS = SS
         self.nr_params_model = sum(p.numel() for p in model.parameters())
@@ -29,7 +31,10 @@ class UIA():
         self.nr_params_layers = 0
         self.nr_params_L = 0
         self.nr_params_S = 0
+        
+        print(f'[rank {self.rank}] Initializing UIA statistics...')
         self.intialization()
+        print(f'[rank {self.rank}] UIA statistics initialized.')
 
     def get_rank_quantile(self, L: torch.Tensor, 
                           energy_quantile: float) -> float:

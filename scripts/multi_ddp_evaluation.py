@@ -62,8 +62,8 @@ def main(cfg_version: str,
     for f in rank_files:
         LL_part, SS_part = get_lowspa_layers(os.path.join(path_folder, f))
         for key in LL_part:
-            LL[key] = LL_part[key]
-            SS[key] = SS_part[key]
+            LL[key] = LL_part[key].to(device)
+            SS[key] = SS_part[key].to(device)
     print(f'[rank {rank}] Low-rank and sparse components loaded.')
 
     # get the tokenizer
@@ -83,7 +83,7 @@ def main(cfg_version: str,
     print(f'[rank {rank}] Layers read.')
 
     print(f'[rank {rank}] Setting up UIA...')
-    uia = UIA(LL, SS, model)
+    uia = UIA(LL, SS, model, rank=rank)
     print(f'[rank {rank}] UIA ready.')
 
     print(f'[rank {rank}] Setting up evaluator...')
