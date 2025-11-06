@@ -73,6 +73,8 @@ def main(cfg_version: str,
 
     layers = [entry['name'] for entry in cfg['layers']]
     uia = UIA(LL, SS, model)
+
+    print(f'[rank {rank}] Setting up evaluator...')
     evaluator = CrossEvaluator(model_type=cfg_version,
                                model=model,
                                train_loader=train_loader,
@@ -83,6 +85,7 @@ def main(cfg_version: str,
                                SS=SS,
                                layer_dim=uia.dim,
                                batch_size=10)
+    print(f'[rank {rank}] Evaluator ready.')
     
     timers = {
         'energy': SimpleTimer('energy'),
@@ -120,7 +123,7 @@ def main(cfg_version: str,
             'eval_train_results': evaluator.eval_train_results,
             'eval_test_results': evaluator.eval_test_results
         }
-        with open(os.path.join(path_folder, 'eval_results_'+str(gamma)+'.pkl'), 'wb') as f:
+        with open(os.path.join(path_folder, 'test_eval_results.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
 if __name__ == "__main__":
@@ -134,10 +137,12 @@ if __name__ == "__main__":
     
     MODEL_TYPE = 'llama_350m'
     FOLDERS = ['ablation']
-    gamma_list = [1.0, 0.95]
+    gamma_list = [1.0]
 
-    # rank, world_size = ddp_setup()
-    rank = 0
+    print('Setting up DDP...')
+    rank, world_size = ddp_setup()
+    print(f'DDP setup done. World size: {world_size}.')
+    # rank = 0
 
     files = []
     for FOLDER in FOLDERS:
@@ -145,8 +150,8 @@ if __name__ == "__main__":
         files.extend(os.listdir(_path))
 
     files = sorted(files)
-    # my_files = files[rank::world_size]
-    my_files = files[6]
+    my_files = files[rank::world_size]
+    # my_files = files[6]
 
     if isinstance(my_files, str):
         my_files = [my_files]
@@ -158,9 +163,9 @@ if __name__ == "__main__":
     # else:
     #     my_files = []   
 
-    # if not my_files:
-    #     print(f"[rank {rank}] No file assigned. Exit.")
-    #     sys.exit(0)
+    if not my_files:
+        print(f"[rank {rank}] No file assigned. Exit.")
+        sys.exit(0)
 
     nr = 0
     for file in my_files:
