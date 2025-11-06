@@ -41,12 +41,14 @@ def main(cfg_version: str,
     set_seed(seed)
 
     # get the model and load the checkpoint
+    print(f'[rank {rank}] Loading model...')
     model = get_model(path_cfg_model)
-
     load_model(model, os.path.join(path_folder, 'model.pth'))
+    print(f'[rank {rank}] Model loaded.')
     # list all files in the folder
     # and load dictionary LL and SS from all files starting with 'matrix_'
     # at last, combine them into one dictionary
+    print(f'[rank {rank}] Loading low-rank and sparse components...')
     LL = {}
     SS = {}
     files = os.listdir(path_folder)
@@ -56,8 +58,10 @@ def main(cfg_version: str,
         for key in LL_part:
             LL[key] = LL_part[key]
             SS[key] = SS_part[key]
+    print(f'[rank {rank}] Low-rank and sparse components loaded.')
 
     # get the tokenizer
+    print(f'[rank {rank}] Preparing data loaders...')
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
     pad_idx = tokenizer.pad_token_id
     # get the data loader
@@ -65,7 +69,8 @@ def main(cfg_version: str,
                              tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
     train_loader = get_eval_data('train', seed_for_shuffle=cfg['seed_for_shuffle'],
                               tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
-    
+    print(f'[rank {rank}] Data loaders ready.')
+
     layers = [entry['name'] for entry in cfg['layers']]
     uia = UIA(LL, SS, model)
     evaluator = CrossEvaluator(model_type=cfg_version,
@@ -115,7 +120,7 @@ def main(cfg_version: str,
             'eval_train_results': evaluator.eval_train_results,
             'eval_test_results': evaluator.eval_test_results
         }
-        with open(os.path.join(path_folder, 'test_eval_results_'+str(gamma)+'.pkl'), 'wb') as f:
+        with open(os.path.join(path_folder, 'eval_results_'+str(gamma)+'.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
 if __name__ == "__main__":
@@ -128,7 +133,7 @@ if __name__ == "__main__":
     }
     
     MODEL_TYPE = 'llama_350m'
-    FOLDERS = ['ablation']
+    FOLDERS = ['ablation', 'salad']
     gamma_list = [1.0, 0.95]
 
     rank, world_size = ddp_setup()
@@ -140,12 +145,12 @@ if __name__ == "__main__":
     files = sorted(files)
     my_files = files[rank::world_size]
 
-    if rank == 0:
-        # my_files = ['20251029_162352']
-        my_files = ['20251104_130755']    
-        # my_files = ['20251009_205606']
-    else:
-        my_files = []   
+    # if rank == 0:
+    #     # my_files = ['20251029_162352']
+    #     my_files = ['20251104_130755']    
+    #     # my_files = ['20251009_205606']
+    # else:
+    #     my_files = []   
 
     if not my_files:
         print(f"[rank {rank}] No file assigned. Exit.")
