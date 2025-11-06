@@ -37,7 +37,9 @@ def get_loss_row(file: str, data_type: str, eval_results: dict, header: list) ->
     """
     rows = []
     row = [file, data_type, 'loss']
-    for gamma in eval_results.keys():
+    gammas = eval_results.keys()
+    sorted_gammas = sorted(gammas, key=lambda x: float(x))
+    for gamma in sorted_gammas:
         _row = row + [gamma]
         _eval_results = eval_results[gamma]
 
@@ -71,7 +73,9 @@ def get_ppl_row(file: str, data_type: str, eval_results: dict, header: list) -> 
     """
     rows = []
     row = [file, data_type, 'ppl']
-    for gamma in eval_results.keys():
+    gammas = eval_results.keys()
+    sorted_gammas = sorted(gammas, key=lambda x: float(x))
+    for gamma in sorted_gammas:
         _row = row + [gamma]
         _eval_results = eval_results[gamma]
 
@@ -134,14 +138,9 @@ def get_results(model_type: str,
 
     return eval_train_results, eval_test_results
 
-def get_row(eval_train_results, eval_test_results, file: str, header: list) -> dict:
+def get_rows_exp(eval_train_results, eval_test_results, file: str, header: list) -> dict:
     """
-    Get a row of statistics for the model from the saved file.
-    Args:
-        model_type: Type of the model (e.g., 'CNN', 'GPT').
-        file: Name of the file containing the statistics.
-    Returns:
-        A dictionary with statistics for the model.
+    Get the rows of statistics for the model from the saved file.
     """
     row1 = get_loss_row(file, 'train', eval_train_results, header)
     row2 = get_ppl_row(file, 'train', eval_train_results, header)
@@ -160,7 +159,7 @@ def get_row(eval_train_results, eval_test_results, file: str, header: list) -> d
 def main(model_type: str, 
          folder: str,
          files: list) -> None:
-    headers = [f"model", f"dataset", f"gamma", f"metric", 
+    headers = [f"model", f"dataset", f"gamma", f"metric",
                f"X",  
                f"L+S", 
                f'par LoR(L)+S_0', 
@@ -170,17 +169,23 @@ def main(model_type: str,
     rows = []
     for file in files:
         eval_train_results, eval_test_resutls = get_results(model_type, folder, file)
-        r1, r2, r3, r4 = get_row(eval_train_results, eval_test_resutls, file, headers[4:])
-        rows = r1 + r2 + r3 + r4  
+        r1, r2, r3, r4 = get_rows_exp(eval_train_results, eval_test_resutls, file, headers[4:])
+        _rows = r1 + r2 + r3 + r4
+        for i in range(1, len(_rows)):
+            _rows[i][0] = ''
+        rows = rows + r1 + r2 + r3 + r4  
     print(tabulate(rows, headers=headers, tablefmt="grid"))
 
 
 if __name__ == "__main__":
     model_type = 'llama_350m'
     FOLDER = 'ablation'
+    files = os.listdir(os.path.join(root, 'data', FOLDER, model_type))
+    
     files = [
             '20251104_130755'
              ]
+
     main(model_type=model_type,
          folder=FOLDER,
          files=files)
