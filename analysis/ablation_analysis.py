@@ -53,7 +53,7 @@ def get_results(model_type: str,
     alpha = cfg['layers'][0]['params']['alpha_dict']['rate_decay']
     beta = cfg['layers'][0]['params']['beta_dict']['rate_decay']
 
-    with open(os.path.join(path, 'eval_results.pkl'), 'rb') as f:
+    with open(os.path.join(path, 'eval_results_1.0.pkl'), 'rb') as f:
         stats = pickle.load(f)
     eval = stats['eval_test_results']
 
@@ -122,7 +122,7 @@ def main(MODEL_TYPE: str,
 
 
 if __name__ == "__main__":
-    MODEL_TYPE = 'llama_130m'
+    MODEL_TYPE = 'llama_350m'
     FOLDERS = ['ablation']
     files = []
 

@@ -182,9 +182,9 @@ if __name__ == "__main__":
     FOLDER = 'ablation'
     files = os.listdir(os.path.join(root, 'data', FOLDER, model_type))
     
-    files = [
-            '20251104_130755'
-             ]
+    # files = [
+    #         '20251104_130755'
+    #          ]
 
     main(model_type=model_type,
          folder=FOLDER,
