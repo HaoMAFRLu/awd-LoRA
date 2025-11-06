@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
     files = sorted(files)
     # my_files = files[rank::world_size]
-    my_files = files[2:4]
+    my_files = files[4:6]
 
     # if rank == 0:
     #     # my_files = ['20251029_162352']
