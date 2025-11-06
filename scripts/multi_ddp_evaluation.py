@@ -99,7 +99,7 @@ def main(cfg_version: str,
             'eval_train_results': evaluator.eval_train_results,
             'eval_test_results': evaluator.eval_test_results
         }
-        with open(os.path.join(path_folder, 'eval_results_'+str(gamma)+'.pkl'), 'wb') as f:
+        with open(os.path.join(path_folder, 'new_eval_results_'+str(gamma)+'.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
 if __name__ == "__main__":
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     }
     
     MODEL_TYPE = 'llama_350m'
-    FOLDERS = ['ablation']
+    FOLDERS = ['ablation', 'salad']
     gamma_list = [1.0, 0.95]
 
     rank, world_size = ddp_setup()

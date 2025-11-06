@@ -9,14 +9,14 @@ arguments       = \
 
 initialdir      = /lustre/home/hma2/projects/awd-LoRA
 
-log             = jobs_eval/task$(Process).log
-error           = jobs_eval/task$(Process).err
-output          = jobs_eval/task$(Process).out
+log             = jobs_eval1/task$(Process).log
+error           = jobs_eval1/task$(Process).err
+output          = jobs_eval1/task$(Process).out
 
 request_cpus    = 8
 request_memory  = 100000
 request_gpus    = 8
-requirements = (CUDACapability >= 8.0 && CUDACapability < 9.0) 
+requirements = (CUDACapability >= 8.9 && CUDACapability < 9.1) 
 
 getenv          = True
 
