@@ -146,7 +146,7 @@ if __name__ == "__main__":
 
     files = sorted(files)
     # my_files = files[rank::world_size]
-    my_files = files[3]
+    my_files = files[6]
 
     if isinstance(my_files, str):
         my_files = [my_files]
