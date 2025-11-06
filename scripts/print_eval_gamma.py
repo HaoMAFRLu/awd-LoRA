@@ -105,7 +105,9 @@ def get_acc_row(file: str, data_type: str, eval_results: dict, header: list) -> 
             row.append('N/A')
     return row
 
-def get_results(model_type: str, file: str) -> dict:
+def get_results(model_type: str, 
+                folder: str,
+                file: str) -> dict:
     """
     Get evaluation results for the model.
     Args:
@@ -118,7 +120,7 @@ def get_results(model_type: str, file: str) -> dict:
     eval_train_results = {}
     eval_test_results = {}
 
-    path = os.path.join(root, 'data', 'ablation', model_type, file)
+    path = os.path.join(root, 'data', folder, model_type, file)
     files = os.listdir(path)
     eval_files = [f for f in files if 'eval_results_' in f]
     for file in eval_files:
@@ -155,7 +157,9 @@ def get_row(eval_train_results, eval_test_results, file: str, header: list) -> d
     return (row1, row2, row3, row4)
 
 
-def main(model_type: str, files: list) -> None:
+def main(model_type: str, 
+         folder: str,
+         files: list) -> None:
     headers = [f"model", f"dataset", f"gamma", f"metric", 
                f"X",  
                f"L+S", 
@@ -165,16 +169,18 @@ def main(model_type: str, files: list) -> None:
     
     rows = []
     for file in files:
-        eval_train_results, eval_test_resutls = get_results(model_type, file)
+        eval_train_results, eval_test_resutls = get_results(model_type, folder, file)
         r1, r2, r3, r4 = get_row(eval_train_results, eval_test_resutls, file, headers[4:])
         rows = r1 + r2 + r3 + r4  
     print(tabulate(rows, headers=headers, tablefmt="grid"))
 
 
 if __name__ == "__main__":
-    model_type = 'llama_60m'
+    model_type = 'llama_350m'
+    FOLDER = 'ablation'
     files = [
-            '20251029_162352'
+            '20251104_130755'
              ]
     main(model_type=model_type,
+         folder=FOLDER,
          files=files)

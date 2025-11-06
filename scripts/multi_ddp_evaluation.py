@@ -133,7 +133,7 @@ if __name__ == "__main__":
     }
     
     MODEL_TYPE = 'llama_350m'
-    FOLDERS = ['ablation', 'salad']
+    FOLDERS = ['ablation']
     gamma_list = [1.0, 0.95]
 
     rank, world_size = ddp_setup()
@@ -143,7 +143,8 @@ if __name__ == "__main__":
         files.extend(os.listdir(_path))
 
     files = sorted(files)
-    my_files = files[rank::world_size]
+    # my_files = files[rank::world_size]
+    my_files = files[0:2]
 
     # if rank == 0:
     #     # my_files = ['20251029_162352']
