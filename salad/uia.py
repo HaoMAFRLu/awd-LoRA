@@ -31,10 +31,7 @@ class UIA():
         self.nr_params_layers = 0
         self.nr_params_L = 0
         self.nr_params_S = 0
-        
-        print(f'[rank {self.rank}] Initializing UIA statistics...')
         self.intialization()
-        print(f'[rank {self.rank}] UIA statistics initialized.')
 
     def get_rank_quantile(self, L: torch.Tensor, 
                           energy_quantile: float) -> float:
