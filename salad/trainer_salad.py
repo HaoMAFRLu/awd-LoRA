@@ -16,7 +16,9 @@ class SALADTrainer():
     def __init__(self, 
                  model: nn.Module,
                  data: datasets.Dataset,
-                 config: dict) -> None:
+                 config: dict,
+                 rank: int=0,
+                 world_size: int=0) -> None:
         """
         Args:
             model: the nn.Module to train
@@ -32,6 +34,9 @@ class SALADTrainer():
         self.model = model
         self.config = config
 
+        self.rank = rank
+        self.world_size = world_size
+
         self.num_warmup_steps = 40
         self.num_total_iters = config.get('num_total_iters', 1000)
 
@@ -46,7 +51,7 @@ class SALADTrainer():
         self.is_monitor = config.get('is_monitor', False)
         self.save_interval = config.get('save_interval', 50)
 
-        self.rank, self.world_size = self._init_distributed()
+        # self.rank, self.world_size = self._init_distributed()
 
         if self.rank == 0:
             # self.path_folder = path_folder
@@ -270,13 +275,12 @@ class SALADTrainer():
         }
         return assigned_layers, owner_map
     
-    def _init_distributed(self):
-        """Initialize distributed environment"""
-        dist.init_process_group(backend='nccl')
-        rank = dist.get_rank()
-        world = dist.get_world_size()
-        return rank, world
-
+    # def _init_distributed(self):
+    #     """Initialize distributed environment"""
+    #     dist.init_process_group(backend='nccl')
+    #     rank = dist.get_rank()
+    #     world = dist.get_world_size()
+    #     return rank, world
 
     def get_diff_per_rank(self) -> dict:
         """Get the difference X - L - S for each layer."""

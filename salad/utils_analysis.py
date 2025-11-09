@@ -364,7 +364,7 @@ def plot_violin_grid(
             dd = d[d["metric"] == metric]
             if dd.empty:
                 continue
-
+            
             g = sns.catplot(
                 data=dd,
                 x="unit", y="value",
@@ -373,11 +373,11 @@ def plot_violin_grid(
                 kind="violin",
                 dodge=True, cut=0, inner="quartile",
                 margin_titles=True, sharey=False,
-                col_wrap=max_cols if max_cols and dd["alpha_cat"].nunique() > max_cols else None,
                 height=height,
-                legend=False,                 # 不生成子图图例
-                palette=rho_palette           # 固定颜色映射
+                legend=False,
+                palette=rho_palette,
             )
+
 
             # === 去掉 axis label（x/y label），保留刻度文字 ===
             g.set_axis_labels("", "")
@@ -484,11 +484,10 @@ def plot_violin_grid(
 
             g = sns.FacetGrid(
                 dd,
-                row="beta_cat", col="alpha_cat",
+                row="beta_cat",
+                col="alpha_cat",
                 margin_titles=True, sharey=False,
-                col_wrap=max_cols if max_cols and dd["alpha_cat"].nunique() > max_cols else None,
-                height=height,
-                aspect=1.6,
+                height=height, aspect=1.6,
             )
 
             def _map_violin(data, color=None, **kwargs):
@@ -603,17 +602,16 @@ def plot_ppl_grid(
     rho_marker = {lvl: marker_pool[i] for i, lvl in enumerate(rho_levels)}
 
     # ---------- Facet 网格 ----------
+
     g = sns.FacetGrid(
         d,
         row="beta_cat",
         col="alpha_cat",
         margin_titles=True,
-        sharey=(y_range is not None),  # 固定 y_range 时各子图共享 y
-        col_wrap=max_cols if max_cols and d["alpha_cat"].nunique() > max_cols else None,
+        sharey=(y_range is not None),
         height=height,
         aspect=1.6,
     )
-
     # ---------- 绘制函数（单个子图） ----------
     def _map_scatter(data, color=None, **kwargs):
         ax = plt.gca()

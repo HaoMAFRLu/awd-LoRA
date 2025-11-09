@@ -27,10 +27,10 @@ class CrossEvaluator():
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         # print device info
-        dev_idx = torch.cuda.current_device() if torch.cuda.is_available() else -1
-        props   = torch.cuda.get_device_properties(dev_idx) if torch.cuda.is_available() else None
+        self.dev_idx = torch.cuda.current_device() if torch.cuda.is_available() else -1
+        props   = torch.cuda.get_device_properties(self.dev_idx) if torch.cuda.is_available() else None
         if props:
-            print(f"[Rank {dev_idx}] using {props.name}, {props.total_memory / (1024 ** 3):.2f} GiB")
+            print(f"[Rank {self.dev_idx}] using {props.name}, {props.total_memory / (1024 ** 3):.2f} GiB")
         else:
             print("[Rank -1] using CPU")
 
@@ -175,14 +175,14 @@ class CrossEvaluator():
         timer = SimpleTimer('evaluation')
 
         for i in range(len(rank_quantile_list)):
-
-            print(f"Evaluating partial low-rank + sparsity model {i} ...")
+            
+            print(f"[Rank {self.dev_idx}] Evaluating model {i}...")
             rank_quantile = rank_quantile_list[i]
             rate_density = rate_density_list[i]
             with timer:
                 eval_results[f'par_lowrank_L_with_S_{i}'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, rank_quantile, rate_density) 
                 eval_results[f'nr_par_lowrank_L_with_S_{i}'] = cal_nr_params(self.total_params, rank_quantile, rate_density, self.layer_dim)
-            print(f"Evaluation of model {i}: {timer.total/60:.1f} mins.")
+            print(f"[Rank {self.dev_idx}] Evaluation time for model {i}: {timer.total/60:.1f} mins.")
             timer.reset()
 
         eval_results['X_without_S'] = None # self._eval_orginal_without_sparsity(dataloader)

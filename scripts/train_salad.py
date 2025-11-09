@@ -6,6 +6,7 @@ from datetime import datetime
 import shutil
 import transformers
 import argparse
+import torch.distributed as dist
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from salad.utils import *
@@ -17,6 +18,13 @@ torch.backends.cuda.enable_mem_efficient_sdp(False)
 torch.backends.cuda.enable_flash_sdp(False)
 
 root = get_parent_path(lvl=1)
+
+def _init_distributed(self):
+    """Initialize distributed environment"""
+    dist.init_process_group(backend='nccl')
+    rank = dist.get_rank()
+    world = dist.get_world_size()
+    return rank, world
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -34,6 +42,8 @@ def main(cfg_version: str,
          alpha_rate: float,
          beta_rate: float) -> None:
     
+    rank, world_size = _init_distributed()
+
     # load the config
     with open(path_cfg) as f:
         cfg = yaml.safe_load(f)
@@ -47,27 +57,34 @@ def main(cfg_version: str,
     seed = cfg['seed']
     set_seed(seed)
 
-    folder_name = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # path_folder = os.path.join(root, 'data', 'salad', cfg_version, folder_name)
-    path_folder = os.path.join(root, 'data', 'ablation', cfg_version, folder_name)
-    mkdir(path_folder)
-    shutil.copytree(os.path.join(root, 'salad'), 
-                    os.path.join(path_folder, 'salad'), 
-                    dirs_exist_ok=True, 
-                    copy_function=shutil.copy2) 
+    if rank == 0:
+        # create a unique folder name based on current datetime
+        folder_name = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # path_folder = os.path.join(root, 'data', 'salad', cfg_version, folder_name)
+        path_folder = os.path.join(root, 'data', 'ablation', cfg_version, folder_name)
+        mkdir(path_folder)
+        shutil.copytree(os.path.join(root, 'salad'), 
+                        os.path.join(path_folder, 'salad'), 
+                        dirs_exist_ok=True, 
+                        copy_function=shutil.copy2) 
     
-    # shutil.copy(path_cfg, path_folder)
-    output_path = os.path.join(path_folder, cfg_version+'.yaml')
-    with open(output_path, 'w', encoding='utf-8') as f:
-        yaml.safe_dump(cfg, f, sort_keys=False, allow_unicode=True)
+        # shutil.copy(path_cfg, path_folder)
+        output_path = os.path.join(path_folder, cfg_version+'.yaml')
+        with open(output_path, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(cfg, f, sort_keys=False, allow_unicode=True)
+        shutil.copy(path_cfg_model, path_folder)
+    
+    # broadcast the path folder to all ranks
+    path_folder_list = [path_folder if rank == 0 else None]
+    dist.broadcast_object_list(path_folder_list, src=0)
+    path_folder = path_folder_list[0]
 
-    shutil.copy(path_cfg_model, path_folder)
-    
     # get the data loader
     model = get_model(path_cfg_model)
     data = get_data(cfg['seed_for_shuffle'])
 
-    ddp_trainer = SALADTrainer(model, data, cfg)
+    ddp_trainer = SALADTrainer(model, data, cfg, 
+                               rank=rank, world_size=world_size)
     ddp_trainer.train(path_folder=path_folder)
     
 if __name__ == "__main__":
