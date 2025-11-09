@@ -19,7 +19,7 @@ torch.backends.cuda.enable_flash_sdp(False)
 
 root = get_parent_path(lvl=1)
 
-def _init_distributed(self):
+def _init_distributed():
     """Initialize distributed environment"""
     dist.init_process_group(backend='nccl')
     rank = dist.get_rank()
