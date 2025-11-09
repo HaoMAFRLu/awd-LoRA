@@ -135,7 +135,7 @@ def main(cfg_version: str,
             'eval_train_results': evaluator.eval_train_results,
             'eval_test_results': evaluator.eval_test_results
         }
-        with open(os.path.join(path_folder, 'test_eval_results.pkl'), 'wb') as f:
+        with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
 if __name__ == "__main__":
@@ -161,8 +161,20 @@ if __name__ == "__main__":
         _path = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
         files.extend(os.listdir(_path))
 
-    files = sorted(files)
-    my_files = files[rank::world_size]
+    _files = []
+    for file in files:
+        if file.startswith('20251107') or file.startswith('20251108'):
+            _files.append(file)
+
+    if rank == 0:
+        # print all file names
+        print('All files to process:')
+        for f in _files:
+            print(f)
+
+    _files = sorted(_files)
+
+    my_files = _files[rank::world_size]
     # my_files = files[6]
 
     if isinstance(my_files, str):
