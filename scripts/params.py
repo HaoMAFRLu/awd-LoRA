@@ -8,12 +8,12 @@ embed_params = {
     'rate_sparsity': 0.10,   # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 0.0,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut'
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.03,
     },
     'beta_dict': {
         'init': 0.0,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
@@ -37,12 +37,12 @@ lm_head_params = {
     'rate_sparsity': 0.10,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 0.0,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut'
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.035,
     },
     'beta_dict': {
         'init': 0.0,
-        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
+        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
     'rho_dict':            {
