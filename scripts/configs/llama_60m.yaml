@@ -38,11 +38,11 @@ layers:
     rate_rank: 0.15
     rate_sparsity: 0.1
     alpha_dict:
-      init: 0.0000001
-      mode: adaptive
+      init: !!float '0'
+      mode: hard_cut
       rate_decay: 0.03
     beta_dict:
-      init: 0.0000001
+      init: !!float '0'
       mode: hard_cut
       rate_decay: 0.02
     rho_dict:
@@ -64,10 +64,10 @@ layers:
     rate_sparsity: 0.1
     alpha_dict:
       init: !!float '0'
-      mode: adaptive
+      mode: hard_cut
       rate_decay: 0.035
     beta_dict:
-      init: 0.0000001
+      init: !!float '0'
       mode: hard_cut
       rate_decay: 0.02
     rho_dict:
