@@ -38,6 +38,7 @@ def parse_args():
 def main(cfg_version: str, 
          path_cfg: str,
          path_cfg_model: str,
+         folder: str,
          rho: float,
          alpha_rate: float,
          beta_rate: float) -> None:
@@ -51,9 +52,11 @@ def main(cfg_version: str,
     
     if rho is not None and alpha_rate is not None and beta_rate is not None:
         for layer in cfg['layers']:
-            layer['params']['rho_dict']['rho'] = rho
-            layer['params']['alpha_dict']['rate_decay'] = alpha_rate
-            layer['params']['beta_dict']['rate_decay'] = beta_rate 
+            # only apply to head 
+            if 'embed_tokens' in layer or 'lm_head' in layer:
+                layer['params']['rho_dict']['rho'] = rho
+                layer['params']['alpha_dict']['rate_decay'] = alpha_rate
+                layer['params']['beta_dict']['rate_decay'] = beta_rate 
 
     seed = cfg['seed']
     set_seed(seed)
@@ -61,8 +64,7 @@ def main(cfg_version: str,
     if rank == 0:
         # create a unique folder name based on current datetime
         folder_name = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # path_folder = os.path.join(root, 'data', 'salad', cfg_version, folder_name)
-        path_folder = os.path.join(root, 'data', 'ablation', cfg_version, folder_name)
+        path_folder = os.path.join(root, 'data', folder, cfg_version, folder_name)
         mkdir(path_folder)
         shutil.copytree(os.path.join(root, 'salad'), 
                         os.path.join(path_folder, 'salad'), 
@@ -91,8 +93,10 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     args = parse_args()
 
-    cfg_version = 'llama_350m'
+    cfg_version = 'llama_60m'
+    folder = 'head'
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
 
-    main(cfg_version, path_cfg, path_cfg_model, args.rho, args.alpha_rate, args.beta_rate)
+    main(cfg_version, path_cfg, path_cfg_model, folder,
+         args.rho, args.alpha_rate, args.beta_rate)

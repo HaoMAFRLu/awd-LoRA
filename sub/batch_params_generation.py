@@ -11,9 +11,9 @@ from utils.general import *
 root = get_parent_path(lvl=1)
 file = os.path.join(root, 'batch_params.txt')
 
-rho = ['5e-8']
-alpha = ['8e-2', '1e-1', '2e-1']
-beta = ['1e-1', '5e-2', '5e-3']
+rho = ['1e-6']
+alpha = ['1e-1', '1', '5']
+beta = ['1e-1', '1', '5']
 
 combinations = [(a, b, c) for a in rho for b in alpha for c in beta]
 
