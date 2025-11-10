@@ -4,15 +4,15 @@ embed_params = {
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,     # Max ADMM iterations per layer
     'tol':           0.001, # Convergence tolerance
-    'rate_rank':     0.05,  # Rate of rank reduction for the layer
-    'rate_sparsity': 0.15,   # Rate of sparsity for the layer
+    'rate_rank':     0.15,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.10,   # Rate of sparsity for the layer
     'alpha_dict': {
-        'init': 1e-7,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
+        'init': 0.0,
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.03,
     },
     'beta_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
@@ -33,15 +33,15 @@ lm_head_params = {
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
     'tol':           0.001,   # Convergence tolerance
-    'rate_rank':     0.05,  # Rate of rank reduction for the layer
-    'rate_sparsity': 0.15,  # Rate of sparsity for the layer
+    'rate_rank':     0.15,  # Rate of rank reduction for the layer
+    'rate_sparsity': 0.10,  # Rate of sparsity for the layer
     'alpha_dict': {
         'init': 0.0,
-        'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
+        'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut'
         'rate_decay': 0.035,
     },
     'beta_dict': {
-        'init': 1e-7,
+        'init': 0.0,
         'mode': 'hard_cut',  # 'fixed', 'adaptive' or 'hard_cut
         'rate_decay': 0.02,
     },
