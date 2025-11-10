@@ -165,6 +165,13 @@ if __name__ == "__main__":
     for file in files:
         if file.startswith('20251107') or file.startswith('20251108'):
             _files.append(file)
+    
+    _files = [
+        '20251109_114657',
+        '20251109_114840',
+        '20251109_115027',
+        '20251109_115152',
+    ]
 
     if rank == 0:
         # print all file names
