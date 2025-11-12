@@ -44,6 +44,7 @@ def main(cfg_version: str,
          beta_rate: float) -> None:
     
     rank, world_size = _init_distributed()
+    print(f'Total world size: {world_size}')
     torch.cuda.set_device(rank % torch.cuda.device_count())
 
     # load the config
