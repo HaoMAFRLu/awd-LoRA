@@ -30,6 +30,14 @@ key_word_map = {
     'par LoR(L)+S_3': 'par_lowrank_L_with_S_3',
 }
 
+short_name_map = {
+    'X': 'X',
+    'L_with_S': 'L_S',
+    'par_lowrank_L_with_S_0': 'pL_S0',
+    'par_lowrank_L_with_S_1': 'pL_S1',
+    'par_lowrank_L_with_S_2': 'pL_S2',
+}
+
 target_keys = ['X', 'L+S', 
                'par LoR(L)+S_0',
                'par LoR(L)+S_1',
@@ -109,12 +117,15 @@ def main(MODEL_TYPE: str,
             path=path_fig,
         )
 
+
+
     plot_ppl_grid(
         df_all,
         eval_order=[key_word_map[k] for k in target_keys],
         yscale='log',
         y_range=(15, 10000),
         path=path_fig,
+        short_name_map=short_name_map,
     )
 
     # plot_heatmap(dfs0, path=os.path.join(path_fig, str(dfs0[0]['rho'])))
