@@ -9,12 +9,12 @@ while IFS=" " read -r arg1 arg2 arg3; do
 
     condor_submit_bid 2000 \
          -a "arguments=-u -m torch.distributed.run \
-            --nproc_per_node=5 --nnodes=1 \
+            --nproc_per_node=8 --nnodes=1 \
             --rdzv_backend=c10d --rdzv_endpoint=127.0.0.1:$((29500 + INDEX)) \
             scripts/train_salad.py --rho $arg1 --alpha_rate $arg2 --beta_rate $arg3" \
-         -a "log=jobs_batch1/task${INDEX}.log" \
-         -a "output=jobs_batch1/task${INDEX}.out" \
-         -a "error=jobs_batch1/task${INDEX}.err" \
+         -a "log=jobs_batch2/task${INDEX}.log" \
+         -a "output=jobs_batch2/task${INDEX}.out" \
+         -a "error=jobs_batch2/task${INDEX}.err" \
          "$SUBFILE"
 
     INDEX=$((INDEX + 1))
