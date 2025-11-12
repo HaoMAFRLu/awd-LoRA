@@ -50,13 +50,20 @@ def main(cfg_version: str,
     with open(path_cfg) as f:
         cfg = yaml.safe_load(f)
     
+    target_layers = [entry['name'] for entry in cfg['layers']]
+
     if rho is not None and alpha_rate is not None and beta_rate is not None:
-        for layer in cfg['layers']:
-            # only apply to head 
-            # if 'embed_tokens' in layer or 'lm_head' in layer['name']:
-            layer['params']['rho_dict']['rho'] = rho
-            layer['params']['alpha_dict']['rate_decay'] = alpha_rate
-            layer['params']['beta_dict']['rate_decay'] = beta_rate 
+        if 'embed_tokens' in target_layers or 'lm_head' in target_layers: # only apply to embedding and lm head
+            for layer in cfg['layers']:
+                if 'embed_tokens' in layer['name'] or 'lm_head' in layer['name']:
+                    layer['params']['rho_dict']['rho'] = rho
+                    layer['params']['alpha_dict']['rate_decay'] = alpha_rate
+                    layer['params']['beta_dict']['rate_decay'] = beta_rate
+        else:
+            for layer in cfg['layers']:
+                layer['params']['rho_dict']['rho'] = rho
+                layer['params']['alpha_dict']['rate_decay'] = alpha_rate
+                layer['params']['beta_dict']['rate_decay'] = beta_rate 
 
     seed = cfg['seed']
     set_seed(seed)
@@ -93,8 +100,8 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     args = parse_args()
 
-    cfg_version = 'llama_350m'
-    folder = 'ablation'
+    cfg_version = 'llama_60m'
+    folder = 'head'
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
 

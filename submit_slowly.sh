@@ -9,7 +9,7 @@ while IFS=" " read -r arg1 arg2 arg3; do
 
     condor_submit_bid 2000 \
          -a "arguments=-u -m torch.distributed.run \
-            --nproc_per_node=8 --nnodes=1 \
+            --nproc_per_node=5 --nnodes=1 \
             --rdzv_backend=c10d --rdzv_endpoint=127.0.0.1:$((29500 + INDEX)) \
             scripts/train_salad.py --rho $arg1 --alpha_rate $arg2 --beta_rate $arg3" \
          -a "log=jobs_batch1/task${INDEX}.log" \
