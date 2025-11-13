@@ -88,7 +88,7 @@ def main(cfg_version: str,
     print(f'[rank {rank}] Setting up UIA...')
     uia = UIA(LL, SS, model, 
               layer_info=layer_info, 
-              rate=100.0,
+              rate=1000.0,
               rank=rank)
     print(f'[rank {rank}] UIA ready.')
 
