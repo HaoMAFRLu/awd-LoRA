@@ -134,7 +134,7 @@ def main(MODEL_TYPE: str,
 
 if __name__ == "__main__":
     MODEL_TYPE = 'llama_350m'
-    FOLDERS = ['ablation', 'salad']
+    FOLDERS = ['ablation']
     files = []
 
     for FOLDER in FOLDERS:

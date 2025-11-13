@@ -231,7 +231,7 @@ if __name__ == "__main__":
         num_total_iters=124000,
         batch_size=256,
         max_length=256,
-        warmup_steps=6000,
+        warmup_steps=2200,
         num_workers=0,
         scheduler_type='cosine',
         include_embeddings=False,
