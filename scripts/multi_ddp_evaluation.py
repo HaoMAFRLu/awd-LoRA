@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     _files = []
     for file in files:
-        if not file.startswith('20251112') and not file.startswith('20251113'):
+        if file.startswith('20251112'):
             _files.append(file)
     
     # _files = [
