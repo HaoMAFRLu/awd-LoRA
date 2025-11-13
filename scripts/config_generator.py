@@ -231,7 +231,7 @@ if __name__ == "__main__":
         num_total_iters=124000,
         batch_size=256,
         max_length=256,
-        warmup_steps=2200,
+        warmup_steps=6000,
         num_workers=0,
         scheduler_type='cosine',
         include_embeddings=False,
@@ -370,4 +370,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_60m)
+    generate_config(**cfg_llama_350m)
