@@ -150,7 +150,7 @@ if __name__ == "__main__":
         'llama_1b':   [669.5, 646.5, 609.5],
     }
     
-    MODEL_TYPE = 'llama_130m'
+    MODEL_TYPE = 'llama_350m'
     FOLDERS = ['ablation']
     gamma_list = [1.0]
 
@@ -164,14 +164,14 @@ if __name__ == "__main__":
         _path = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
         files.extend(os.listdir(_path))
 
-    # _files = []
-    # for file in files:
-    #     if file.startswith('20251107') or file.startswith('20251108'):
-    #         _files.append(file)
+    _files = []
+    for file in files:
+        if not file.startswith('20251112'):
+            _files.append(file)
     
-    _files = [
-        '20251103_085721',
-    ]
+    # _files = [
+    #     '20251103_085721',
+    # ]
 
     if rank == 0:
         # print all file names
