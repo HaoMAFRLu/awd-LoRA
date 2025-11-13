@@ -13,6 +13,7 @@ class UIA():
                  LL: dict,
                  SS: dict,
                  model: torch.nn.Module,
+                 layer_info: dict,
                  rank: int=0) -> None:
         """Allocate ranks and sparsity levels for each layer given target parameters.
         Args:
@@ -22,6 +23,7 @@ class UIA():
             model: the original model
         """
         self.rank = rank
+        self.layer_info = layer_info
         self.LL = LL
         self.SS = SS
         self.nr_params_model = sum(p.numel() for p in model.parameters())
@@ -64,7 +66,10 @@ class UIA():
             nr_total = row * col
 
             self.rate_density[key] = nr_nonzero / nr_total
-            self.rank_quantile_energy[key], rank = self.get_rank_quantile(L, energy_quantile=0.999)
+
+            # self.rank_quantile_energy[key], rank = self.get_rank_quantile(L, energy_quantile=0.999)
+            rank = self.layer_info[key]['rank'][-1]
+            self.rank_quantile_energy[key] = min(row, col)
 
             # calculate the number of parameters for each layer
             self.nr_params_layers += nr_total

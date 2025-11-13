@@ -66,6 +66,9 @@ def main(cfg_version: str,
             SS[key] = SS_part[key].to(device)
     print(f'[rank {rank}] Low-rank and sparse components loaded.')
 
+    with open(os.path.join(path_folder, 'layer_info.pkl'), 'rb') as f:
+        layer_info = pickle.load(f)
+    
     # get the tokenizer
     print(f'[rank {rank}] Preparing data loaders...')
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
@@ -83,7 +86,7 @@ def main(cfg_version: str,
     print(f'[rank {rank}] Layers read.')
 
     print(f'[rank {rank}] Setting up UIA...')
-    uia = UIA(LL, SS, model, rank=rank)
+    uia = UIA(LL, SS, model, layer_info=layer_info, rank=rank)
     print(f'[rank {rank}] UIA ready.')
 
     print(f'[rank {rank}] Setting up evaluator...')
@@ -147,7 +150,7 @@ if __name__ == "__main__":
         'llama_1b':   [669.5, 646.5, 609.5],
     }
     
-    MODEL_TYPE = 'llama_350m'
+    MODEL_TYPE = 'llama_130m'
     FOLDERS = ['ablation']
     gamma_list = [1.0]
 
@@ -161,17 +164,13 @@ if __name__ == "__main__":
         _path = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
         files.extend(os.listdir(_path))
 
-    _files = []
-    for file in files:
-        if file.startswith('20251107') or file.startswith('20251108'):
-            _files.append(file)
+    # _files = []
+    # for file in files:
+    #     if file.startswith('20251107') or file.startswith('20251108'):
+    #         _files.append(file)
     
     _files = [
-        '20251110_000935',
-        '20251110_093319',
-        '20251110_093502',
-        '20251110_093554',
-        '20251110_094016',
+        '20251103_085721',
     ]
 
     if rank == 0:
