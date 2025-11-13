@@ -14,6 +14,7 @@ class UIA():
                  SS: dict,
                  model: torch.nn.Module,
                  layer_info: dict,
+                 rate: float=100.0,
                  rank: int=0) -> None:
         """Allocate ranks and sparsity levels for each layer given target parameters.
         Args:
@@ -23,6 +24,7 @@ class UIA():
             model: the original model
         """
         self.rank = rank
+        self.rate = rate
         self.layer_info = layer_info
         self.LL = LL
         self.SS = SS
@@ -50,7 +52,7 @@ class UIA():
         rank_quantile = rank / len(s)
         return rank_quantile, rank
 
-    def intialization(self, rate=50.0):
+    def intialization(self):
         """Initialize the statistics for each layer.
         Args:
             None
@@ -61,7 +63,7 @@ class UIA():
             L = self.LL[key]
             S = self.SS[key]
             max_value = torch.max(S.abs()).item()
-            eps = max_value / rate
+            eps = max_value / self.rate
 
             row, col = L.shape
             self.dim[key] = (row, col)
