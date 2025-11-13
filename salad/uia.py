@@ -50,7 +50,7 @@ class UIA():
         rank_quantile = rank / len(s)
         return rank_quantile, rank
 
-    def intialization(self):
+    def intialization(self, rate=50.0):
         """Initialize the statistics for each layer.
         Args:
             None
@@ -60,9 +60,13 @@ class UIA():
         for key in self.LL:
             L = self.LL[key]
             S = self.SS[key]
+            max_value = torch.max(S.abs()).item()
+            eps = max_value / rate
+
             row, col = L.shape
             self.dim[key] = (row, col)
-            nr_nonzero = torch.sum(S != 0).item()
+            # nr_nonzero = torch.sum(S != 0).item()
+            nr_nonzero = torch.sum(S.abs() > eps).item()
             nr_total = row * col
 
             self.rate_density[key] = nr_nonzero / nr_total

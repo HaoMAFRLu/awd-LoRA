@@ -322,9 +322,11 @@ class CrossEvaluator():
                                rank_quantile: dict,
                                rate_density: dict) -> None:
         if self.model is not None:
-            self.fullrank_results_train =  self._eval_lowrank_sparsity(self.train_loader) 
+            # self.fullrank_results_train =  self._eval_lowrank_sparsity(self.train_loader) 
+            self.fullrank_results_train = self._eval_par_lowrank_lowrank_sparsity(self.train_loader, rank_quantile, rate_density)
             self.fullrank_results_train_params = cal_nr_params(self.total_params, rank_quantile, rate_density, self.layer_dim)
-            self.fullrank_results_test = self._eval_lowrank_sparsity(self.test_loader)
+            # self.fullrank_results_test = self._eval_lowrank_sparsity(self.test_loader)
+            self.fullrank_results_test = self._eval_par_lowrank_lowrank_sparsity(self.test_loader, rank_quantile, rate_density)
             self.fullrank_results_test_params = cal_nr_params(self.total_params, rank_quantile, rate_density, self.layer_dim)
             print('Full-rank + sparsity model evaluation done.')
     
