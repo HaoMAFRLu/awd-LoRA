@@ -1,7 +1,7 @@
 seed: 42
 name: llama_350m
 num_total_iters: 124000
-num_freq: 40
+num_freq: 20
 gradient: coupled
 is_asyn: false
 is_init: false

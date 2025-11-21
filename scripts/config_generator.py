@@ -226,7 +226,7 @@ if __name__ == "__main__":
         save_interval=50,
         min_lr_ratio=0.1,
         weight_decay=0.0,
-        num_freq=40,
+        num_freq=20,
         seed_for_shuffle=42,
         num_total_iters=124000,
         batch_size=256,
