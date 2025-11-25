@@ -82,12 +82,12 @@ if __name__ == "__main__":
     MODEL_TYPES = [
         # 'llama_60m',
         # 'llama_130m',
-        # 'llama_350m',
-        'llama_1b',
+        'llama_350m',
+        # 'llama_1b',
     ]
     FOLDERS = [
         'ablation',
-        'salad',
+        # 'salad',
     ]
 
     # MODEL_TYPE = 'llama_350m'
@@ -97,5 +97,7 @@ if __name__ == "__main__":
         for FOLDER in FOLDERS:
             path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
             files = os.listdir(path_folder)
+
+            files = ['20251120_212958']
             for FILE in files:
                 main(MODEL_TYPE=MODEL_TYPE, FOLDER=FOLDER, FILE=FILE)

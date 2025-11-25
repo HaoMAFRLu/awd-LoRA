@@ -18,7 +18,8 @@ class SALADTrainer():
                  data: datasets.Dataset,
                  config: dict,
                  rank: int=0,
-                 world_size: int=0) -> None:
+                 world_size: int=0,
+                 folder_name: str=None) -> None:
         """
         Args:
             model: the nn.Module to train
@@ -78,7 +79,8 @@ class SALADTrainer():
             wandb.login(key=os.getenv("WANDB_API_KEY"), relogin=False)
             self.run_wandb = wandb.init(project="SALAD_"+self.config['name'], 
                                         entity="hao-ma-eth-z-rich", 
-                                        config=self.config)
+                                        config=self.config,
+                                        name=folder_name)
             
         # fk the error 429!!!!!!ls -l
         hf_login_once()

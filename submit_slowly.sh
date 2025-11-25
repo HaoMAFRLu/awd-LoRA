@@ -7,7 +7,7 @@ INDEX=0
 while IFS=" " read -r arg1 arg2 arg3; do
     echo "[INFO] Submit job index $INDEX with rho=$arg1 alpha=$arg2 beta=$arg3"
 
-    condor_submit_bid 2000 \
+    condor_submit_bid 50 \
          -a "arguments=-u -m torch.distributed.run \
             --nproc_per_node=8 --nnodes=1 \
             --rdzv_backend=c10d --rdzv_endpoint=127.0.0.1:$((29500 + INDEX)) \

@@ -86,6 +86,8 @@ def main(cfg_version: str,
         with open(output_path, 'w', encoding='utf-8') as f:
             yaml.safe_dump(cfg, f, sort_keys=False, allow_unicode=True)
         shutil.copy(path_cfg_model, path_folder)
+    else:
+        folder_name = None
     
     # broadcast the path folder to all ranks
     path_folder_list = [path_folder if rank == 0 else None]
@@ -97,7 +99,9 @@ def main(cfg_version: str,
     data = get_data(cfg['seed_for_shuffle'])
 
     ddp_trainer = SALADTrainer(model, data, cfg, 
-                               rank=rank, world_size=world_size)
+                               rank=rank, 
+                               world_size=world_size,
+                               folder_name=folder_name)
     ddp_trainer.train(path_folder=path_folder)
     
 if __name__ == "__main__":
