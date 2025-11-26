@@ -13,6 +13,19 @@ from salad.utils_analysis import *
 
 root = get_parent_path(lvl=1)
 
+class CPU_Unpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        # 这里拦截 torch.storage._load_from_bytes
+        if module == 'torch.storage' and name == '_load_from_bytes':
+            # 把内部的 torch.load(...) 强制 map 到 CPU（或 cuda:0）
+            return lambda b: torch.load(
+                io.BytesIO(b),
+                map_location='cpu',        # 如果想直接上 GPU，可以改成 'cuda:0'
+                weights_only=False         # 兼容你现在的 PyTorch 2.6
+            )
+        # 其他的一律走默认逻辑
+        return super().find_class(module, name)
+    
 key_word_map = {
     'X': 'X',
     'X-S': 'X_without_S',
@@ -65,8 +78,10 @@ def get_results(model_type: str,
         stats = pickle.load(f)
     eval = stats['eval_test_results']
 
+
     with open(os.path.join(path, 'layer_info.pkl'), 'rb') as f:
-        data = pickle.load(f)
+        # data = pickle.load(f)
+        data = CPU_Unpickler(f).load()
     
     df = build_item(
         exp_id=file, 
@@ -104,6 +119,7 @@ def main(MODEL_TYPE: str,
 
     df_list = []
     for (FOLDER, file) in files:
+        print(f'Processing {FOLDER}/{file}...')
         df = get_results(MODEL_TYPE, FOLDER, file, layer_keys)
         df_list.append(df)
 
@@ -134,7 +150,7 @@ def main(MODEL_TYPE: str,
 
 if __name__ == "__main__":
     MODEL_TYPE = 'llama_130m'
-    FOLDERS = ['ablation']
+    FOLDERS = ['ablation', 'salad']
     files = []
 
     for FOLDER in FOLDERS:
