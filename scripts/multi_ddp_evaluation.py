@@ -167,14 +167,14 @@ if __name__ == "__main__":
         _path = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
         files.extend(os.listdir(_path))
 
-    _files = []
-    for file in files:
-        if file.startswith('20251120'):
-            _files.append(file)
+    # _files = []
+    # for file in files:
+    #     if file.startswith('20251120'):
+    #         _files.append(file)
     
-    # _files = [
-    #     '20251103_085721',
-    # ]
+    _files = [
+        '20251125_144957',
+    ]
 
     if rank == 0:
         # print all file names
