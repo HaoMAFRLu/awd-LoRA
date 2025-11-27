@@ -108,7 +108,11 @@ class UIA():
         else:
             raise ValueError("component should be either 'L' or 'S'.")
         
-        ratio = 1 - params_to_reduce / params_capacity
+        if params_capacity == 0:
+            ratio = 1.0
+        else:
+            ratio = 1 - params_to_reduce / params_capacity
+        
         ratio = np.clip(ratio, 0.0, 1.0)
 
         for key, value in quantiles.items():
