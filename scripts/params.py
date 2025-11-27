@@ -183,7 +183,7 @@ mlp_gate_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.1,
+        'rate_decay': 0.15,
     },
     'beta_dict': {
         'init': 0.0,
@@ -212,7 +212,7 @@ mlp_down_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.1,
+        'rate_decay': 0.15,
     },
     'beta_dict': {
         'init': 0.0,
@@ -241,7 +241,7 @@ mlp_up_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.1,
+        'rate_decay': 0.15,
     },
     'beta_dict': {
         'init': 0.0,
