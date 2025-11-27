@@ -144,6 +144,8 @@ def main(cfg_version: str,
         with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
+    dist.destroy_process_group()
+    
 if __name__ == "__main__":
     params_tgt = {
         'llama_9m':   [7.5, 6.5, 5.5],
