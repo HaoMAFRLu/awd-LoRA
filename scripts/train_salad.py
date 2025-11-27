@@ -41,7 +41,8 @@ def main(cfg_version: str,
          folder: str,
          rho: float,
          alpha_rate: float,
-         beta_rate: float) -> None:
+         beta_rate: float,
+         exclude_layers: list=None) -> None:
     
     rank, world_size = _init_distributed()
     print(f'[Rank {rank}] initializing...')
@@ -68,6 +69,12 @@ def main(cfg_version: str,
                 layer['params']['alpha_dict']['rate_decay'] = alpha_rate
                 layer['params']['beta_dict']['rate_decay'] = beta_rate 
 
+    if exclude_layers is not None:
+        cfg['layers'] = [
+            layer for layer in cfg['layers']
+            if not any(ex in layer['name'] for ex in exclude_layers)
+        ]
+        
     seed = cfg['seed']
     set_seed(seed)
 
@@ -107,10 +114,13 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     args = parse_args()
 
-    cfg_version = 'llama_350m'
+    cfg_version = 'llama_60m'
     folder = 'ablation'
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
 
+    exclude_layers = ['mlp']
+
     main(cfg_version, path_cfg, path_cfg_model, folder,
-         args.rho, args.alpha_rate, args.beta_rate)
+         args.rho, args.alpha_rate, args.beta_rate,
+         exclude_layers=exclude_layers)
