@@ -98,6 +98,6 @@ if __name__ == "__main__":
             path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
             files = os.listdir(path_folder)
 
-            files = ['20251125_144957']
+            files = ['20251126_101939']
             for FILE in files:
                 main(MODEL_TYPE=MODEL_TYPE, FOLDER=FOLDER, FILE=FILE)

@@ -73,7 +73,7 @@ if __name__ == '__main__':
     MODEL_TYPE = 'llama_130m'
     FOLDER = 'ablation'  
     # file = '20251029_162352'   # 60m
-    file = '20251103_085721'   # 130m
+    file = '20251126_140836'   # 130m
     main(MODEL_TYPE=MODEL_TYPE,
          FOLDER=FOLDER,
          file=file)
