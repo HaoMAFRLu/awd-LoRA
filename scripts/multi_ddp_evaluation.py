@@ -160,7 +160,7 @@ if __name__ == "__main__":
     
     MODEL_TYPE = 'llama_350m'
     FOLDERS = ['ablation']
-    gamma_list = [1.0, 0.95, 0.9, 0.85, 0.8]
+    gamma_list = [0.75, 0.70, 0.65, 0.60, 0.55]
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
