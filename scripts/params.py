@@ -249,7 +249,7 @@ mlp_up_proj_params = {
         'rate_decay': 0.005,
     },
     'rho_dict':            {
-        'rho':           1e-7,
+        'rho':           5e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
