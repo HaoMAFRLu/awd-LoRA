@@ -160,8 +160,8 @@ if __name__ == "__main__":
     
     MODEL_TYPE = 'llama_1b'
     FOLDERS = ['salad']
-    gamma_list = [1.0]
-    # gamma_list = np.arange(0.1, 0.50, 0.05).tolist()
+    # gamma_list = [1.0]
+    gamma_list = np.arange(0.1, 0.50, 0.05).tolist()
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
