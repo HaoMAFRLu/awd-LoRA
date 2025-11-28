@@ -158,8 +158,8 @@ if __name__ == "__main__":
         'llama_1b':   [669.5, 646.5, 609.5],
     }
     
-    MODEL_TYPE = 'llama_1b'
-    FOLDERS = ['salad']
+    MODEL_TYPE = 'llama_350m'
+    FOLDERS = ['ablation']
     # gamma_list = [0.75, 0.70, 0.65, 0.60, 0.55]
     gamma_list = np.arange(0.5, 1.0, 0.05).tolist()
 
@@ -179,7 +179,10 @@ if __name__ == "__main__":
     #         _files.append(file)
     
     _files = [
-        '20251016_233939',
+        '20251104_131243',
+        '20251107_105320',
+        '20251127_103821',
+        '20251127_130254',
     ]
 
     if rank == 0:
