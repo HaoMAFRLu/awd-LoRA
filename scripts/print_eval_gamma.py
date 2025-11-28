@@ -183,7 +183,8 @@ if __name__ == "__main__":
     files = os.listdir(os.path.join(root, 'data', FOLDER, model_type))
     
     files = [
-            '20251110_094016'
+            # '20251110_094016',
+            '20251110_093319'
              ]
 
     main(model_type=model_type,

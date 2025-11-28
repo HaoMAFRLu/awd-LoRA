@@ -159,7 +159,7 @@ if __name__ == "__main__":
     }
     
     MODEL_TYPE = 'llama_1b'
-    FOLDERS = ['ablation']
+    FOLDERS = ['salad']
     # gamma_list = [0.75, 0.70, 0.65, 0.60, 0.55]
     gamma_list = np.arange(0.5, 1.0, 0.05).tolist()
 
