@@ -114,12 +114,12 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     args = parse_args()
 
-    cfg_version = 'llama_60m'
+    cfg_version = 'llama_130m'
     folder = 'ablation'
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
 
-    exclude_layers = ['q_proj', 'k_proj']
+    exclude_layers = ['mlp']
 
     main(cfg_version, path_cfg, path_cfg_model, folder,
          args.rho, args.alpha_rate, args.beta_rate,
