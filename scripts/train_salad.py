@@ -119,7 +119,7 @@ if __name__ == "__main__":
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
 
-    exclude_layers = ['mlp']
+    exclude_layers = ['o_proj', 'v_proj']
 
     main(cfg_version, path_cfg, path_cfg_model, folder,
          args.rho, args.alpha_rate, args.beta_rate,
