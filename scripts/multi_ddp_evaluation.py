@@ -141,7 +141,10 @@ def main(cfg_version: str,
             'eval_train_results': evaluator.eval_train_results,
             'eval_test_results': evaluator.eval_test_results
         }
-        with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
+        # with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
+        #     pickle.dump(data, f)
+
+        with open(os.path.join(path_folder, 'eval_results_'+str(gamma)+'.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
     dist.destroy_process_group()
@@ -157,7 +160,7 @@ if __name__ == "__main__":
     
     MODEL_TYPE = 'llama_350m'
     FOLDERS = ['ablation']
-    gamma_list = [1.0]
+    gamma_list = [1.0, 0.95, 0.9, 0.85, 0.8]
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
@@ -175,7 +178,7 @@ if __name__ == "__main__":
     #         _files.append(file)
     
     _files = [
-        '20251127_110631',
+        '20251110_094016',
     ]
 
     if rank == 0:

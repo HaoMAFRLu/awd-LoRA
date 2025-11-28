@@ -39,6 +39,9 @@ def plot_figs(layer_info: dict,
             ax1 = axes[j, i]
             ax2 = ax1.twinx()
 
+            ax1.set_ylim(0, 1)
+            ax2.set_ylim(0, 1) 
+
             _layer_info = layer_info[layer_name]
 
             ranks = np.array(_layer_info['rank']) / _layer_info['total_rank'][0]
@@ -68,8 +71,13 @@ def main(MODEL_TYPE: str,
     path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE, FILE)
     layer_info = get_layer_info(path_folder)
 
-    layer_names = [key for key in layer_info.keys() if 'layers' in key]
-    nr_layers = len(layer_names) // 7
+    nr_layers = 0
+    for key in layer_info.keys():
+        if 'layers' in key:
+            parts = key.split(".")
+            if int(parts[1]) + 1 > nr_layers:
+                nr_layers = int(parts[1]) + 1
+
 
     path_fig = os.path.join(root, 'data', 'figures', FOLDER, MODEL_TYPE, FILE)
     mkdir(path_fig)
@@ -80,9 +88,9 @@ def main(MODEL_TYPE: str,
 
 if __name__ == "__main__":
     MODEL_TYPES = [
-        # 'llama_60m',
+        'llama_60m',
         # 'llama_130m',
-        'llama_350m',
+        # 'llama_350m',
         # 'llama_1b',
     ]
     FOLDERS = [
@@ -98,6 +106,10 @@ if __name__ == "__main__":
             path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
             files = os.listdir(path_folder)
 
-            files = ['20251126_133151']
+            files = [
+                     '20251127_230848',
+                     '20251127_231700'
+                    ]
             for FILE in files:
+                print(f'Processing MODEL_TYPE: {MODEL_TYPE}, FOLDER: {FOLDER}, FILE: {FILE}')
                 main(MODEL_TYPE=MODEL_TYPE, FOLDER=FOLDER, FILE=FILE)
