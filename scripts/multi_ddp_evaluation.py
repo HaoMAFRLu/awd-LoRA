@@ -158,10 +158,10 @@ if __name__ == "__main__":
         'llama_1b':   [669.5, 646.5, 609.5],
     }
     
-    MODEL_TYPE = 'llama_130m'
+    MODEL_TYPE = 'llama_350m'
     FOLDERS = ['ablation']
-    gamma_list = [1.0]
-    # gamma_list = np.arange(0.5, 1.0, 0.05).tolist()
+    # gamma_list = [1.0]
+    gamma_list = np.arange(0.1, 0.50, 0.05).tolist()
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
@@ -178,19 +178,14 @@ if __name__ == "__main__":
     #     if file.startswith('20251120'):
     #         _files.append(file)
     
-    # _files = [
-    #     '20251104_131243',
-    #     '20251107_105320',
-    #     '20251127_103821',
-    #     '20251127_130254',
-    # ]
-
     _files = [
-        '20251128_093234',
-        '20251128_093054',
-        '20251128_092739',
+        '20251110_094016',
+        # '20251104_131243',
+        # '20251107_105320',
+        # '20251127_103821',
+        # '20251127_130254',
     ]
-    
+
     if rank == 0:
         # print all file names
         print('All files to process:')
