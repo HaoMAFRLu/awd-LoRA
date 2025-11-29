@@ -178,12 +178,12 @@ def main(model_type: str,
 
 
 if __name__ == "__main__":
-    model_type = 'llama_350m'
+    model_type = 'llama_130m'
     FOLDER = 'ablation'
     files = os.listdir(os.path.join(root, 'data', FOLDER, model_type))
     
     files = [
-            '20251110_094016',    # 350m
+            # '20251110_094016',    # 350m
             # '20251128_134206',    # 350m
             # '20251128_134339',    # 350m
             # '20251128_134521',    # 350m
@@ -193,6 +193,8 @@ if __name__ == "__main__":
             # '20251107_105320',   # 350m
             # '20251127_103821',   # 350m
             # '20251127_130254'    # 350m
+            # '20251029_162352',  # 60m
+            '20251103_085721',  # 130m
              ]
 
     main(model_type=model_type,
