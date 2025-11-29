@@ -158,7 +158,7 @@ if __name__ == "__main__":
         'llama_1b':   [646.5, 609.5],
     }
     
-    MODEL_TYPE = 'llama_60m'
+    MODEL_TYPE = 'llama_130m'
     FOLDERS = ['ablation']
     # gamma_list = [1.0]
     gamma_list = np.arange(0.4, 1.05, 0.05).tolist()
@@ -188,7 +188,8 @@ if __name__ == "__main__":
         # '20251128_134521',
         # '20251128_134339',
         # '20251128_134206',
-        '20251029_162352',
+        # '20251029_162352',
+        '20251103_085721',
     ]
 
     if rank == 0:
