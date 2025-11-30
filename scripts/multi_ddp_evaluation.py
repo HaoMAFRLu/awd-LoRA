@@ -161,7 +161,7 @@ if __name__ == "__main__":
     MODEL_TYPE = 'llama_350m'
     FOLDERS = ['ablation']
     # gamma_list = [1.0]
-    gamma_list = np.arange(0.4, 1.05, 0.05).tolist()
+    gamma_list = np.arange(0.51, 0.60, 0.01).tolist()
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
@@ -191,8 +191,8 @@ if __name__ == "__main__":
         # '20251029_162352',
         # '20251103_085721',
         '20251129_205117',
-        '20251129_205243',
-        '20251129_221213',
+        # '20251129_205243',
+        # '20251129_221213',
     ]
 
     if rank == 0:
