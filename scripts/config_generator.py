@@ -314,7 +314,7 @@ if __name__ == "__main__":
         num_workers=0,
         scheduler_type='cosine',
         include_embeddings=True,
-        include_head=True,
+        include_head=False,
         is_clip=1.0,
         bos_token_id=0,
         eos_token_id=1,
