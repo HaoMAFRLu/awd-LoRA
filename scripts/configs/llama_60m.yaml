@@ -35,8 +35,8 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.2
-    rate_sparsity: 0.2
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
       init: !!float '0'
       mode: adaptive
@@ -60,8 +60,8 @@ layers:
     is_init: false
     iter_max: 1
     tol: 0.001
-    rate_rank: 0.2
-    rate_sparsity: 0.2
+    rate_rank: 0.15
+    rate_sparsity: 0.05
     alpha_dict:
       init: !!float '0'
       mode: adaptive
