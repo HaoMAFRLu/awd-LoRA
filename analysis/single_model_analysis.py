@@ -88,9 +88,9 @@ def main(MODEL_TYPE: str,
 
 if __name__ == "__main__":
     MODEL_TYPES = [
-        'llama_60m',
+        # 'llama_60m',
         # 'llama_130m',
-        # 'llama_350m',
+        'llama_350m',
         # 'llama_1b',
     ]
     FOLDERS = [
@@ -107,8 +107,9 @@ if __name__ == "__main__":
             files = os.listdir(path_folder)
 
             files = [
-                     '20251127_230848',
-                     '20251127_231700'
+                    '20251129_205117',
+                    '20251129_205243',
+                    '20251129_221213',
                     ]
             for FILE in files:
                 print(f'Processing MODEL_TYPE: {MODEL_TYPE}, FOLDER: {FOLDER}, FILE: {FILE}')
