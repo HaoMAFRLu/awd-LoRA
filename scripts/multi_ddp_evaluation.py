@@ -123,6 +123,9 @@ def main(cfg_version: str,
 
 
     for gamma in gamma_list:
+
+        gamma = np.clip(gamma, 0, 1)
+        
         rank_quantile_list = []
         rate_density_list = []
 
