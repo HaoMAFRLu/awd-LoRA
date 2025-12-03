@@ -162,7 +162,7 @@ if __name__ == "__main__":
     MODEL_TYPE = 'llama_130m'
     FOLDERS = ['head']
     # gamma_list = [1.0]
-    gamma_list = np.arange(0.10, 0.40, 0.05).tolist()
+    gamma_list = np.arange(0.40, 1.05, 0.05).tolist()
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
