@@ -159,10 +159,10 @@ if __name__ == "__main__":
         'llama_1b':   [646.5, 609.5],
     }
     
-    MODEL_TYPE = 'llama_130m'
-    FOLDERS = ['ablation']
+    MODEL_TYPE = 'llama_350m'
+    FOLDERS = ['head']
     # gamma_list = [1.0]
-    gamma_list = np.arange(0.10, 0.50, 0.05).tolist()
+    gamma_list = np.arange(0.40, 1.05, 0.05).tolist()
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
@@ -205,8 +205,9 @@ if __name__ == "__main__":
         # '20251126_125908',
         # '20251126_112055',
         # '20251202_000040',
-        '20251202_164626',
-        '20251202_131304',
+        # '20251202_164626',
+        # '20251202_131304',
+        '20251202_094223',
     ]
 
     if rank == 0:
