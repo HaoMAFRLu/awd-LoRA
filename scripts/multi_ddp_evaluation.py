@@ -162,7 +162,7 @@ if __name__ == "__main__":
     MODEL_TYPE = 'llama_60m'
     FOLDERS = ['head']
     # gamma_list = [1.0]
-    gamma_list = np.arange(0.30, 1.05, 0.05).tolist()
+    gamma_list = np.arange(0.30, 0.65, 0.05).tolist()
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     #         _files.append(file)
     
     _files = [
-        '20251204_152747',
+        '20251204_134313',
     ]
 
     if rank == 0:
