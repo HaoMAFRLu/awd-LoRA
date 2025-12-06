@@ -162,7 +162,7 @@ if __name__ == "__main__":
     MODEL_TYPE = 'llama_1b'
     FOLDERS = ['ablation']
     # gamma_list = [1.0]
-    gamma_list = np.arange(0.85, 1.05, 0.05).tolist()
+    gamma_list = np.arange(0.40, 1.05, 0.05).tolist()
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
@@ -180,6 +180,7 @@ if __name__ == "__main__":
     #         _files.append(file)
     
     _files = [
+        '20251130_125821',
         '20251130_130148',
         '20251130_125959',
     ]
