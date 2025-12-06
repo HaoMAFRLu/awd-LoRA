@@ -162,8 +162,7 @@ if __name__ == "__main__":
     MODEL_TYPE = 'llama_1b'
     FOLDERS = ['ablation']
     # gamma_list = [1.0]
-    gamma_list = np.arange(0.35, 0.60, 0.05).tolist()
-    # gamma_list = np.arange(0.60, 0.85, 0.05).tolist()
+    gamma_list = np.arange(0.60, 0.85, 0.05).tolist()
     # gamma_list = np.arange(0.85, 1.05, 0.05).tolist()
 
     print('Setting up DDP...')
