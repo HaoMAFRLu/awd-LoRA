@@ -178,7 +178,8 @@ if __name__ == "__main__":
     for MODEL_TYPE in MODEL_TYPES:
         for FOLDER in FOLDERS:
             _path = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
-            files.extend(os.listdir(_path))
+            if os.path.exists(_path):
+                files.extend(os.listdir(_path))
 
     # _files = []
     # for file in files:
