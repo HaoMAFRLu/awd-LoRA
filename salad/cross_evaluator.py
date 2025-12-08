@@ -70,19 +70,13 @@ class CrossEvaluator():
         opt_copy(self.model_sd, self.model)
         return self.evaluate_one_step(self.model, dataloader)
 
-    # def _eval_lowrank_sparsity(self, dataloader) -> dict:
-    #     """Evaluate the low-rank model with sparsity."""
-    #     self.opt_replace(self.model, self.layers, self.LL)
-    #     self.opt_add(self.model, self.layers, self.SS)
-    #     return self.evaluate_one_step(self.model, dataloader)
-
     def _eval_par_lowrank_lowrank_sparsity(self, dataloader, rank_quantile, rate_density) -> dict:
         """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
         opt_copy(self.model_sd, self.model)  # copy the original model
         opt_replace(self.model, self.layers, self.LL, self.device)  # replace partial layers with low-rank matrices L
         opt_lowrank(self.model, self.layers, rank_quantile, self.device)
         _SS = re_sparse(self.SS, rate_density)
-        self.opt_add(self.model, self.layers, _SS, self.device)  # add sparse components S
+        opt_add(self.model, self.layers, _SS, self.device)  # add sparse components S
         return self.evaluate_one_step(self.model, dataloader)
     
     @torch.no_grad()
