@@ -14,7 +14,7 @@ embed_params = {
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.005,
+        'rate_decay': 0.003,
     },
     'rho_dict':            {
         'rho':           5e-9,
