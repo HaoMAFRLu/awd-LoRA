@@ -114,7 +114,7 @@ def load_all_models(MODEL_TYPES: list=['llama_60m'],
     gamma = np.clip(gamma, 0, 1)
     rank_quantile, rate_density = uia.allocate(params_tgt=params_tgt, gamma=gamma)
 
-    # Step 3: replace the specified layers in the original model with L+S
+    # Step 3: replace the specified layers in the original model with \tilde{L+S}
     # Step 3.1: replace the specified layers with low-rank matirces
     opt_replace(model_SALAAD, layers, LL, device)
     # Step 3.2: do the low rank approximation based on the rank quantile
