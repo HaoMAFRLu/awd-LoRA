@@ -19,7 +19,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def load_all_models(MODEL_TYPES: list=['llama_60m'],
                    FOLDERS: list=['baseline'],
                    FILE: str=None,
-                   nr_params: float=646.5,
+                   params_tgt: float=646.5,
                    gamma: float=0.5) -> None:
     """
     """
@@ -38,8 +38,12 @@ def load_all_models(MODEL_TYPES: list=['llama_60m'],
     
     path_cfg = os.path.join(path_folder, MODEL_TYPE+'.yaml')
     path_cfg_model = os.path.join(path_folder, MODEL_TYPE+'_model.json')
+    
+    with open(os.path.join(path_folder, 'layer_info.pkl'), 'rb') as f:
+        layer_info = pickle.load(f)
     with open(path_cfg) as f:
         cfg = yaml.safe_load(f)
+    
     # set up the hyperparameters
     seed = cfg['seed']
     set_seed(seed)
@@ -67,32 +71,63 @@ def load_all_models(MODEL_TYPES: list=['llama_60m'],
             LL[key] = LL_part[key]
             SS[key] = SS_part[key]
 
-    
-    
     # Step 2: get the specified layers
     layers = [entry['name'] for entry in cfg['layers']]
-
-    # Step 3: get the linear layers in the model for cross evaluation
-    # model_layers = get_model_layer_names(model_original)
 
     # Step 3: load the original model X again
     model_LS = get_model(path_cfg_model)
     load_model(model_LS, os.path.join(path_folder, 'model.pth'))
     model_LS.to(device)
 
-    uia = UIA(LL, SS, model_LS, 
+    # Step 4: set up UIA to allocate the parameters
+    uia = UIA(LL, 
+              SS, 
+              model_LS, 
               layer_info=layer_info, 
-              rate=100000000.0,
-              rank=rank)
-    # Step 4: replace the specified layers in the original model with L+S
-    # Step 4.1: replace the specified layers with low-rank matirces
+              rate=100000000.0)    
+
+    # Step 5: replace the specified layers in the original model with L+S
+    # Step 5.1: replace the specified layers with low-rank matirces
     opt_replace(model_LS, layers, LL, device)
-    # Step 4.2: add sparse matrices
-    opt_lowrank(model_LS, layers, rank_quantile)
+    # Step 5.2: do the low rank approximation based on the rank quantile
+    opt_lowrank(model_LS, layers, uia.rank_quantile_energy, device)
+    # Step 5.3: approximate the sparse matrices based on the rate density
+    _SS = re_sparse(SS, uia.rate_density)
+    # Step 5.4: add the sparse matrices to the model
+    opt_add(model_LS, layers, _SS, device)
+    # Optional: check the number of parameters
+    nr_params = uia.check_params(uia.rank_quantile_energy,
+                                 uia.rate_density)
+    print(f'Number of parameters: {nr_params/1e6:.2f} Million')
+        
+
+    """
+    Load the spars and low-rank model, and adjust to certain number
+    of parameters
+    """
+    # Step 1: load the original model X aagain
+    model_SALAAD = get_model(path_cfg_model)
+    load_model(model_SALAAD, os.path.join(path_folder, 'model.pth'))
+    model_SALAAD.to(device)
+
+    # Step 2: shrink to the target number of parameters
+    gamma = np.clip(gamma, 0, 1)
+    rank_quantile, rate_density = uia.allocate(params_tgt=params_tgt, gamma=gamma)
+
+    # Step 3: replace the specified layers in the original model with L+S
+    # Step 3.1: replace the specified layers with low-rank matirces
+    opt_replace(model_SALAAD, layers, LL, device)
+    # Step 3.2: do the low rank approximation based on the rank quantile
+    opt_lowrank(model_SALAAD, layers, rank_quantile, device)
+    # Step 3.3: approximate the sparse matrices based on the rate density
     _SS = re_sparse(SS, rate_density)
-    opt_add(model_LS, layers, _SS) 
-    
-    print('finished')
+    # Step 3.4: add the sparse matrices to the model
+    opt_add(model_SALAAD, layers, _SS, device)
+    # Optional: check the number of parameters
+    nr_params = uia.check_params(rank_quantile,
+                                 rate_density)
+    print(f'Number of parameters: {nr_params/1e6:.2f} Million')
+
 
 if __name__ == '__main__':
     MODEL_TYPES = [
@@ -105,10 +140,12 @@ if __name__ == '__main__':
               'incl_embedding',
               'baseline'
             ]
+    
     # FILE = '20251204_152747'
     FILE = '20251204_135646'
     gamma = 0.25
-    nr_params = 646.5
+    nr_params = 44.5
+
     load_all_models(MODEL_TYPES,
                     FOLDERS,
                     FILE,

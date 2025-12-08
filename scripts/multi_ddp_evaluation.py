@@ -113,7 +113,7 @@ def main(cfg_version: str,
     print(f'[rank {rank}] Collecting results for full-rank + sparsity model...')
     with timers['energy']:
         evaluator.collect_single_results(uia.rank_quantile_energy,
-                                        uia.rate_density)  # evaluate the full-rank + sparsity model and store the results
+                                         uia.rate_density)  # evaluate the full-rank + sparsity model and store the results
     print(f'[rank {rank}] Energy-based evaluation time: {timers["energy"].total/60:.1f} mins.')
 
     print(f'[rank {rank}] Collecting results for original model...')
@@ -167,7 +167,8 @@ if __name__ == "__main__":
     
     FOLDERS = ['baseline', 'incl_embedding']
     # gamma_list = [1.0]
-    gamma_list = [round(x, 2) for x in np.arange(0.40, 1.05, 0.05)]
+    # gamma_list = [round(x, 2) for x in np.arange(0.40, 1.05, 0.05)]
+    gamma_list = [0.60]
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()

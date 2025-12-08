@@ -56,7 +56,7 @@ class CrossEvaluator():
         self.SS = SS if SS is not None else {}
         self.layers = layers if layers is not None else []
         
-        self.model_layers = get_linear_layers_name(self.model) if model is not None else []
+        # self.model_layers = get_linear_layers_name(self.model) if model is not None else []
         
         self.eval_train_results = {}
         self.eval_test_results = {}

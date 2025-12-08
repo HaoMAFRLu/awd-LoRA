@@ -178,8 +178,8 @@ def main(model_type: str,
 
 
 if __name__ == "__main__":
-    model_type = 'llama_1b'
-    FOLDER = 'ablation'
+    model_type = 'llama_60m'
+    FOLDER = 'baseline'
     files = os.listdir(os.path.join(root, 'data', FOLDER, model_type))
     
     files = [
@@ -212,9 +212,7 @@ if __name__ == "__main__":
             # '20251204_135502',
             # '20251204_152747',
             # '20251204_134313',
-            '20251130_130148',
-            '20251130_125959',
-            '20251130_125821',
+            '20251204_135646',
              ]
 
     main(model_type=model_type,
