@@ -8,6 +8,8 @@ import math
 
 from salad.utils import *
 from salad.simple_timer import SimpleTimer
+from salad.operators import *
+
 
 class CrossEvaluator():
     """
@@ -65,95 +67,22 @@ class CrossEvaluator():
             Dictionary with evaluation results.
         """
         # evaluate the original model, X
-        self.opt_copy(self.model_sd, self.model, self.layers)
+        opt_copy(self.model_sd, self.model, self.layers, self.device)
         return self.evaluate_one_step(self.model, dataloader)
-   
-    # def _eval_orginal_without_sparsity(self, dataloader) -> dict:
-    #     """Evaluate the original model without sparsity."""
-    #     # evaluate the original model, X - S
-    #     self.opt_copy(self.model_sd, self.model, self.layers)
-    #     self.opt_remove(self.model, self.layers, self.SS)
-    #     return self.evaluate_one_step(self.model, dataloader)
-         
-    # def _eval_original_lowrank_without_sparsity(self, dataloader) -> dict:
-    #     """Evaluate the original model with low-rank approximation without sparsity."""
-    #     # evaluate the original model, 90% low-rank approximation of (X - S)
-    #     self.opt_copy(self.model_sd, self.model, self.layers)
-    #     self.opt_remove(self.model, self.layers, self.SS)
-    #     self.opt_lowrank(self.model, self.layers, self.rank_quantile)
-    #     return self.evaluate_one_step(self.model, dataloader)
-        
-    # def _eval_lowrank(self, dataloader) -> dict:
-    #     """Evaluate the low-rank model."""
-    #     self.opt_replace(self.model, self.layers, self.LL)
-    #     return self.evaluate_one_step(self.model, dataloader)
-     
-    # def _eval_lowrank_lowrank(self, dataloader) -> dict:
-    #     """Evaluate the low-rank model with low-rank approximation."""
-    #     self.opt_replace(self.model, self.layers, self.LL)
-    #     self.opt_lowrank(self.model, self.layers, self.rank_quantile)
-    #     return self.evaluate_one_step(self.model, dataloader)
-          
-    def _eval_lowrank_sparsity(self, dataloader) -> dict:
-        """Evaluate the low-rank model with sparsity."""
-        self.opt_replace(self.model, self.layers, self.LL)
-        self.opt_add(self.model, self.layers, self.SS)
-        return self.evaluate_one_step(self.model, dataloader)
-    
-    # def _eval_par_lowrank_sparsity(self, dataloader) -> dict:
-    #     """Evaluate the partial low-rank model with sparsity."""
-    #     self.opt_copy(self.model_sd, self.model, self.layers)
-    #     self.opt_replace(self.model, self.partial_layers, self.LL)
-    #     self.opt_add(self.model, self.partial_layers, self.SS)
-    #     return self.evaluate_one_step(self.model, dataloader)
 
-    # def _eval_lowrank_lowrank_sparsity(self, dataloader, rank_quantile) -> dict:
-    #     """Evaluate the low-rank model with low-rank approximation and sparsity."""
+    # def _eval_lowrank_sparsity(self, dataloader) -> dict:
+    #     """Evaluate the low-rank model with sparsity."""
     #     self.opt_replace(self.model, self.layers, self.LL)
-    #     self.opt_lowrank(self.model, self.layers, rank_quantile)
     #     self.opt_add(self.model, self.layers, self.SS)
     #     return self.evaluate_one_step(self.model, dataloader)
-
-    # def _eval_par_lowrank_lowrank_sparsity(self, dataloader) -> dict:
-    #     """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
-    #     self.opt_replace(self.model, self.layers, self.LL)  # replace all layers with full low-rank matrices L
-    #     self.opt_lowrank(self.model, self.partial_layers, self.rank_quantile)  #  apply low-rank approximation to partial layers
-    #     self.opt_add(self.model, self.layers, self.SS)
-    #     return self.evaluate_one_step(self.model, dataloader)
-
-    def re_sparse(self, SS: dict, rate_density: dict) -> dict:
-        """Re-sparsify the sparse components based on the target rate density.
-        Args:
-            SS (dict): original sparse components
-            rate_density (dict): target rate density for each layer
-        Returns:
-            _SS (dict): re-sparsified sparse components
-        """
-        _SS = {}
-        for key in SS:
-            S = SS[key]
-            S_flat = S.view(-1)
-            nr_total = S_flat.shape[0]
-            nr_nonzero_target = int(nr_total * rate_density[key])
-            if nr_nonzero_target >= nr_total:
-                _SS[key] = S
-                continue
-            # get the threshold
-            if nr_nonzero_target == 0:
-                threshold = torch.max(torch.abs(S_flat)) + 1.0  # set threshold higher than max value
-            else:
-                threshold = torch.topk(torch.abs(S_flat), nr_nonzero_target, largest=True).values[-1]
-            S_sparse = torch.where(torch.abs(S) >= threshold, S, torch.zeros_like(S))
-            _SS[key] = S_sparse
-        return _SS
 
     def _eval_par_lowrank_lowrank_sparsity(self, dataloader, rank_quantile, rate_density) -> dict:
         """Evaluate the partial low-rank model with low-rank approximation and sparsity."""
-        self.opt_copy(self.model_sd, self.model, self.layers)  # copy the original model
-        self.opt_replace(self.model, self.layers, self.LL)  # replace partial layers with low-rank matrices L
-        self.opt_lowrank(self.model, self.layers, rank_quantile)
-        _SS = self.re_sparse(self.SS, rate_density)
-        self.opt_add(self.model, self.layers, _SS)  # add sparse components S
+        opt_copy(self.model_sd, self.model, self.layers, self.device)  # copy the original model
+        opt_replace(self.model, self.layers, self.LL, self.device)  # replace partial layers with low-rank matrices L
+        opt_lowrank(self.model, self.layers, rank_quantile, self.device)
+        _SS = re_sparse(self.SS, rate_density)
+        self.opt_add(self.model, self.layers, _SS, self.device)  # add sparse components S
         return self.evaluate_one_step(self.model, dataloader)
     
     @torch.no_grad()
@@ -185,103 +114,8 @@ class CrossEvaluator():
             print(f"[Rank {self.dev_idx}] Evaluation time for model {i}: {timer.total/60:.1f} mins.")
             timer.reset()
 
-        eval_results['X_without_S'] = None # self._eval_orginal_without_sparsity(dataloader)
-        eval_results['lowrank_X_without_S'] = None # self._eval_original_lowrank_without_sparsity(dataloader)
-        # print("Evaluation for original model without sparsity done.")
-
-        eval_results['L'] = None # self._eval_lowrank(dataloader)
-        eval_results['lowrank_L'] = None # self._eval_lowrank_lowrank(dataloader)
-        # print("Evaluation for low-rank model done.")
-
-        # eval_results['L_with_S'] = self._eval_lowrank_sparsity(dataloader)  # 99.9 energy
-        # eval_results['par_L_with_S'] = self._eval_par_lowrank_sparsity(dataloader) if self.is_partial else {'avg_loss': ['N/A'], 'ppl': 'N/A'}
-        eval_results['L_with_S'] = None # self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_energy)  # 99.9% energy 
-        eval_results['nr_L_with_S'] = None # cal_nr_params(self.total_params, self.rank_quantile_energy, self.rate_sparsity, self.layer_dim)
-        # print("Evaluation for low-rank + sparsity model done.")
-
-        eval_results['lowrank_L_with_S'] = None # self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_target)  # target rate
-        eval_results['nr_lowrank_L_with_S'] = None # cal_nr_params(self.total_params, self.rank_quantile_target, self.rate_sparsity, self.layer_dim)
-        # print("Evaluation for low-rank (target rate) + sparsity model done.")
-
-        eval_results['lowrank_L_with_S_specify'] = None # self._eval_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify)  # specified rate
-        eval_results['nr_lowrank_L_with_S_specify'] = None # cal_nr_params(self.total_params, self.rank_quantile_specify, self.rate_sparsity, self.layer_dim)
-        # print("Evaluation for low-rank (specified rate) + sparsity model done.")
-        
-        # eval_results['par_lowrank_L_with_S'] = self._eval_par_lowrank_lowrank_sparsity(dataloader, self.rank_quantile_specify) if self.is_partial else eval_results['lowrank_L_with_S']
         return eval_results
     
-    @torch.no_grad()        
-    def opt_copy(self,
-                 model_source: nn.Module,
-                 model_target: nn.Module,
-                 layers: list) -> None:
-        """Copy the weights from source model to target model for specified layers."""
-        model_target.load_state_dict(model_source, strict=True)
-    
-    @torch.no_grad()        
-    def opt_lowrank(self, 
-                    model: nn.Module, 
-                    layers: list,
-                    rank_quantile: float) -> None:
-        """Do low-rank approximation on specified layers of the model.
-        Args:
-            model: The model to optimize.
-            layers: List of layer names to apply low-rank approximation.
-        """
-        for layer_name in layers:
-            if 'model.'+layer_name in self.model_layers:
-                layer = model.get_submodule('model.'+layer_name)
-                weight = layer.weight.data
-                U, s, V = torch.linalg.svd(weight, full_matrices=False)
-                # nr_singular_values = get_energy_quantile(s, quantile=rank_quantile)
-                nr_singular_values = int(len(s) * rank_quantile[layer_name])
-                low_rank_weight = U[:, :nr_singular_values] @ torch.diag(s[:nr_singular_values]) @ V[:nr_singular_values, :]
-                layer.weight.copy_(low_rank_weight.to(self.device))
-            else:
-                print(f"Warning: Layer {layer_name} not found in model for low-rank optimization.")
-
-    @torch.no_grad()        
-    def opt_add(self,
-                model: nn.Module,
-                layers: list,
-                SS: dict) -> None:
-        """Add sparse components to the model."""
-        for layer_name in layers:
-            if layer_name in SS:
-                if 'model.'+layer_name in self.model_layers:
-                    layer = model.get_submodule('model.'+layer_name)
-                    layer.weight.data += SS[layer_name].to(self.device)
-            else:
-                print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
-
-    @torch.no_grad()        
-    def opt_replace(self,
-                    model: nn.Module,
-                    layers: list,
-                    LL: dict) -> None:
-        """Replace the weights of the model with low-rank components."""
-        for layer_name in layers:
-            if layer_name in LL:
-                if 'model.'+layer_name in self.model_layers:
-                    layer = model.get_submodule('model.'+layer_name)
-                    layer.weight.copy_(LL[layer_name].to(self.device))
-            else:
-                print(f"Warning: Low-rank component for layer {layer_name} not found in LL dictionary.")
-
-    @torch.no_grad()        
-    def opt_remove(self,
-                   model: nn.Module,
-                   layers: list,
-                   SS: dict) -> None:
-        """Remove sparse components from the model."""
-        for layer_name in layers:
-            if layer_name in SS:
-                if 'model.'+layer_name in self.model_layers:
-                    layer = model.get_submodule('model.'+layer_name)
-                    layer.weight.data -= SS[layer_name].to(self.device)
-            else:
-                print(f"Warning: Sparse component for layer {layer_name} not found in SS dictionary.")
-
     @torch.no_grad()        
     def evaluate_one_step(self,
                           model: nn.Module,

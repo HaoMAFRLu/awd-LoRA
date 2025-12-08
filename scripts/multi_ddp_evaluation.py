@@ -159,10 +159,15 @@ if __name__ == "__main__":
         'llama_1b':   [646.5, 609.5],
     }
     
-    MODEL_TYPE = 'llama_1b'
-    FOLDERS = ['ablation']
+    MODEL_TYPES = [
+                   'llama_60m',
+                   'llama_130m',
+                   'llama_350m',
+                   'llama_1b']
+    
+    FOLDERS = ['baseline', 'incl_embedding']
     # gamma_list = [1.0]
-    gamma_list = np.arange(0.40, 1.05, 0.05).tolist()
+    gamma_list = [round(x, 2) for x in np.arange(0.40, 1.05, 0.05)]
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
@@ -170,9 +175,10 @@ if __name__ == "__main__":
     # rank = 0
 
     files = []
-    for FOLDER in FOLDERS:
-        _path = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
-        files.extend(os.listdir(_path))
+    for MODEL_TYPE in MODEL_TYPES:
+        for FOLDER in FOLDERS:
+            _path = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
+            files.extend(os.listdir(_path))
 
     # _files = []
     # for file in files:
@@ -180,9 +186,7 @@ if __name__ == "__main__":
     #         _files.append(file)
     
     _files = [
-        '20251130_125821',
-        '20251130_130148',
-        '20251130_125959',
+        '20251204_135646',
     ]
 
     if rank == 0:
@@ -199,13 +203,6 @@ if __name__ == "__main__":
     if isinstance(my_files, str):
         my_files = [my_files]
 
-    # if rank == 0:
-    #     # my_files = ['20251029_162352']
-    #     my_files = ['20251104_130755']    
-    #     # my_files = ['20251009_205606']
-    # else:
-    #     my_files = []   
-
     if not my_files:
         print(f"[rank {rank}] No file assigned. Exit.")
         sys.exit(0)
@@ -214,12 +211,14 @@ if __name__ == "__main__":
     for file in my_files:
         nr += 1
         print(f'[rank {rank}] Processing folder: {file}')
-    
-        for FOLDER in FOLDERS:
-            path = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file)
-            if os.path.exists(path):
-                path_folder = path
-                break
+
+        for _MODEL_TYPE in MODEL_TYPES:
+            for _FOLDER in FOLDERS:
+                _path = os.path.join(root, 'data', _FOLDER, _MODEL_TYPE, file)
+                if os.path.exists(_path):
+                    path_folder = _path
+                    MODEL_TYPE = _MODEL_TYPE
+                    FOLDER = _FOLDER
 
         main(MODEL_TYPE,
              path_folder,
