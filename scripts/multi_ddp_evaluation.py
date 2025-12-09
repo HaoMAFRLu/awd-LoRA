@@ -163,45 +163,33 @@ if __name__ == "__main__":
                    'llama_60m',
                    'llama_130m',
                    'llama_350m',
-                   'llama_1b']
+                   'llama_1b'
+                ]
     
-    FOLDERS = ['baseline', 'incl_embedding']
-    # gamma_list = [1.0]
-    # gamma_list = [round(x, 2) for x in np.arange(0.40, 1.05, 0.05)]
-    gamma_list = [0.60]
+    FOLDERS = [
+        'baseline', 
+        'incl_embedding'
+    ]
+    gamma_list = [round(x, 2) for x in np.arange(0.40, 1.05, 0.05)]
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
     print(f'DDP setup done. World size: {world_size}.')
-    # rank = 0
-
-    files = []
-    for MODEL_TYPE in MODEL_TYPES:
-        for FOLDER in FOLDERS:
-            _path = os.path.join(root, 'data', FOLDER, MODEL_TYPE)
-            if os.path.exists(_path):
-                files.extend(os.listdir(_path))
-
-    # _files = []
-    # for file in files:
-    #     if file.startswith('20251120'):
-    #         _files.append(file)
     
-    _files = [
-        '20251204_135646',
+    # rank = 0
+    files = [
+        '20251209_121421',
     ]
 
     if rank == 0:
         # print all file names
         print('All files to process:')
-        for f in _files:
+        for f in files:
             print(f)
 
-    _files = sorted(_files)
+    files = sorted(files)
 
-    my_files = _files[rank::world_size]
-    # my_files = files[6]
-
+    my_files = files[rank::world_size]
     if isinstance(my_files, str):
         my_files = [my_files]
 
@@ -214,13 +202,13 @@ if __name__ == "__main__":
         nr += 1
         print(f'[rank {rank}] Processing folder: {file}')
 
-        for _MODEL_TYPE in MODEL_TYPES:
-            for _FOLDER in FOLDERS:
-                _path = os.path.join(root, 'data', _FOLDER, _MODEL_TYPE, file)
-                if os.path.exists(_path):
-                    path_folder = _path
-                    MODEL_TYPE = _MODEL_TYPE
-                    FOLDER = _FOLDER
+        path_part = determine_path_part(MODEL_TYPES=MODEL_TYPES,
+                                        FOLDERS=FOLDERS,
+                                        file=file)
+
+        MODEL_TYPE = path_part['model_type']
+        FOLDER = path_part['folder']
+        path_folder = os.path.join(root, 'results', MODEL_TYPE, FOLDER, file)
 
         main(MODEL_TYPE,
              path_folder,
