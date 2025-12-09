@@ -23,7 +23,7 @@ def opt_lowrank(model: nn.Module,
     for layer_name in layers:
         layer = model.get_submodule('model.'+layer_name)
         weight = layer.weight.data
-        U, s, V = torch.linalg.svd(weight, full_matrices=False)
+        U, s, V = torch.linalg.svd(weight.float(), full_matrices=False)
         # nr_singular_values = get_energy_quantile(s, quantile=rank_quantile)
         nr_singular_values = int(len(s) * rank_quantile[layer_name])
         low_rank_weight = U[:, :nr_singular_values] @ torch.diag(s[:nr_singular_values]) @ V[:nr_singular_values, :]

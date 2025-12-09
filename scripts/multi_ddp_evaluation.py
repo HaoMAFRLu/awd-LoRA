@@ -27,7 +27,10 @@ def main(cfg_version: str,
          path_folder: str,
          params_tgt: list,
          gamma_list: list,
-         rank: int=0) -> None:
+         rank: int=0,
+         precision: str='bf16'
+         ) -> None:
+    
     # load the config
     path_cfg = os.path.join(path_folder, cfg_version+'.yaml')
     path_cfg_model = os.path.join(path_folder, cfg_version+'_model.json')
@@ -47,7 +50,13 @@ def main(cfg_version: str,
 
     # get the model and load the checkpoint
     print(f'[rank {rank}] Loading model...')
+    
     model = get_model(path_cfg_model)
+    if precision == 'fp32':
+        model.to(torch.float32)
+    elif precision == 'bf16':
+        model.to(torch.bfloat16)
+    
     load_model(model, os.path.join(path_folder, 'model.pth'))
     model.to(device)
     print(f'[rank {rank}] Model loaded.')
@@ -147,7 +156,7 @@ def main(cfg_version: str,
         # with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
         #     pickle.dump(data, f)
 
-        with open(os.path.join(path_folder, 'eval_results_'+str(gamma)+'.pkl'), 'wb') as f:
+        with open(os.path.join(path_folder, 'eval_results_'+precision+'_'+str(gamma)+'.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
 if __name__ == "__main__":
@@ -160,6 +169,7 @@ if __name__ == "__main__":
     }
     
     MODEL_TYPES = [
+                   'llama_9m',
                    'llama_60m',
                    'llama_130m',
                    'llama_350m',
@@ -171,6 +181,7 @@ if __name__ == "__main__":
         'incl_embedding'
     ]
     gamma_list = [round(x, 2) for x in np.arange(0.40, 1.05, 0.05)]
+    # gamma_list = [0.25]
 
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
@@ -178,7 +189,8 @@ if __name__ == "__main__":
 
     # rank = 0
     files = [
-        '20251209_121421',
+        '20251209_153830',
+        # '20251209_174058',
     ]
 
     if rank == 0:
@@ -210,11 +222,15 @@ if __name__ == "__main__":
         FOLDER = path_part['folder']
         path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file)
 
-        main(MODEL_TYPE,
-             path_folder,
-             params_tgt[MODEL_TYPE],
-             gamma_list=gamma_list,
-             rank=rank)
+        for precision in ['bf16', 'fp32']:
+            main(
+                 MODEL_TYPE,
+                 path_folder,
+                 params_tgt[MODEL_TYPE],
+                 gamma_list=gamma_list,
+                 rank=rank,
+                 precision=precision,
+                )
 
         print(f'[rank {rank}] Finished folder: {file}')
         print(f'[rank {rank}] ----------{nr}/{len(my_files)}----------')
