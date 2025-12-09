@@ -222,7 +222,7 @@ if __name__ == "__main__":
     cfg_llama_350m = dict(
         name='llama_350m',
         seed=42,
-        training_mode='vanilla',  # or salad
+        training_mode='salad',  # or salad
         lr=0.001,
         gradient='coupled',  # or decoupled
         is_asyn=False,
@@ -241,7 +241,7 @@ if __name__ == "__main__":
         warmup_steps=2200,
         num_workers=0,
         scheduler_type='cosine',
-        include_embeddings=True,
+        include_embeddings=False,
         include_head=False,
         is_clip=1.0,
         bos_token_id=0,
@@ -384,4 +384,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_130m)
+    generate_config(**cfg_llama_350m)
