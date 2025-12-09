@@ -175,7 +175,7 @@ if __name__ == "__main__":
     print('Setting up DDP...')
     rank, world_size = ddp_setup()
     print(f'DDP setup done. World size: {world_size}.')
-    
+
     # rank = 0
     files = [
         '20251209_121421',
@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
         MODEL_TYPE = path_part['model_type']
         FOLDER = path_part['folder']
-        path_folder = os.path.join(root, 'results', MODEL_TYPE, FOLDER, file)
+        path_folder = os.path.join(root, 'results', FOLDER, MODEL_TYPE, file)
 
         main(MODEL_TYPE,
              path_folder,
