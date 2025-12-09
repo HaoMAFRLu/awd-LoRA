@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
         MODEL_TYPE = path_part['model_type']
         FOLDER = path_part['folder']
-        path_folder = os.path.join(root, 'results', FOLDER, MODEL_TYPE, file)
+        path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file)
 
         main(MODEL_TYPE,
              path_folder,
