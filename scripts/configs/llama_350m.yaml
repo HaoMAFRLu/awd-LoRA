@@ -1,6 +1,6 @@
 seed: 42
 name: llama_350m
-training_mode: salad
+training_mode: vanilla
 num_total_iters: 124000
 num_freq: 40
 gradient: coupled
