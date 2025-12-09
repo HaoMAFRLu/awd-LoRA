@@ -18,6 +18,7 @@ proj = projection()
 def generate_config(
     name: str = 'llama_9m',
     seed: int = 42,
+    training_mode: str='salad',
     lr: float = 0.008,
     num_freq: int = 1000,
     weight_decay: float=0.0,
@@ -86,6 +87,7 @@ def generate_config(
     cfg = {
         'seed': seed,
         'name': name,
+        'training_mode': training_mode,
         'num_total_iters': num_total_iters,
         'num_freq': num_freq,
         'gradient': gradient,
@@ -178,6 +180,7 @@ if __name__ == "__main__":
     cfg_llama_1b = dict(
         name='llama_1b',
         seed=42,
+        training_mode='vanilla',  # or salad
         lr=0.0005,
         gradient='coupled',  # or decoupled
         is_asyn=False,
@@ -217,6 +220,7 @@ if __name__ == "__main__":
     cfg_llama_350m = dict(
         name='llama_350m',
         seed=42,
+        training_mode='vanilla',  # or salad
         lr=0.001,
         gradient='coupled',  # or decoupled
         is_asyn=False,
@@ -257,6 +261,7 @@ if __name__ == "__main__":
     cfg_llama_130m = dict(
         name='llama_130m',
         seed=42,
+        training_mode='vanilla',  # or salad
         lr=0.003,
         gradient='coupled',  # or decoupled
         is_asyn=False,
@@ -296,6 +301,7 @@ if __name__ == "__main__":
     cfg_llama_60m = dict(
         name='llama_60m',
         seed=42,
+        training_mode='vanilla',  # or salad
         lr=0.003,
         is_wandb=True,
         is_monitor=True,
@@ -334,6 +340,7 @@ if __name__ == "__main__":
 
     cfg_llama_9m = dict(
         name='llama_9m',
+        training_mode='vanilla',  # or salad
         seed=42,
         lr=0.008,
         num_freq=2,
@@ -371,4 +378,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_1b)
+    generate_config(**cfg_llama_60m)

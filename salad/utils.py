@@ -17,7 +17,8 @@ import time, random
 import wandb
 from torch.nn.parallel import DistributedDataParallel as DDP
 import io
-from salad.register import get_data
+
+from salad.register import *
 
 def mkdir(path: Path) -> None:
     """Check if the folder exists and create it if it does not."""
@@ -539,7 +540,11 @@ def get_eval_data(split: str,
     _data_mapped.batch = lambda batch_size: batch_fn(_data_mapped, batch_size)
     return _data_mapped
 
-def get_ex_layers(layers: list, model, LL: dict, SS: dict, nr_remove: int) -> list:
+def get_ex_layers(layers: list, 
+                  model, 
+                  LL: dict, 
+                  SS: dict, 
+                  nr_remove: int) -> list:
     ex_layers = []
     loss = {}
     _list = []
@@ -579,3 +584,46 @@ def cal_nr_params(total_params: int,
         # how many parameters are reduced due to sparsity
         nr_params += int(row * col * rate_sparsity[key])
     return nr_params
+
+def determine_path_part(MODEL_TYPES: list,
+                        FOLDERS: list,
+                        file: str,
+                        root: str=None) -> dict:
+    """Determine the path part for the given model type, folder, and file.
+    """
+    if root is None:
+        root = get_parent_path(lvl=1)
+
+    for model_type in MODEL_TYPES:
+        for folder in FOLDERS:
+            path = os.path.join(root, 'data', folder, model_type, file)
+            if os.path.exists(path):
+                return {
+                    'model_type': model_type,
+                    'folder': folder,
+                    'file': file
+                }
+    raise ValueError(f'Path not found for file: {file}')
+
+def get_layer_weight(path: str, 
+                     layer_name: str,
+                     target: str='SLR') -> torch.Tensor:
+    """Get the weight of the specified layer from the model at the given path.
+    """
+    if target == 'SLR':  # load the SLR structure
+        files = os.listdir(path)
+        rank_files = [f for f in files if f.startswith('matrix')]
+        for f in rank_files:
+            LL, SS = get_lowspa_layers(os.path.join(path, f))
+            if layer_name in LL:
+                return LL[layer_name], SS[layer_name]
+            
+        raise KeyError(f"Layer '{layer_name}' not found in any lowspa matrix files.")
+    
+    elif target == 'X':  # load the original weight
+        model_type = os.path.basename(os.path.dirname(path))
+        path_cfg = os.path.join(path, model_type+'_model.json')
+        model = get_model(path_cfg)
+        load_model(model, os.path.join(path, 'model.pth'))
+        weight = get_weight(model, layer_name)
+        return weight
