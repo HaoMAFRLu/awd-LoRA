@@ -316,7 +316,7 @@ if __name__ == "__main__":
         optimizer_name='AdamW',
         min_lr_ratio=0.1,
         weight_decay=0.0,
-        num_freq=5,
+        num_freq=20,
         seed_for_shuffle=42,
         num_total_iters=11000,
         batch_size=512,

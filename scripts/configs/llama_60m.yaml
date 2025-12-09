@@ -2,7 +2,7 @@ seed: 42
 name: llama_60m
 training_mode: salad
 num_total_iters: 11000
-num_freq: 5
+num_freq: 20
 gradient: coupled
 is_asyn: false
 is_init: false
