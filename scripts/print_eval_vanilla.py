@@ -129,7 +129,7 @@ if __name__ == "__main__":
     FOLDERS = ['vanilla']
     
     files = [
-            '20251209_104656'
+            '20251209_220046'
              ]
 
     path_part = determine_path_part(MODEL_TYPES=MODEL_TYPES,
