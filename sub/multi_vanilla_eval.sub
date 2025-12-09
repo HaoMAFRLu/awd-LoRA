@@ -1,0 +1,23 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = \
+    -u -m torch.distributed.run \
+    --nproc_per_node=1 \
+    --nnodes=1 \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint=127.0.0.1:29500 \
+    scripts/vanilla_evaluation.py
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs_eval/task$(Process).log
+error           = jobs_eval/task$(Process).err
+output          = jobs_eval/task$(Process).out
+
+request_cpus    = 1
+request_memory  = 100000
+request_gpus    = 1
+requirements = (CUDACapability >= 9.0 && CUDACapability < 9.1) 
+
+getenv          = True
+
+queue 1
