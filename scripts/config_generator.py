@@ -191,6 +191,7 @@ if __name__ == "__main__":
         save_interval=50,
         min_lr_ratio=0.1,
         weight_decay=0.0,
+        optimizer_name='AdamW',
         num_freq=40,
         seed_for_shuffle=42,
         num_total_iters=254000,  # 254000
@@ -231,6 +232,7 @@ if __name__ == "__main__":
         save_interval=50,
         min_lr_ratio=0.1,
         weight_decay=0.0,
+        optimizer_name='AdamW',
         num_freq=40,
         seed_for_shuffle=42,
         num_total_iters=124000,
@@ -272,6 +274,7 @@ if __name__ == "__main__":
         save_interval=50,
         min_lr_ratio=0.1,
         weight_decay=0.0,
+        optimizer_name='AdamW',
         num_freq=20,
         seed_for_shuffle=42,
         num_total_iters=22000,
@@ -302,7 +305,7 @@ if __name__ == "__main__":
     cfg_llama_60m = dict(
         name='llama_60m',
         seed=42,
-        training_mode='vanilla',  # or salad
+        training_mode='salad',  # or salad
         lr=0.003,
         is_wandb=True,
         is_monitor=True,
@@ -318,7 +321,7 @@ if __name__ == "__main__":
         num_total_iters=11000,
         batch_size=512,
         max_length=256,
-        warmup_steps=1100,
+        warmup_steps=2200,
         num_workers=0,
         scheduler_type='cosine',
         include_embeddings=False,
@@ -342,7 +345,7 @@ if __name__ == "__main__":
 
     cfg_llama_9m = dict(
         name='llama_9m',
-        training_mode='vanilla',  # or salad
+        training_mode='salad',  # or salad
         seed=42,
         lr=0.008,
         num_freq=2,

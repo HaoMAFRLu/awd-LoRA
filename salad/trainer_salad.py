@@ -122,7 +122,8 @@ class SALADTrainer():
                 with torch.no_grad():
                     W.copy_(_W.to(W.dtype))
 
-        self.ddp_model = DDP(self.model, device_ids=[torch.cuda.current_device()])
+        self.ddp_model = DDP(self.model.to(torch.bfloat16), 
+                             device_ids=[torch.cuda.current_device()])
 
         data = datasets.distributed.split_dataset_by_node(data, rank=self.rank, world_size=self.world_size)
 

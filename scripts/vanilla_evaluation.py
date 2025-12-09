@@ -96,7 +96,7 @@ if __name__ == "__main__":
     print(f'DDP setup done. World size: {world_size}.')
     # rank = 0
     
-    files = ['20251209_104656']
+    files = ['20251209_140721']
     
     if rank == 0:
         # print all file names

@@ -39,7 +39,7 @@ class SALAD():
         rho_cfg['row'] = X.shape[0]
         rho_cfg['col'] = X.shape[1]
         rho_cfg['nr_layers'] = nr_layers
-        rho_cfg['X_norm'] = torch.norm(X.detach(), p='fro').cpu().numpy()
+        rho_cfg['X_norm'] = torch.norm(X.detach().float(), p='fro').cpu().numpy()
         self.rho_solver = RHO(rho_cfg)
         
         alpha_cfg = self.alpha_dict
@@ -63,7 +63,7 @@ class SALAD():
         self.nr_elements = X.numel()
 
         if is_full:
-            _, s, _ = torch.linalg.svd(X, full_matrices=False)
+            _, s, _ = torch.linalg.svd(X.float(), full_matrices=False)
             self.nr_total_rank = len(s)
             
             if self.is_init:   
@@ -193,9 +193,9 @@ class SALAD():
 
     def initialization(self) -> None:
         if self.init_energy <= 0:
-            self.L = torch.zeros_like(self.X_with_grad.detach(), device=self.device)
+            self.L = torch.zeros_like(self.X_with_grad.detach().float(), device=self.device)
         else:
-            U, s, Vt = torch.linalg.svd(self.X_with_grad.detach(), full_matrices=False)
+            U, s, Vt = torch.linalg.svd(self.X_with_grad.detach().float(), full_matrices=False)
             nr_singular_values = int(len(s) * self.rate_rank)
             self.L = U[:, :nr_singular_values] @ torch.diag(s[:nr_singular_values]) @ Vt[:nr_singular_values, :]
 

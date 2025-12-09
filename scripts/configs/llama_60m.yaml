@@ -1,6 +1,6 @@
 seed: 42
 name: llama_60m
-training_mode: vanilla
+training_mode: salad
 num_total_iters: 11000
 num_freq: 10
 gradient: coupled
@@ -17,7 +17,7 @@ num_workers: 0
 scheduler:
   name: cosine
   params:
-    warmup_steps: 1100
+    warmup_steps: 2200
     min_lr_ratio: 0.1
 optimizer:
   name: AdamW
