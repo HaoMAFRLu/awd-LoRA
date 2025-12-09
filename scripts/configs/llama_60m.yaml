@@ -27,7 +27,7 @@ optimizer:
     - 0.9
     - 0.95
     eps: 0.00000001
-    weight_decay: !!float '0'
+    weight_decay: 0.001
 layers:
 - name: embed_tokens
   params:

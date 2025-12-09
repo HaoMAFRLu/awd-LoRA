@@ -310,7 +310,7 @@ if __name__ == "__main__":
         is_asyn=False,
         is_init=False,
         min_lr_ratio=0.1,
-        weight_decay=0.0,
+        weight_decay=1e-3,
         num_freq=10,
         seed_for_shuffle=42,
         num_total_iters=11000,
