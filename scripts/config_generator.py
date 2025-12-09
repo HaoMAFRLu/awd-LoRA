@@ -310,7 +310,7 @@ if __name__ == "__main__":
         gradient='coupled',  # or decoupled
         is_asyn=False,
         is_init=False,
-        optimizer_name='Adam',
+        optimizer_name='AdamW',
         min_lr_ratio=0.1,
         weight_decay=0.0,
         num_freq=10,
@@ -318,7 +318,7 @@ if __name__ == "__main__":
         num_total_iters=11000,
         batch_size=512,
         max_length=256,
-        warmup_steps=2200,
+        warmup_steps=1100,
         num_workers=0,
         scheduler_type='cosine',
         include_embeddings=False,
