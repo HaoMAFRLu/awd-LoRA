@@ -126,7 +126,7 @@ def get_results(model_type: str,
 
     path = os.path.join(root, 'data', folder, model_type, file)
     files = os.listdir(path)
-    eval_files = [f for f in files if 'eval_results_' in f]
+    eval_files = [f for f in files if 'eval_results_bf16' in f]
     for file in eval_files:
         with open(os.path.join(path, file), 'rb') as f:
             stats = pickle.load(f)
@@ -212,7 +212,8 @@ if __name__ == "__main__":
             # '20251204_135502',
             # '20251204_152747',
             # '20251204_134313',
-            '20251209_121421',
+            # '20251209_121421',
+            '20251209_153830',
              ]
 
     main(model_type=model_type,

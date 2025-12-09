@@ -305,7 +305,7 @@ if __name__ == "__main__":
     cfg_llama_60m = dict(
         name='llama_60m',
         seed=42,
-        training_mode='salad',  # or salad
+        training_mode='vanilla',  # or salad
         lr=0.003,
         is_wandb=True,
         is_monitor=True,
