@@ -22,6 +22,7 @@ def generate_config(
     lr: float = 0.008,
     num_freq: int = 1000,
     weight_decay: float=0.0,
+    optimizer_name: str='Adam',
     gradient: str='coupled',
     is_asyn: bool = False,
     is_init: bool = False,
@@ -109,7 +110,7 @@ def generate_config(
             }
         },
         'optimizer': {
-            'name': 'AdamW',
+            'name': optimizer_name,
             'params': {
                 'lr':  lr,
                 'betas': (0.9, 0.95),
@@ -301,7 +302,7 @@ if __name__ == "__main__":
     cfg_llama_60m = dict(
         name='llama_60m',
         seed=42,
-        training_mode='vanilla',  # or salad
+        training_mode='salad',  # or salad
         lr=0.003,
         is_wandb=True,
         is_monitor=True,
@@ -309,8 +310,9 @@ if __name__ == "__main__":
         gradient='coupled',  # or decoupled
         is_asyn=False,
         is_init=False,
+        optimizer_name='Adam',
         min_lr_ratio=0.1,
-        weight_decay=1e-3,
+        weight_decay=0.0,
         num_freq=10,
         seed_for_shuffle=42,
         num_total_iters=11000,
@@ -319,7 +321,7 @@ if __name__ == "__main__":
         warmup_steps=2200,
         num_workers=0,
         scheduler_type='cosine',
-        include_embeddings=True,
+        include_embeddings=False,
         include_head=False,
         is_clip=1.0,
         bos_token_id=0,
