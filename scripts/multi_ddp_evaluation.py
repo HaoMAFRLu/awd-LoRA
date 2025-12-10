@@ -180,7 +180,7 @@ if __name__ == "__main__":
         'baseline', 
         'incl_embedding'
     ]
-    gamma_list = [round(x, 2) for x in np.arange(0.40, 0.85, 0.05)]
+    gamma_list = [round(x, 2) for x in np.arange(0.40, 1.05, 0.05)]
     # gamma_list = [0.25]
 
     print('Setting up DDP...')
@@ -189,8 +189,9 @@ if __name__ == "__main__":
 
     # rank = 0
     files = [
-        '20251209_232017',
-        # '20251209_174058',
+        '20251210_083718',
+        '20251210_083540',
+        '20251210_083401',
     ]
 
     if rank == 0:
@@ -222,7 +223,7 @@ if __name__ == "__main__":
         FOLDER = path_part['folder']
         path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file)
 
-        for precision in ['bf16', 'fp32']:
+        for precision in ['bf16']:
             main(
                  MODEL_TYPE,
                  path_folder,
