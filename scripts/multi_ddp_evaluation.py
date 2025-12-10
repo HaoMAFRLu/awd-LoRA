@@ -189,9 +189,8 @@ if __name__ == "__main__":
 
     # rank = 0
     files = [
-        '20251210_083718',
-        '20251210_083540',
-        '20251210_083401',
+        '20251210_093825',
+        '20251210_093644',
     ]
 
     if rank == 0:
@@ -223,7 +222,7 @@ if __name__ == "__main__":
         FOLDER = path_part['folder']
         path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file)
 
-        for precision in ['bf16']:
+        for precision in ['bf16', 'fp32']:
             main(
                  MODEL_TYPE,
                  path_folder,
