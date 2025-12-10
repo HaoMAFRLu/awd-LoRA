@@ -50,6 +50,7 @@ def main(path_part: dict,
     model = get_model(path_cfg_model)
     load_model(model, os.path.join(path_folder, 'model.pth'))
     model.to(device)
+    model.to(torch.bfloat16)
     print(f'[rank {rank}] Model loaded.')
 
     # get the tokenizer
@@ -96,7 +97,7 @@ if __name__ == "__main__":
     print(f'DDP setup done. World size: {world_size}.')
     # rank = 0
     
-    files = ['20251209_140721']
+    files = ['20251209_232356']
     
     if rank == 0:
         # print all file names
