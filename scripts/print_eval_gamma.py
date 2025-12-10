@@ -185,11 +185,10 @@ if __name__ == "__main__":
     files = os.listdir(os.path.join(root, 'data', FOLDER, model_type))
     
     files = [
-            '20251210_083718',
-            '20251210_083540',
-            '20251210_083401',
+            '20251210_093825',
+            '20251210_093644'    
              ]
-    precision = 'bf16'
+    precision = 'fp32'
     main(model_type=model_type,
          folder=FOLDER,
          files=files,
