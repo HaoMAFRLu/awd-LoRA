@@ -16,7 +16,11 @@ output          = jobs_eval2/task$(Process).out
 request_cpus    = 4
 request_memory  = 100000
 request_gpus    = 4
-requirements = (CUDACapability >= 9.0 && CUDACapability < 9.1) 
+requirements = (CUDACapability >= 9.0 && CUDACapability < 9.1)  && \
+    !stringListMember("GPU-1f35d697", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-45d24b88", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-0e5a23fb", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-3bdb5e8e", CUDAGPUDeviceUUID)
 
 getenv          = True
 
