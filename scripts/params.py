@@ -14,10 +14,10 @@ embed_params = {
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.005,
+        'rate_decay': 0.003,
     },
     'rho_dict':            {
-        'rho':           5e-9,
+        'rho':           5e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,

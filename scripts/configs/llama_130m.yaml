@@ -45,9 +45,9 @@ layers:
     beta_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.005
+      rate_decay: 0.003
     rho_dict:
-      rho: 0.000000005
+      rho: 0.00000005
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1

@@ -57,14 +57,10 @@ def main(cfg_version: str,
     target_layers = [entry['name'] for entry in cfg['layers']]
 
     if rho is not None and alpha_rate is not None and beta_rate is not None:
-        if 'embed_tokens' in target_layers or 'lm_head' in target_layers: # only apply to embedding and lm head
-            for layer in cfg['layers']:
-                if 'embed_tokens' in layer['name'] or 'lm_head' in layer['name']:
-                    layer['params']['rho_dict']['rho'] = rho
-                    layer['params']['alpha_dict']['rate_decay'] = alpha_rate
-                    layer['params']['beta_dict']['rate_decay'] = beta_rate
-        else:
-            for layer in cfg['layers']:
+        for layer in cfg['layers']:
+            if 'embed' in layer['name'] or 'lm_head' in layer['name']:
+                continue
+            else:
                 layer['params']['rho_dict']['rho'] = rho
                 layer['params']['alpha_dict']['rate_decay'] = alpha_rate
                 layer['params']['beta_dict']['rate_decay'] = beta_rate 
