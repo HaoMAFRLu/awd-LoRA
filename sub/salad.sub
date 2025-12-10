@@ -17,7 +17,14 @@ request_cpus    = 8
 request_memory  = 100000
 request_gpus    = 8
 requirements = (CUDACapability >= 9.0 && CUDACapability < 9.1) && \
-    !stringListMember("GPU-a0e440fb", CUDAGPUDeviceUUID) 
+    !stringListMember("GPU-4c275e72", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-a0e440fb", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-b50eee5a", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-57cf3c62", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-b65aba4e", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-90f1a7d5", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-2d57d3d7", CUDAGPUDeviceUUID) && \
+    !stringListMember("GPU-1feef0b3", CUDAGPUDeviceUUID)
 
 getenv          = True
 
