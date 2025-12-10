@@ -198,10 +198,9 @@ if __name__ == "__main__":
     ]
 
     files = [
-            '20251210_093825',
-            '20251210_093644'    
+            '20251210_101448',  
              ]
-    precision = 'fp32'
+    precision = 'bf16'
 
     path_parts = []
     for file in files:
