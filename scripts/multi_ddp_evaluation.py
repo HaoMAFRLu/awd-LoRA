@@ -180,7 +180,7 @@ if __name__ == "__main__":
         'baseline', 
         'incl_embedding'
     ]
-    gamma_list = [round(x, 2) for x in np.arange(0.40, 1.05, 0.05)]
+    gamma_list = [round(x, 2) for x in np.arange(0.40, 0.85, 0.05)]
     # gamma_list = [0.25]
 
     print('Setting up DDP...')

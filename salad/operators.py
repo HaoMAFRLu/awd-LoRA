@@ -93,3 +93,43 @@ def re_sparse(SS: dict, rate_density: dict) -> dict:
         S_sparse = torch.where(torch.abs(S) >= threshold, S, torch.zeros_like(S))
         _SS[key] = S_sparse
     return _SS
+
+def opt_slr(LL: dict,
+            SS: dict,
+            rank_quantile: dict,
+            rate_density: dict,
+            layers: list,
+            device: str) -> dict:
+    """Optimize the model with both low-rank and sparse components.
+    Args:
+        LL (dict): low-rank components
+        SS (dict): sparse components
+        rank_quantile (dict): target rank quantile for each layer
+        rate_density (dict): target rate density for each layer
+        layers (list): list of layer names to optimize
+    Returns:
+        XX (dict): optimized weight matrices for specified layers
+    """
+    XX = {}
+    for layer_name in layers:
+        L = LL[layer_name]
+        S = SS[layer_name]
+        U, s, V = torch.linalg.svd(L.float(), full_matrices=False)
+        nr_singular_values = int(len(s) * rank_quantile[layer_name])
+        L_lowrank = U[:, :nr_singular_values] @ torch.diag(s[:nr_singular_values]) @ V[:nr_singular_values, :]
+        
+        # Re-sparsify S
+        S_flat = S.view(-1)
+        nr_total = S_flat.shape[0]
+        nr_nonzero_target = int(nr_total * rate_density[layer_name])
+        if nr_nonzero_target >= nr_total:
+            S_sparse = S
+        else:
+            if nr_nonzero_target == 0:
+                threshold = torch.max(torch.abs(S_flat)) + 1.0
+            else:
+                threshold = torch.topk(torch.abs(S_flat), nr_nonzero_target, largest=True).values[-1]
+            S_sparse = torch.where(torch.abs(S) >= threshold, S, torch.zeros_like(S))
+        
+        XX[layer_name] = (L_lowrank + S_sparse).to(device)
+    return XX
