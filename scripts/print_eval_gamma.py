@@ -157,10 +157,9 @@ def get_rows_exp(eval_train_results, eval_test_results, file: str, header: list)
     return (row1, row2, row3, row4)
 
 
-def main(model_type: str, 
-         folder: str,
-         files: list,
+def main(path_parts: list,
          precision: str='bf16') -> None:
+    
     headers = [f"model", f"dataset", f"gamma", f"metric",
                f"X",  
                f"L+S", 
@@ -169,7 +168,12 @@ def main(model_type: str,
                f'par LoR(L)+S_2']
     
     rows = []
-    for file in files:
+    for path_part in path_parts:
+
+        model_type = path_part['model_type']
+        folder = path_part['folder']
+        file = path_part['file']
+        
         eval_train_results, eval_test_resutls = get_results(model_type, folder, file, precision)
         r1, r2, r3, r4 = get_rows_exp(eval_train_results, eval_test_resutls, file, headers[4:])
         _rows = r1 + r2 + r3 + r4
@@ -180,16 +184,30 @@ def main(model_type: str,
 
 
 if __name__ == "__main__":
-    model_type = 'llama_130m'
-    FOLDER = 'baseline'
-    files = os.listdir(os.path.join(root, 'data', FOLDER, model_type))
+    MODEL_TYPES = [
+                   'llama_9m',
+                   'llama_60m',
+                   'llama_130m',
+                   'llama_350m',
+                   'llama_1b'
+                ]
     
+    FOLDERS = [
+        'baseline', 
+        'incl_embedding'
+    ]
+
     files = [
             '20251210_093825',
             '20251210_093644'    
              ]
     precision = 'fp32'
-    main(model_type=model_type,
-         folder=FOLDER,
-         files=files,
+
+    path_parts = []
+    for file in files:
+        path_parts.append(determine_path_part(MODEL_TYPES=MODEL_TYPES,
+                                              FOLDERS=FOLDERS,
+                                              file=file))
+
+    main(path_parts,
          precision=precision)
