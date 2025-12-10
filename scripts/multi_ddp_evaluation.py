@@ -160,6 +160,8 @@ def main(cfg_version: str,
             pickle.dump(data, f)
 
 if __name__ == "__main__":
+    print('Starting multi-DDP evaluation...')
+
     params_tgt = {
         'llama_9m':   [6.5, 5.5],
         'llama_60m':  [44.5, 43.5],
