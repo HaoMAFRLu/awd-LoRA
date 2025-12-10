@@ -180,7 +180,8 @@ if __name__ == "__main__":
     
     FOLDERS = [
         'baseline', 
-        'incl_embedding'
+        'incl_embedding',
+        'head'
     ]
     gamma_list = [round(x, 2) for x in np.arange(0.40, 0.85, 0.05)]
     # gamma_list = [0.25]
