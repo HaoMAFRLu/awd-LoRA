@@ -111,7 +111,8 @@ def get_acc_row(file: str, data_type: str, eval_results: dict, header: list) -> 
 
 def get_results(model_type: str, 
                 folder: str,
-                file: str) -> dict:
+                file: str,
+                precision: str) -> dict:
     """
     Get evaluation results for the model.
     Args:
@@ -126,7 +127,7 @@ def get_results(model_type: str,
 
     path = os.path.join(root, 'data', folder, model_type, file)
     files = os.listdir(path)
-    eval_files = [f for f in files if 'eval_results_bf16' in f]
+    eval_files = [f for f in files if 'eval_results_' + precision in f]
     for file in eval_files:
         with open(os.path.join(path, file), 'rb') as f:
             stats = pickle.load(f)
@@ -158,7 +159,8 @@ def get_rows_exp(eval_train_results, eval_test_results, file: str, header: list)
 
 def main(model_type: str, 
          folder: str,
-         files: list) -> None:
+         files: list,
+         precision: str='bf16') -> None:
     headers = [f"model", f"dataset", f"gamma", f"metric",
                f"X",  
                f"L+S", 
@@ -168,7 +170,7 @@ def main(model_type: str,
     
     rows = []
     for file in files:
-        eval_train_results, eval_test_resutls = get_results(model_type, folder, file)
+        eval_train_results, eval_test_resutls = get_results(model_type, folder, file, precision)
         r1, r2, r3, r4 = get_rows_exp(eval_train_results, eval_test_resutls, file, headers[4:])
         _rows = r1 + r2 + r3 + r4
         for i in range(1, len(_rows)):
@@ -178,7 +180,7 @@ def main(model_type: str,
 
 
 if __name__ == "__main__":
-    model_type = 'llama_60m'
+    model_type = 'llama_130m'
     FOLDER = 'baseline'
     files = os.listdir(os.path.join(root, 'data', FOLDER, model_type))
     
@@ -213,9 +215,10 @@ if __name__ == "__main__":
             # '20251204_152747',
             # '20251204_134313',
             # '20251209_121421',
-            '20251209_220046'
+            '20251209_232017'
              ]
-
+    precision = 'bf16'
     main(model_type=model_type,
          folder=FOLDER,
-         files=files)
+         files=files,
+         precision=precision)
