@@ -223,7 +223,7 @@ if __name__ == "__main__":
         name='llama_350m',
         seed=42,
         training_mode='salad',  # or salad
-        lr=0.003,
+        lr=0.001,
         gradient='coupled',  # or decoupled
         is_asyn=False,
         is_init=False,
@@ -238,7 +238,7 @@ if __name__ == "__main__":
         num_total_iters=65000,
         batch_size=512,
         max_length=256,
-        warmup_steps=6500,
+        warmup_steps=2200,
         num_workers=0,
         scheduler_type='cosine',
         include_embeddings=True,

@@ -17,12 +17,12 @@ num_workers: 0
 scheduler:
   name: cosine
   params:
-    warmup_steps: 6500
+    warmup_steps: 2200
     min_lr_ratio: 0.1
 optimizer:
   name: AdamW
   params:
-    lr: 0.003
+    lr: 0.001
     betas:
     - 0.9
     - 0.95
