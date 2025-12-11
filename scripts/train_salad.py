@@ -59,7 +59,8 @@ def main(cfg_version: str,
     if rho is not None and alpha_rate is not None and beta_rate is not None:
         for layer in cfg['layers']:
             if 'embed' in layer['name'] or 'lm_head' in layer['name']:
-                continue
+                layer['params']['alpha_dict']['rate_decay'] = alpha_rate
+                layer['params']['beta_dict']['rate_decay'] = beta_rate 
             else:
                 layer['params']['rho_dict']['rho'] = rho
                 layer['params']['alpha_dict']['rate_decay'] = alpha_rate
