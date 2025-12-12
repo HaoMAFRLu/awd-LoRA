@@ -47,7 +47,7 @@ layers:
       mode: adaptive
       rate_decay: 0.002
     rho_dict:
-      rho: 0.00000007
+      rho: 0.00000009
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
