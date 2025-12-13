@@ -181,7 +181,7 @@ if __name__ == "__main__":
     cfg_llama_1b = dict(
         name='llama_1b',
         seed=42,
-        training_mode='vanilla',  # or salad
+        training_mode='vanilla',  # salad or vanilla
         lr=0.0005,
         gradient='coupled',  # or decoupled
         is_asyn=False,
