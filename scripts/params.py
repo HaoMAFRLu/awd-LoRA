@@ -17,7 +17,7 @@ embed_params = {
         'rate_decay': 0.002,
     },
     'rho_dict':            {
-        'rho':           9e-8,
+        'rho':           5e-7,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
