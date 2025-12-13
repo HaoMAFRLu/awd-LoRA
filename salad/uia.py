@@ -195,3 +195,30 @@ class UIA():
             nr_params_total_uia (int): total number of parameters with allocated ranks and sparsity
         """ 
         return cal_nr_params(self.nr_params_model, rank_quantile, rate_density, self.dim)
+    
+    def post_allocate(self,
+                      rank_quantile: dict,
+                      rate_density: dict,
+                      params_tgt: float) -> tuple:
+        """Post-process the allocated ranks and sparsity levels to match the target number of parameters.
+        Args:
+            rank_quantile_uia (dict): allocated rank quantile for each layer
+            rate_density (dict): allocated density for each layer
+            params_tgt (float): target number of parameters (in million)
+        Returns:
+            rank_quantile_post (dict): post-processed rank quantile for each layer
+            rate_density_post (dict): post-processed density for each layer
+        """
+        params_tgt = int(params_tgt * 1e6)
+        nr_params = self.check_params(rank_quantile, rate_density)
+        params_diff = params_tgt - nr_params - 1
+
+        if params_diff <= 0:
+            return rank_quantile, rate_density
+        # increase only density to match the target number of parameters
+        ratio = params_diff / self.nr_params_layers
+        
+        for key in rate_density:
+            rate_density[key] += ratio
+        
+        return rank_quantile, rate_density

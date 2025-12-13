@@ -572,7 +572,7 @@ def get_rank(X: torch.Tensor,
 
 def cal_nr_params(total_params: int,
                   rank_quantile: dict,
-                  rate_sparsity: dict,
+                  rate_density: dict,
                   layer_dim: dict) -> int:
     """Calculate the number of parameters after low-rank approximation and sparsity."""
     nr_params = total_params
@@ -582,7 +582,7 @@ def cal_nr_params(total_params: int,
         rank = int(min(row, col) * rank_quantile[key])
         nr_params -= (row * col - (row + col) * rank)
         # how many parameters are reduced due to sparsity
-        nr_params += int(row * col * rate_sparsity[key])
+        nr_params += int(row * col * rate_density[key])
     return nr_params
 
 def determine_path_part(MODEL_TYPES: list,

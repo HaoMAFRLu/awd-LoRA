@@ -119,16 +119,16 @@ def main(cfg_version: str,
         'original': SimpleTimer('original')
     }
 
-    print(f'[rank {rank}] Collecting results for full-rank + sparsity model...')
-    with timers['energy']:
-        evaluator.collect_single_results(uia.rank_quantile_energy,
-                                         uia.rate_density)  # evaluate the full-rank + sparsity model and store the results
-    print(f'[rank {rank}] Energy-based evaluation time: {timers["energy"].total/60:.1f} mins.')
+    # print(f'[rank {rank}] Collecting results for full-rank + sparsity model...')
+    # with timers['energy']:
+    #     evaluator.collect_single_results(uia.rank_quantile_energy,
+    #                                      uia.rate_density)  # evaluate the full-rank + sparsity model and store the results
+    # print(f'[rank {rank}] Energy-based evaluation time: {timers["energy"].total/60:.1f} mins.')
 
-    print(f'[rank {rank}] Collecting results for original model...')
-    with timers['original']:
-        evaluator.collect_model_results()  # evaluate the original model and store the results
-    print(f'[rank {rank}] Original model evaluation time: {timers["original"].total/60:.1f} mins.')    
+    # print(f'[rank {rank}] Collecting results for original model...')
+    # with timers['original']:
+    #     evaluator.collect_model_results()  # evaluate the original model and store the results
+    # print(f'[rank {rank}] Original model evaluation time: {timers["original"].total/60:.1f} mins.')    
 
 
     for gamma in gamma_list:
@@ -139,7 +139,9 @@ def main(cfg_version: str,
         rate_density_list = []
 
         for params in params_tgt:
-            rank_quantile, rate_density = uia.allocate(params_tgt=params, gamma=gamma)
+            _rank_quantile, _rate_density = uia.allocate(params_tgt=params, gamma=gamma)
+            rank_quantile, rate_density = uia.post_allocate(_rank_quantile, _rate_density, params_tgt=params) 
+
             rank_quantile_list.append(rank_quantile)
             rate_density_list.append(rate_density)
 
