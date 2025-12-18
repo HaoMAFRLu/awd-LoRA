@@ -40,13 +40,13 @@ class PARAM():
             return
 
         elif self.mode == 'adaptive':
-            # if self.nr_updates < self.start_epoch:  # apply only the p-controller
-            self.dvalue = rho * (current_rate - self.target_rate) * self.rate_decay # current rate - target rate
-            self.value = self.value + self.dvalue  # update parameter
-            # else:  # apply the p-d controller
-            #     rate_diff = max(0.0, current_rate - self.pre_rate)  
-            #     self.dvalue = rho * (current_rate - self.target_rate) * self.rate_decay + rho * rate_diff * self.drate
-            #     self.value = self.value + self.dvalue  # update parameter
+            if self.nr_updates < self.start_epoch:  # apply only the p-controller
+                self.dvalue = rho * (current_rate - self.target_rate) * self.rate_decay # current rate - target rate
+                self.value = self.value + self.dvalue  # update parameter
+            else:  # apply the p-d controller
+                rate_diff = max(0.0, current_rate - self.pre_rate)  
+                self.dvalue = rho * (current_rate - self.target_rate) * self.rate_decay + rho * rate_diff * self.drate
+                self.value = self.value + self.dvalue  # update parameter
             self.pre_rate = current_rate
 
         elif self.mode == 'hard_cut':

@@ -32,6 +32,8 @@ def parse_args():
     parser.add_argument('--rho', type=float, default=None, help='Rho')
     parser.add_argument('--alpha_rate', type=float, default=None, help='Alpha Rate')
     parser.add_argument('--beta_rate', type=float, default=None, help='Beta Rate')
+    parser.add_argument('--dalpha', type=float, default=None, help='Delta Alpha')
+    parser.add_argument('--dbeta', type=float, default=None, help='Delta Beta')
 
     return parser.parse_args()
 
@@ -42,6 +44,8 @@ def main(cfg_version: str,
          rho: float,
          alpha_rate: float,
          beta_rate: float,
+         dalpha: float,
+         dbeta: float,
          exclude_layers: list=None) -> None:
     
     rank, world_size = _init_distributed()
@@ -61,10 +65,14 @@ def main(cfg_version: str,
             if 'embed' in layer['name'] or 'lm_head' in layer['name']:
                 layer['params']['alpha_dict']['rate_decay'] = alpha_rate
                 layer['params']['beta_dict']['rate_decay'] = beta_rate 
+                layer['params']['alpha_dict']['drate'] = dalpha
+                layer['params']['beta_dict']['drate'] = dbeta
             else:
                 layer['params']['rho_dict']['rho'] = rho
                 layer['params']['alpha_dict']['rate_decay'] = alpha_rate
                 layer['params']['beta_dict']['rate_decay'] = beta_rate 
+                layer['params']['alpha_dict']['drate'] = dalpha
+                layer['params']['beta_dict']['drate'] = dbeta
 
     if exclude_layers is not None:
         cfg['layers'] = [
@@ -120,5 +128,5 @@ if __name__ == "__main__":
     exclude_layers = None
 
     main(cfg_version, path_cfg, path_cfg_model, folder,
-         args.rho, args.alpha_rate, args.beta_rate,
+         args.rho, args.alpha_rate, args.beta_rate, args.dalpha, args.dbeta,
          exclude_layers=exclude_layers)
