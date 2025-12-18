@@ -16,7 +16,7 @@ class SALAD():
                  X: torch.Tensor,
                  nr_layers: int,
                  is_full: bool,
-                 precision: str=torch.bfloat16) -> None:
+                 precision: str=torch.float32) -> None:
         """
         Args:
             layer_name: Name of the layer this solver applies to
