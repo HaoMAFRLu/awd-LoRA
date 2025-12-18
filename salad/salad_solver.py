@@ -15,7 +15,8 @@ class SALAD():
                  params: dict,
                  X: torch.Tensor,
                  nr_layers: int,
-                 is_full: bool) -> None:
+                 is_full: bool,
+                 precision: str=torch.bfloat16) -> None:
         """
         Args:
             layer_name: Name of the layer this solver applies to
@@ -25,6 +26,7 @@ class SALAD():
         self.X_with_grad = X  # Initial weight matrix
         self.layer_name = layer_name
 
+        self.precision = precision
         self.sum_pre = None
         self.gamma = 0.9
         self.ema_r = None
@@ -152,7 +154,7 @@ class SALAD():
                          alpha: float,
                          beta: float,
                          rho: float,
-                         energy: float) -> tuple:
+                         energy: float,) -> tuple:
         S = self._update_S(X, L, Y, self.rate_sparsity, rho)
         L, nr_rank = self._update_L(X, S, Y, alpha, rho, energy)
         Y = self._update_Y(X, L, S, rho)
@@ -193,14 +195,14 @@ class SALAD():
 
     def initialization(self) -> None:
         if self.init_energy <= 0:
-            self.L = torch.zeros_like(self.X_with_grad.detach().float(), device=self.device)
+            self.L = torch.zeros_like(self.X_with_grad.detach().float(), device=self.device).to(self.precision)
         else:
             U, s, Vt = torch.linalg.svd(self.X_with_grad.detach().float(), full_matrices=False)
             nr_singular_values = int(len(s) * self.rate_rank)
-            self.L = U[:, :nr_singular_values] @ torch.diag(s[:nr_singular_values]) @ Vt[:nr_singular_values, :]
+            self.L = (U[:, :nr_singular_values] @ torch.diag(s[:nr_singular_values]) @ Vt[:nr_singular_values, :]).to(self.precision)
 
-        self.S = torch.zeros_like(self.X_with_grad.detach())
-        self.Y = torch.zeros_like(self.X_with_grad.detach())
+        self.S = torch.zeros_like(self.X_with_grad.detach()).to(self.precision)
+        self.Y = torch.zeros_like(self.X_with_grad.detach()).to(self.precision)
 
     def init_T(self, l: int, K: int) -> None:
         """[alpha, beta, dalpha, dbeta, rho, 
@@ -266,7 +268,7 @@ class SALAD():
         self.S = self._update_S(self.X_with_grad.detach(), 
                                 self.L, 
                                 self.Y,
-                                self.rho)
+                                self.rho).to(self.precision)
 
     @staticmethod
     def _update_Y(X: torch.Tensor,
@@ -284,7 +286,7 @@ class SALAD():
                                 self.L, 
                                 self.S,
                                 self.Y, 
-                                self.rho)
+                                self.rho).to(self.precision)
 
     def update_nr_epoch(self) -> None:
         self.nr_epoch += 1
@@ -302,7 +304,7 @@ class SALAD():
                   alpha: float,
                   rho: float,
                   energy: float) -> torch.Tensor:
-        U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
+        U, s, Vt = torch.linalg.svd(X.float() - S.float() + Y.float() / rho, full_matrices=False)
         _s = soft_threshold(s, alpha/rho)
         L  = U @ torch.diag(_s) @ Vt
         nr_rank = get_energy_quantile(_s, quantile=energy)
@@ -312,12 +314,13 @@ class SALAD():
         """
         Update the low-rank component L.
         """
-        self.L, self.nr_rank = self._update_L(self.X_with_grad.detach(),
-                                              self.S,
-                                              self.Y,
-                                              self.alpha_solver.value,
-                                              self.rho,
-                                              energy=self.energy)
+        L, self.nr_rank = self._update_L(self.X_with_grad.detach(),
+                                        self.S,
+                                        self.Y,
+                                        self.alpha_solver.value,
+                                        self.rho,
+                                        energy=self.energy)
+        self.L = L.to(self.precision)
 
     def update_alpha(self) -> None:
         """
