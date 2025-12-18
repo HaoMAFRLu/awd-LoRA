@@ -9,7 +9,7 @@ error           = jobs_batch/task.err
 request_cpus    = 8
 request_memory  = 100000
 request_gpus    = 8
-requirements = (
+requirements = ( \
     CUDACapability >= 9.0 && \
     CUDACapability < 9.1 && \
     !regexp("GPU-a0e440fb", TARGET.DetectedGPUs) && \
@@ -20,8 +20,7 @@ requirements = (
     !regexp("GPU-6ecb75e1", TARGET.DetectedGPUs) && \
     !regexp("GPU-a3569e05", TARGET.DetectedGPUs) && \
     !regexp("GPU-6f9cd3b3", TARGET.DetectedGPUs) && \
-    !regexp("GPU-cebba8d2", TARGET.DetectedGPUs)
-)
+    !regexp("GPU-cebba8d2", TARGET.DetectedGPUs))
 getenv          = True
 
 queue
