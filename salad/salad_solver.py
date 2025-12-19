@@ -16,7 +16,7 @@ class SALAD():
                  X: torch.Tensor,
                  nr_layers: int,
                  is_full: bool,
-                 precision: str=torch.float32) -> None:
+                 precision: str=torch.bfloat16) -> None:
         """
         Args:
             layer_name: Name of the layer this solver applies to
@@ -265,9 +265,9 @@ class SALAD():
         """
         Update the sparse component S. 
         """
-        self.S = self._update_S(self.X_with_grad.detach(), 
-                                self.L, 
-                                self.Y,
+        self.S = self._update_S(self.X_with_grad.detach().float(), 
+                                self.L.float(), 
+                                self.Y.float(),
                                 self.rho).to(self.precision)
 
     @staticmethod
@@ -304,7 +304,7 @@ class SALAD():
                   alpha: float,
                   rho: float,
                   energy: float) -> torch.Tensor:
-        U, s, Vt = torch.linalg.svd(X.float() - S.float() + Y.float() / rho, full_matrices=False)
+        U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
         _s = soft_threshold(s, alpha/rho)
         L  = U @ torch.diag(_s) @ Vt
         nr_rank = get_energy_quantile(_s, quantile=energy)
@@ -314,9 +314,9 @@ class SALAD():
         """
         Update the low-rank component L.
         """
-        L, self.nr_rank = self._update_L(self.X_with_grad.detach(),
-                                        self.S,
-                                        self.Y,
+        L, self.nr_rank = self._update_L(self.X_with_grad.detach().float(),
+                                        self.S.float(),
+                                        self.Y.float(),
                                         self.alpha_solver.value,
                                         self.rho,
                                         energy=self.energy)
