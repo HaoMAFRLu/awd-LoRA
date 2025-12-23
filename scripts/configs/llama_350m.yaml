@@ -49,7 +49,7 @@ layers:
       rate_decay: 0.002
       drate: 0.01
     rho_dict:
-      rho: 0.0000003
+      rho: 0.0000002
       mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
