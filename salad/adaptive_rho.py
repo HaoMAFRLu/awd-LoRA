@@ -52,7 +52,7 @@ class RHO():
             # self.rho_max = coeff_rho_max * _rho
             self.rho = cfg.get('rho', 1e-3)
             _, self.rho_list = self.tanh_ramp_steps(self.rho,
-                                                    self.rho * 0.7,
+                                                    self.rho * 5.0,
                                                     3100,
                                                     mid_step=2000,
                                                     W=100)
