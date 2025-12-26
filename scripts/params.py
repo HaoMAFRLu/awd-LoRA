@@ -51,7 +51,7 @@ lm_head_params = {
     },
     'rho_dict':            {
         'rho':           6e-8,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -82,7 +82,7 @@ attn_o_proj_params = {
     },
     'rho_dict':            {
         'rho':           6e-8,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -113,7 +113,7 @@ attn_q_proj_params = {
     },
     'rho_dict':            {
         'rho':           6e-8,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -144,7 +144,7 @@ attn_k_proj_params = {
     },
     'rho_dict':            {
         'rho':           6e-8,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -175,7 +175,7 @@ attn_v_proj_params = {
     },
     'rho_dict':            {
         'rho':           6e-8,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -206,7 +206,7 @@ mlp_gate_proj_params = {
     },
     'rho_dict':            {
         'rho':           6e-8,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -237,7 +237,7 @@ mlp_down_proj_params = {
     },
     'rho_dict':            {
         'rho':           6e-8,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,
@@ -268,7 +268,7 @@ mlp_up_proj_params = {
     },
     'rho_dict':            {
         'rho':           6e-8,
-        'mode':          'adaptive',  # 'fixed', 'shape_dependent', 'adaptive'
+        'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
         'coeff_rho_min': 0.01,

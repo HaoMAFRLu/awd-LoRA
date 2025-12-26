@@ -12,15 +12,14 @@ request_gpus    = 8
 requirements = ( \
     CUDACapability >= 9.0 && \
     CUDACapability < 9.1 && \
-    !regexp("GPU-a0e440fb", TARGET.DetectedGPUs) && \
-    !regexp("GPU-6afc8b57", TARGET.DetectedGPUs) && \
-    !regexp("GPU-00a214e8", TARGET.DetectedGPUs) && \
-    !regexp("GPU-9221ffea", TARGET.DetectedGPUs) && \
-    !regexp("GPU-448e8d48", TARGET.DetectedGPUs) && \
-    !regexp("GPU-6ecb75e1", TARGET.DetectedGPUs) && \
-    !regexp("GPU-a3569e05", TARGET.DetectedGPUs) && \
-    !regexp("GPU-6f9cd3b3", TARGET.DetectedGPUs) && \
-    !regexp("GPU-cebba8d2", TARGET.DetectedGPUs))
+    !regexp("GPU-2384c51a", TARGET.DetectedGPUs) && \
+    !regexp("GPU-7e8f3cb0", TARGET.DetectedGPUs) && \
+    !regexp("GPU-0ba95d00", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1b6113e3", TARGET.DetectedGPUs) && \
+    !regexp("GPU-a0fe3c14", TARGET.DetectedGPUs) && \
+    !regexp("GPU-0fa8e8ba", TARGET.DetectedGPUs) && \
+    !regexp("GPU-5d4f4312", TARGET.DetectedGPUs) && \
+    !regexp("GPU-4041e645", TARGET.DetectedGPUs))
 getenv          = True
 
 queue

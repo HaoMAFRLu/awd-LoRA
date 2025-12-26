@@ -77,7 +77,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -104,7 +104,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -131,7 +131,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -158,7 +158,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -185,7 +185,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -212,7 +212,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -239,7 +239,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -266,7 +266,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -293,7 +293,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -320,7 +320,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -347,7 +347,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -374,7 +374,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -401,7 +401,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -428,7 +428,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -455,7 +455,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -482,7 +482,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -509,7 +509,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -536,7 +536,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -563,7 +563,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -590,7 +590,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -617,7 +617,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -644,7 +644,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -671,7 +671,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -698,7 +698,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -725,7 +725,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -752,7 +752,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -779,7 +779,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -806,7 +806,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -833,7 +833,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -860,7 +860,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -887,7 +887,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -914,7 +914,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -941,7 +941,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -968,7 +968,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -995,7 +995,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1022,7 +1022,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1049,7 +1049,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1076,7 +1076,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1103,7 +1103,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1130,7 +1130,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1157,7 +1157,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1184,7 +1184,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1211,7 +1211,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1238,7 +1238,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1265,7 +1265,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1292,7 +1292,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1319,7 +1319,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1346,7 +1346,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1373,7 +1373,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1400,7 +1400,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1427,7 +1427,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1454,7 +1454,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1481,7 +1481,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1508,7 +1508,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1535,7 +1535,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1562,7 +1562,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1589,7 +1589,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1616,7 +1616,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1643,7 +1643,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1670,7 +1670,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1697,7 +1697,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1724,7 +1724,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1751,7 +1751,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1778,7 +1778,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1805,7 +1805,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1832,7 +1832,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1859,7 +1859,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1886,7 +1886,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1913,7 +1913,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1940,7 +1940,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1967,7 +1967,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -1994,7 +1994,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2021,7 +2021,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2048,7 +2048,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2075,7 +2075,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2102,7 +2102,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2129,7 +2129,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2156,7 +2156,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2183,7 +2183,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2210,7 +2210,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2237,7 +2237,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2264,7 +2264,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2291,7 +2291,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2318,7 +2318,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2345,7 +2345,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2372,7 +2372,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2399,7 +2399,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2426,7 +2426,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2453,7 +2453,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2480,7 +2480,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2507,7 +2507,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2534,7 +2534,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2561,7 +2561,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2588,7 +2588,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2615,7 +2615,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2642,7 +2642,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2669,7 +2669,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2696,7 +2696,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2723,7 +2723,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2750,7 +2750,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2777,7 +2777,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2804,7 +2804,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2831,7 +2831,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2858,7 +2858,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2885,7 +2885,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2912,7 +2912,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2939,7 +2939,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2966,7 +2966,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -2993,7 +2993,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3020,7 +3020,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3047,7 +3047,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3074,7 +3074,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3101,7 +3101,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3128,7 +3128,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3155,7 +3155,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3182,7 +3182,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3209,7 +3209,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3236,7 +3236,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3263,7 +3263,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3290,7 +3290,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3317,7 +3317,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3344,7 +3344,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3371,7 +3371,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3398,7 +3398,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3425,7 +3425,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3452,7 +3452,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3479,7 +3479,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3506,7 +3506,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3533,7 +3533,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3560,7 +3560,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3587,7 +3587,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3614,7 +3614,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3641,7 +3641,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3668,7 +3668,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3695,7 +3695,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3722,7 +3722,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3749,7 +3749,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3776,7 +3776,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3803,7 +3803,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3830,7 +3830,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3857,7 +3857,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3884,7 +3884,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3911,7 +3911,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3938,7 +3938,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3965,7 +3965,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -3992,7 +3992,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4019,7 +4019,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4046,7 +4046,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4073,7 +4073,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4100,7 +4100,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4127,7 +4127,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4154,7 +4154,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4181,7 +4181,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4208,7 +4208,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4235,7 +4235,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4262,7 +4262,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4289,7 +4289,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4316,7 +4316,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4343,7 +4343,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4370,7 +4370,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4397,7 +4397,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4424,7 +4424,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4451,7 +4451,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4478,7 +4478,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4505,7 +4505,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4532,7 +4532,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4559,7 +4559,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
@@ -4586,7 +4586,7 @@ layers:
       drate: 0.01
     rho_dict:
       rho: 0.00000006
-      mode: adaptive
+      mode: fixed
       start_epoch: 2
       coeff_rho: 0.1
       coeff_rho_min: 0.01
