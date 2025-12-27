@@ -119,7 +119,7 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     args = parse_args()
 
-    cfg_version = 'llama_350m'
+    cfg_version = 'llama_130m'
     folder = 'baseline'
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
