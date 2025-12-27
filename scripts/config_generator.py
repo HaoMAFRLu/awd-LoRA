@@ -194,8 +194,8 @@ if __name__ == "__main__":
         optimizer_name='AdamW',
         num_freq=20,
         seed_for_shuffle=42,
-        num_total_iters=127000,  # 254000
-        batch_size=512,
+        num_total_iters=139000,  # 254000
+        batch_size=468,
         max_length=256,
         warmup_steps=2200,
         num_workers=0,
