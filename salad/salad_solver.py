@@ -328,7 +328,7 @@ class SALAD():
         """
         if 'embed' not in self.layer_name:
             if self.nr_epoch == 2000:
-                self.alpha_solver.rate_decay = self.alpha_solver.rate_decay * 2.0
+                self.alpha_solver.rate_decay = self.alpha_solver.rate_decay * 5.0
         self.alpha_solver.update(self.nr_rank/self.nr_total_rank, self.rho)
 
     def update_beta(self) -> None:
@@ -337,7 +337,7 @@ class SALAD():
         """
         if 'embed' not in self.layer_name:
             if self.nr_epoch == 2000:
-                self.beta_solver.rate_decay = self.beta_solver.rate_decay * 2.0
+                self.beta_solver.rate_decay = self.beta_solver.rate_decay * 5.0
         cur_elements = torch.count_nonzero(self.S)
         self.beta_solver.update(cur_elements/self.nr_elements, self.rho)
 
