@@ -71,8 +71,12 @@ def main(cfg_version: str,
     for f in rank_files:
         LL_part, SS_part = get_lowspa_layers(os.path.join(path_folder, f))
         for key in LL_part:
-            LL[key] = LL_part[key].to(device)
-            SS[key] = SS_part[key].to(device)
+            if 'lm_head' in key:
+                LL[key] = LL_part[key].to(device).t()
+                SS[key] = SS_part[key].to(device).t()
+            else:
+                LL[key] = LL_part[key].to(device)
+                SS[key] = SS_part[key].to(device)
     print(f'[rank {rank}] Low-rank and sparse components loaded.')
 
     with open(os.path.join(path_folder, 'layer_info.pkl'), 'rb') as f:
