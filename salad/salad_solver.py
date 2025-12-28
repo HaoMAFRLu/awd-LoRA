@@ -23,8 +23,12 @@ class SALAD():
             params: Solver-specific hyperparameters
             X: Initial weight matrix for this layer
         """
-        self.X_with_grad = X  # Initial weight matrix
         self.layer_name = layer_name
+        
+        if 'lm_head' in layer_name:
+            self.X_with_grad = X.t()
+        else:
+            self.X_with_grad = X  # Initial weight matrix
 
         self.precision = precision
         self.sum_pre = None

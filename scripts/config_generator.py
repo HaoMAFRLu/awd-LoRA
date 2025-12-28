@@ -325,7 +325,7 @@ if __name__ == "__main__":
         num_workers=0,
         scheduler_type='cosine',
         include_embeddings=True,
-        include_head=False,
+        include_head=True,
         is_clip=1.0,
         bos_token_id=0,
         eos_token_id=1,
@@ -366,7 +366,7 @@ if __name__ == "__main__":
         scheduler_type='cosine',
         min_lr_ratio=0.1,
         include_embeddings=True,
-        include_head=False,
+        include_head=True,
         is_clip=1.0,
         bos_token_id=0,
         eos_token_id=1,
@@ -384,4 +384,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_350m)
+    generate_config(**cfg_llama_60m)
