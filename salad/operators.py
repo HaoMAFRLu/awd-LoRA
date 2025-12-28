@@ -21,7 +21,7 @@ def opt_lowrank(model: nn.Module,
         layers: List of layer names to apply low-rank approximation.
     """
     for layer_name in layers:
-        layer = model.get_submodule('model.'+layer_name)
+        layer = get_submodule(model, layer_name)
         weight = layer.weight.data
         U, s, V = torch.linalg.svd(weight.float(), full_matrices=False)
         # nr_singular_values = get_energy_quantile(s, quantile=rank_quantile)
@@ -37,7 +37,7 @@ def opt_add(model: nn.Module,
     """Add sparse components to the model."""
     for layer_name in layers:
         if layer_name in SS:
-            layer = model.get_submodule('model.'+layer_name)
+            layer = get_submodule(model, layer_name)
             layer.weight.data += SS[layer_name].to(device)
         else:
             raise ValueError(f"Sparse component for layer {layer_name} not found in SS dictionary.")
@@ -50,10 +50,19 @@ def opt_replace(model: nn.Module,
     """Replace the weights of the model with low-rank components."""
     for layer_name in layers:
         if layer_name in LL:
-            layer = model.get_submodule('model.'+layer_name)
+            layer = get_submodule(model, layer_name)
             layer.weight.copy_(LL[layer_name].to(device))
         else:
             raise ValueError(f"Low-rank component for layer {layer_name} not found in LL dictionary.")
+
+def get_submodule(model: nn.Module, layer_name: str) -> nn.Module:
+    """Get the submodule from the model based on the layer name."""
+    # consider lm head
+    if 'lm_head' in layer_name:
+        layer = model.get_submodule(layer_name)
+    else:
+        layer = model.get_submodule('model.'+layer_name)
+    return layer
 
 @torch.no_grad()        
 def opt_remove(model: nn.Module,
@@ -63,7 +72,7 @@ def opt_remove(model: nn.Module,
     """Remove sparse components from the model."""
     for layer_name in layers:
         if layer_name in SS:
-            layer = model.get_submodule('model.'+layer_name)
+            layer = get_submodule(model, layer_name)
             layer.weight.data -= SS[layer_name].to(device)
         else:
             raise ValueError(f"Sparse component for layer {layer_name} not found in SS dictionary.")
