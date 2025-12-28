@@ -221,7 +221,7 @@ if __name__ == "__main__":
     
     cfg_llama_350m = dict(
         name='llama_350m',
-        seed=42,
+        seed=422,
         training_mode='salad',  # or salad
         lr=0.001,
         gradient='coupled',  # or decoupled
@@ -233,9 +233,9 @@ if __name__ == "__main__":
         min_lr_ratio=0.1,
         weight_decay=0.0,
         optimizer_name='AdamW',
-        num_freq=30,
+        num_freq=20,
         seed_for_shuffle=42,
-        num_total_iters=63000,
+        num_total_iters=62000,
         batch_size=512,
         max_length=256,
         warmup_steps=2200,
