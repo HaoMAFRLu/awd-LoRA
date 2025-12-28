@@ -233,9 +233,9 @@ if __name__ == "__main__":
         min_lr_ratio=0.1,
         weight_decay=0.0,
         optimizer_name='AdamW',
-        num_freq=20,
+        num_freq=30,
         seed_for_shuffle=42,
-        num_total_iters=62000,
+        num_total_iters=63000,
         batch_size=512,
         max_length=256,
         warmup_steps=2200,
@@ -384,4 +384,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_60m)
+    generate_config(**cfg_llama_350m)
