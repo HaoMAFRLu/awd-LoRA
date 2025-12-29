@@ -73,9 +73,9 @@ class UIA():
 
             self.rate_density[key] = nr_nonzero / nr_total
 
-            self.rank_quantile_energy[key], rank = self.get_rank_quantile(L, energy_quantile=0.995)
-            # rank = self.layer_info[key]['rank'][-1]
-            # self.rank_quantile_energy[key] = rank/min(row, col)
+            # self.rank_quantile_energy[key], rank = self.get_rank_quantile(L, energy_quantile=0.995)
+            rank = self.layer_info[key]['rank'][-1]
+            self.rank_quantile_energy[key] = rank/min(row, col)
 
             # calculate the number of parameters for each layer
             self.nr_params_layers += nr_total

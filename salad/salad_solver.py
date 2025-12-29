@@ -262,7 +262,7 @@ class SALAD():
         """
         max_abs = S.abs().max()
         if max_abs > 0:
-            tau_hard = max_abs / constant
+            tau_hard = 3e-6
             S = torch.where(S.abs() >= tau_hard, S, torch.zeros_like(S))
         else:
             # S is already all zero
@@ -329,7 +329,7 @@ class SALAD():
         with torch.no_grad():
             max_s = _s.max()
             if max_s > 0:
-                tau_hard = max_s / 1e7  # try 1e3~1e5
+                tau_hard = 3e-5  # try 1e3~1e5
                 _s = torch.where(_s >= tau_hard, _s, torch.zeros_like(_s))
         
         L  = U @ torch.diag(_s) @ Vt

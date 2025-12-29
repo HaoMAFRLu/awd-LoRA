@@ -189,7 +189,7 @@ if __name__ == "__main__":
         'incl_embedding',
         'head'
     ]
-    gamma_list = [round(x, 2) for x in np.arange(0.10, 0.85, 0.05)]
+    gamma_list = [round(x, 2) for x in np.arange(0.10, 1.0, 0.05)]
     # gamma_list = [0.25]
 
     print('Setting up DDP...')
@@ -198,7 +198,10 @@ if __name__ == "__main__":
 
     # rank = 0
     files = [
-        '20251229_124734',
+        # '20251229_124734',
+        '20251227_122450',
+        '20251227_122303',
+        '20251227_122124',
     ]
 
     if rank == 0:
