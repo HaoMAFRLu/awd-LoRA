@@ -325,6 +325,13 @@ class SALAD():
                   energy: float) -> torch.Tensor:
         U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
         _s = soft_threshold(s, alpha/rho)
+
+        with torch.no_grad():
+            max_s = _s.max()
+            if max_s > 0:
+                tau_hard = max_s / 1e7  # try 1e3~1e5
+                _s = torch.where(_s >= tau_hard, _s, torch.zeros_like(_s))
+        
         L  = U @ torch.diag(_s) @ Vt
         nr_rank = get_energy_quantile(_s, quantile=energy)
         return L, nr_rank
