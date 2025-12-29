@@ -255,6 +255,20 @@ class SALAD():
         #                 'nr_elements': self.nr_elements,
         #                 'avg_loss': (self.total_loss/self.nr_cals)}
 
+    def S_hard_threshold(self, 
+                         S: torch.Tensor,
+                         constant: float=1e4) -> torch.Tensor:
+        """
+        """
+        max_abs = S.abs().max()
+        if max_abs > 0:
+            tau_hard = max_abs / constant
+            S = torch.where(S.abs() >= tau_hard, S, torch.zeros_like(S))
+        else:
+            # S is already all zero
+            pass
+        return S
+
     def _update_S(self,
                   X: torch.Tensor,
                   L: torch.Tensor,
@@ -262,7 +276,8 @@ class SALAD():
                   rho: float,) -> torch.Tensor:
         if self.beta_solver.mode == 'hard_cut':
             self.beta_solver.update_quantile(X-L+Y/rho, rho)
-        return soft_threshold(X - L + Y/rho, self.beta_solver.value/rho)
+        # return soft_threshold(X - L + Y/rho, self.beta_solver.value/rho)
+        return self.S_hard_threshold(soft_threshold(X - L + Y/rho, self.beta_solver.value/rho))
 
 
     def update_S(self) -> None:

@@ -1,5 +1,5 @@
 embed_params = {
-    'energy':        0.999,   # Energy parameter
+    'energy':        0.995,   # Energy parameter
     'init_energy':   0.45,   # Initial energy
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,     # Max ADMM iterations per layer
@@ -30,7 +30,7 @@ embed_params = {
 }
 
 lm_head_params = {
-    'energy':        0.999,     # Energy parameter
+    'energy':        0.995,     # Energy parameter
     'init_energy':   0.15,     # Initial energy
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
@@ -61,7 +61,7 @@ lm_head_params = {
 }
 
 attn_o_proj_params = {
-    'energy':        0.999,     # Energy parameter
+    'energy':        0.995,     # Energy parameter
     'init_energy':   0.15,     # Initial energy
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
@@ -92,7 +92,7 @@ attn_o_proj_params = {
 }
 
 attn_q_proj_params = {
-    'energy':        0.999,     # Energy parameter
+    'energy':        0.995,     # Energy parameter
     'init_energy':   0.15,     # Initial energy
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
@@ -123,7 +123,7 @@ attn_q_proj_params = {
 }
 
 attn_k_proj_params = {
-    'energy':        0.999,     # Energy parameter
+    'energy':        0.995,     # Energy parameter
     'init_energy':   0.15,     # Initial energy
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
@@ -154,7 +154,7 @@ attn_k_proj_params = {
 }
 
 attn_v_proj_params = {
-    'energy':        0.999,     # Energy parameter
+    'energy':        0.995,     # Energy parameter
     'init_energy':   0.15,     # Initial energy
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
@@ -185,7 +185,7 @@ attn_v_proj_params = {
 }
 
 mlp_gate_proj_params = {
-    'energy':        0.999,     # Energy parameter
+    'energy':        0.995,     # Energy parameter
     'init_energy':   0.35,     # Initial energy
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer
@@ -216,7 +216,7 @@ mlp_gate_proj_params = {
 }
 
 mlp_down_proj_params = {
-    'energy':         0.999,     # Energy parameter
+    'energy':         0.995,     # Energy parameter
     'init_energy':    0.35,     # Initial energy
     'is_init':        False,  # Whether to initialize
     'iter_max':       1,       # Max ADMM iterations per layer
@@ -247,7 +247,7 @@ mlp_down_proj_params = {
 }
 
 mlp_up_proj_params = {
-    'energy':        0.999,     # Energy parameter
+    'energy':        0.995,     # Energy parameter
     'init_energy':   0.35,     # Initial energy
     'is_init':       False,  # Whether to initialize
     'iter_max':      1,       # Max ADMM iterations per layer

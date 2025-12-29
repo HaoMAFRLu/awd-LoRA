@@ -221,7 +221,7 @@ if __name__ == "__main__":
     
     cfg_llama_350m = dict(
         name='llama_350m',
-        seed=422,
+        seed=42,
         training_mode='salad',  # or salad
         lr=0.001,
         gradient='coupled',  # or decoupled
@@ -384,4 +384,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_60m)
+    generate_config(**cfg_llama_350m)
