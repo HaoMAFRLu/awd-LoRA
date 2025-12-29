@@ -260,13 +260,13 @@ class SALAD():
                          constant: float=1e4) -> torch.Tensor:
         """
         """
-        max_abs = S.abs().max()
-        if max_abs > 0:
-            tau_hard = 1e-5
-            S = torch.where(S.abs() >= tau_hard, S, torch.zeros_like(S))
-        else:
-            # S is already all zero
-            pass
+        # max_abs = S.abs().max()
+        # if max_abs > 0:
+        #     tau_hard = 1e-5
+        #     S = torch.where(S.abs() >= tau_hard, S, torch.zeros_like(S))
+        # else:
+        #     # S is already all zero
+        #     pass
         return S
 
     def _update_S(self,
@@ -326,14 +326,16 @@ class SALAD():
         U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
         _s = soft_threshold(s, alpha/rho)
 
-        with torch.no_grad():
-            max_s = _s.max()
-            if max_s > 0:
-                tau_hard = 1e-4  # try 1e3~1e5
-                _s = torch.where(_s >= tau_hard, _s, torch.zeros_like(_s))
+        # with torch.no_grad():
+        #     max_s = _s.max()
+        #     if max_s > 0:
+        #         tau_hard = 1e-4  # try 1e3~1e5
+        #         _s = torch.where(_s >= tau_hard, _s, torch.zeros_like(_s))
+        
+        nr_rank = get_energy_quantile(_s, quantile=energy)
+        _s[nr_rank:] = 0.0
         
         L  = U @ torch.diag(_s) @ Vt
-        nr_rank = get_energy_quantile(_s, quantile=energy)
         return L, nr_rank
 
     def update_L(self) -> None:
