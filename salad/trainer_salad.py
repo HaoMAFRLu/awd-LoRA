@@ -837,15 +837,16 @@ class SALADTrainer():
                 epoch += 1
 
                 if self.training_mode == 'salad':
-                    self.update_ADMM_single_step(target='beta')
-                    with self.timers['S']:
-                        self.update_ADMM_single_step(target='S')
-                    self.update_ADMM_rho()
-                    
                     with self.timers['L']:
                         self.update_ADMM_single_step(target='L')
                     self.update_ADMM_single_step(target='alpha')
-                
+
+                    with self.timers['S']:
+                        self.update_ADMM_single_step(target='S')
+                    self.update_ADMM_single_step(target='beta')
+                    
+                    self.update_ADMM_rho()
+                    
                     with self.timers['Y']:
                         self.update_ADMM_single_step(target='Y')
 
