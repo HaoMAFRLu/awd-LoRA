@@ -1,7 +1,7 @@
 seed: 42
 name: llama_1b
 training_mode: salad
-num_total_iters: 139000
+num_total_iters: 140000
 num_freq: 20
 gradient: coupled
 is_asyn: false
