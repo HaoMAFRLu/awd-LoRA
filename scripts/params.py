@@ -19,7 +19,7 @@ embed_params = {
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           3e-7,
+        'rho':           5e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
