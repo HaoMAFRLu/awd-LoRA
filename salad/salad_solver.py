@@ -333,7 +333,7 @@ class SALAD():
         #         _s = torch.where(_s >= tau_hard, _s, torch.zeros_like(_s))
         
         nr_rank = get_energy_quantile(_s, quantile=energy)
-        # _s[nr_rank:] = 0.0
+        _s[nr_rank:] = 0.0
 
         L  = U @ torch.diag(_s) @ Vt
         return L, nr_rank
