@@ -19,7 +19,15 @@ requirements = ( \
     !regexp("GPU-b65aba4e", TARGET.DetectedGPUs) && \
     !regexp("GPU-90f1a7d5", TARGET.DetectedGPUs) && \
     !regexp("GPU-2d57d3d7", TARGET.DetectedGPUs) && \
-    !regexp("GPU-1feef0b3", TARGET.DetectedGPUs) )
+    !regexp("GPU-1feef0b3", TARGET.DetectedGPUs) && \
+    !regexp("GPU-438be6c4", TARGET.DetectedGPUs) && \
+    !regexp("GPU-84d3c693", TARGET.DetectedGPUs) && \
+    !regexp("GPU-4d7099ac", TARGET.DetectedGPUs) && \
+    !regexp("GPU-0d0e287b", TARGET.DetectedGPUs) && \
+    !regexp("GPU-537f0097", TARGET.DetectedGPUs) && \
+    !regexp("GPU-6dae7b89", TARGET.DetectedGPUs) && \
+    !regexp("GPU-2aa00ee9", TARGET.DetectedGPUs) && \
+    !regexp("GPU-47e4496c", TARGET.DetectedGPUs) )
 getenv          = True
 
 queue
