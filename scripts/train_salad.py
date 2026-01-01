@@ -108,7 +108,14 @@ def main(cfg_version: str,
 
     # get the data loader
     model = get_model(path_cfg_model)
-    data = get_data(cfg['seed_for_shuffle'])
+
+    if dist.get_rank() == 0:
+        data = get_data(cfg['seed_for_shuffle'])
+
+    dist.barrier()
+
+    if dist.get_rank() != 0:
+        data = get_data(cfg['seed_for_shuffle'])
 
     ddp_trainer = SALADTrainer(model, data, cfg, 
                                rank=rank, 
