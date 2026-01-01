@@ -260,13 +260,13 @@ class SALAD():
                          constant: float=1e4) -> torch.Tensor:
         """
         """
-        max_abs = S.abs().max()
-        if max_abs > 0:
-            tau_hard = max_abs/5e-5
-            S = torch.where(S.abs() >= tau_hard, S, torch.zeros_like(S))
-        else:
-            # S is already all zero
-            pass
+        # max_abs = S.abs().max()
+        # if max_abs > 0:
+        #     tau_hard = max_abs/1e-6
+        #     S = torch.where(S.abs() >= tau_hard, S, torch.zeros_like(S))
+        # else:
+        #     # S is already all zero
+        #     pass
         return S
 
     def _update_S(self,
