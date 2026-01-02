@@ -11,11 +11,7 @@ request_memory  = 100000
 request_gpus    = 8
 requirements = ( \
     CUDACapability >= 9.0 && \
-    CUDACapability < 9.1 && \
-    !regexp("i101", TARGET.Machine) && \
-    !regexp("i201", TARGET.Machine) && \
-    !regexp("i103", TARGET.Machine) && \
-    !regexp("i102", TARGET.Machine))
+    CUDACapability < 9.1 )
 getenv          = True
 
 queue
