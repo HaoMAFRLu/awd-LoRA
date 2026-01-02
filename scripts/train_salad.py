@@ -50,6 +50,7 @@ def main(cfg_version: str,
          exclude_layers: list=None) -> None:
     
     # fk the error 429!!!!!!
+    # fk the error 502!!!!!!
     hf_login_once()
 
     rank, world_size = _init_distributed()

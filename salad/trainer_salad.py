@@ -83,8 +83,6 @@ class SALADTrainer():
                                         config=self.config,
                                         name=folder_name)
             
-        # fk the error 429!!!!!!
-        hf_login_once()
 
         # torch.cuda.set_device(self.rank % torch.cuda.device_count())
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
