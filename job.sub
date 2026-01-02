@@ -9,25 +9,7 @@ error           = jobs_batch/task.err
 request_cpus    = 8
 request_memory  = 100000
 request_gpus    = 8
-requirements = ( \
-    CUDACapability >= 9.0 && \
-    CUDACapability < 9.1 && \
-    !regexp("GPU-4c275e72", TARGET.DetectedGPUs) && \
-    !regexp("GPU-a0e440fb", TARGET.DetectedGPUs) && \
-    !regexp("GPU-b50eee5a", TARGET.DetectedGPUs) && \
-    !regexp("GPU-57cf3c62", TARGET.DetectedGPUs) && \
-    !regexp("GPU-b65aba4e", TARGET.DetectedGPUs) && \
-    !regexp("GPU-90f1a7d5", TARGET.DetectedGPUs) && \
-    !regexp("GPU-2d57d3d7", TARGET.DetectedGPUs) && \
-    !regexp("GPU-1feef0b3", TARGET.DetectedGPUs) && \
-    !regexp("GPU-438be6c4", TARGET.DetectedGPUs) && \
-    !regexp("GPU-84d3c693", TARGET.DetectedGPUs) && \
-    !regexp("GPU-4d7099ac", TARGET.DetectedGPUs) && \
-    !regexp("GPU-0d0e287b", TARGET.DetectedGPUs) && \
-    !regexp("GPU-537f0097", TARGET.DetectedGPUs) && \
-    !regexp("GPU-6dae7b89", TARGET.DetectedGPUs) && \
-    !regexp("GPU-2aa00ee9", TARGET.DetectedGPUs) && \
-    !regexp("GPU-47e4496c", TARGET.DetectedGPUs) )
+requirements = ( CUDACapability >= 9.0 && CUDACapability < 9.1)
 getenv          = True
 
 queue
