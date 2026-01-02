@@ -49,6 +49,9 @@ def main(cfg_version: str,
          dbeta: float,
          exclude_layers: list=None) -> None:
     
+    # fk the error 429!!!!!!
+    hf_login_once()
+
     rank, world_size = _init_distributed()
     print(f'[Rank {rank}] initializing...')
     print(f'[Rank {rank}]: Total world size: {world_size}')
@@ -111,9 +114,9 @@ def main(cfg_version: str,
     # get the data loader
     model = get_model(path_cfg_model)
 
-    time.sleep(2.0 * rank)  # 3s per rank is a good starting point
+    # time.sleep(2.0 * rank)  # 3s per rank is a good starting point
     data = get_data(cfg["seed_for_shuffle"])
-    dist.barrier()
+    # dist.barrier()
 
     ddp_trainer = SALADTrainer(model, data, cfg, 
                                rank=rank, 
