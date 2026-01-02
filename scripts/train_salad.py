@@ -7,6 +7,7 @@ import shutil
 import transformers
 import argparse
 import torch.distributed as dist
+import socket 
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from salad.utils import *
@@ -51,6 +52,7 @@ def main(cfg_version: str,
     rank, world_size = _init_distributed()
     print(f'[Rank {rank}] initializing...')
     print(f'[Rank {rank}]: Total world size: {world_size}')
+    print(f"[Rank {rank}]: {dist.get_rank()} | [HOST]: {socket.gethostname()}")
     
     torch.cuda.set_device(rank % torch.cuda.device_count())
 
