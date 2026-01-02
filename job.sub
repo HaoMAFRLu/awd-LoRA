@@ -14,6 +14,7 @@ requirements = ( \
     CUDACapability < 9.1 && \
     !regexp("i101", TARGET.Machine) && \
     !regexp("i201", TARGET.Machine) && \
+    !regexp("i103", TARGET.Machine) && \
     !regexp("i102", TARGET.Machine))
 getenv          = True
 
