@@ -9,24 +9,16 @@ arguments       = \
 
 initialdir      = /lustre/home/hma2/projects/awd-LoRA
 
-log             = jobs3/task$(Process).log
-error           = jobs3/task$(Process).err
-output          = jobs3/task$(Process).out
+log             = jobs/task$(Process).log
+error           = jobs/task$(Process).err
+output          = jobs/task$(Process).out
 
 request_cpus    = 8
 request_memory  = 100000
 request_gpus    = 8
 requirements = ( \
     CUDACapability >= 9.0 && \
-    CUDACapability < 9.1 && \
-    !regexp("GPU-4c275e72", TARGET.DetectedGPUs) && \
-    !regexp("GPU-a0e440fb", TARGET.DetectedGPUs) && \
-    !regexp("GPU-b50eee5a", TARGET.DetectedGPUs) && \
-    !regexp("GPU-57cf3c62", TARGET.DetectedGPUs) && \
-    !regexp("GPU-b65aba4e", TARGET.DetectedGPUs) && \
-    !regexp("GPU-90f1a7d5", TARGET.DetectedGPUs) && \
-    !regexp("GPU-2d57d3d7", TARGET.DetectedGPUs) && \
-    !regexp("GPU-1feef0b3", TARGET.DetectedGPUs) )
+    CUDACapability < 9.1 &&)
 
 getenv          = True
 
