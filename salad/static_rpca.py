@@ -32,6 +32,8 @@ class StaticRPCA:
 
         if self.rank == 0:
             all_layers = [f'layers.{i}.{layer_type}' for i in range(self.nr_layers) for layer_type in LAYER_TYPE]
+            all_layers.append('embed_tokens')
+            
             # split the layers among the ranks
             layers_per_rank = [[] for _ in range(self.world_size)]
             for idx, layer_name in enumerate(all_layers):
@@ -96,6 +98,7 @@ class StaticRPCA:
         """Recover the low-rank and sparse components for the assigned layers."""
         svs = {}
         SS = {}
+        LL = {}
         for layer_name in self.assigned_layers:
             X = get_weight(self.ddp_model, layer_name).detach().to(torch.float32).to(self.device)
             m, n = X.shape
@@ -107,9 +110,12 @@ class StaticRPCA:
             
             _, sv, _ = torch.linalg.svd(L, full_matrices=False)
             svs[layer_name] = sv.to('cpu')
+            LL[layer_name] = L.to('cpu')
             SS[layer_name] = S.to('cpu')
         
-        data = {'svs': svs, 'SS': SS}
+        data = {'svs': svs, 
+                'SS': SS,
+                'LL': LL}
         atomic_pickle_dump(data, os.path.join(self.path_folder, f'rpca_X_rank_{self.rank}.pkl'))
 
     def destroy(self):

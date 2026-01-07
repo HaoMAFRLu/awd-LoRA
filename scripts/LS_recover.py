@@ -11,9 +11,11 @@ from salad.static_rpca import StaticRPCA
 hf_login_once()
 ROOT = get_parent_path(lvl=1)
 
-def main(MODEL_TYPE: str, FILE: str) -> None:
+def main(MODEL_TYPE: str, 
+         FOLDER: str,
+         file: str) -> None:
 
-    path_folder = os.path.join(ROOT, 'data', 'salad', MODEL_TYPE, FILE)
+    path_folder = os.path.join(ROOT, 'data', FOLDER, MODEL_TYPE, file)
     path_cfg_model = os.path.join(path_folder, MODEL_TYPE+'_model.json')
 
     model = get_model(path_cfg_model)
@@ -22,7 +24,7 @@ def main(MODEL_TYPE: str, FILE: str) -> None:
 
     static_rpca = StaticRPCA(model, path_folder)
     static_rpca.recover_X()
-    static_rpca.recover_LS()
+    # static_rpca.recover_LS()
     static_rpca.destroy()
 
 if __name__ == "__main__":
@@ -38,13 +40,21 @@ if __name__ == "__main__":
         'vanilla',
         'baseline', 
         'incl_embedding'
+        'head_fp32',
+        'head_bf16',
+        'vanilla_bf16',
+        'baseline_fp16',
     ]
 
     files = [
-        '20251209_104454',
+        '20251209_204846',
+        '20251209_232356',
+        '20251209_233045',
+        '20251213_234650',
     ]
 
     for file in files:
+        print(f'Processing folder: {file}')
         path_part = determine_path_part(MODEL_TYPES=MODEL_TYPES,
                                         FOLDERS=FOLDERS,
                                         file=file)
@@ -55,3 +65,4 @@ if __name__ == "__main__":
         main(MODEL_TYPE, 
              FOLDER,
              file)
+        print(f'Finished folder: {file}')
