@@ -40,8 +40,6 @@ def main(MODEL_TYPE: str,
     with open(path_cfg) as f:
         cfg = yaml.safe_load(f)
 
-    layers = [entry['name'] for entry in cfg['layers']]
-
     seed = cfg['seed']
     max_length = cfg['max_length']
     batch_size = cfg['batch_size']
@@ -60,22 +58,23 @@ def main(MODEL_TYPE: str,
     LL = {}
     SS = {}
     files = os.listdir(path_folder)
-    if FOLDER == 'vanilla':
+    if 'vanilla' in FOLDER:
         rank_files = [f for f in files if f.startswith('rpca_X')]
     else:
         rank_files = [f for f in files if f.startswith('matrix')]
-        
+    
+    layers = []
     for f in rank_files:
         LL_part, SS_part = get_lowspa_layers(os.path.join(path_folder, f))
         for key in LL_part:
-            if 'lm_head' in key:
-                LL[key] = LL_part[key].to(device).t()
-                SS[key] = SS_part[key].to(device).t()
+            if 'embed' in key or 'lm_head' in key:
+                continue
             else:
-                LL[key] = LL_part[key].to(device)
-                SS[key] = SS_part[key].to(device)
-    print(f'[rank {rank}] Low-rank and sparse components loaded.')
-    nr_total_params = sum(p.numel() for p in model.parameters())
+                LL[key] = LL_part[key]
+                SS[key] = SS_part[key]
+                layers.append(key)
+
+    # nr_total_params = sum(p.numel() for p in model.parameters())
     
     print(f'[rank {rank}] Preparing data loaders...')
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
@@ -92,10 +91,6 @@ def main(MODEL_TYPE: str,
               rate=100000000.0,
               rank=rank)
    
-    print(f'[rank {rank}] Read layers...')
-    layers = [entry['name'] for entry in cfg['layers']]
-    print(f'[rank {rank}] Layers read.')
-
     print(f'[rank {rank}] Setting up evaluator...')
     evaluator = CrossEvaluator(model_type=MODEL_TYPE,
                                model=model,
@@ -160,7 +155,7 @@ if __name__ == "__main__":
     rank, world_size = ddp_setup()
 
     params_tgts = {
-        'llama_9m':   [6.5, 5.5],
+        'llama_9m':   [8.5, 8.2],
         'llama_60m':  [49.5, 46.5, 43.5, 40.5, 37.5],
         'llama_130m': [127.5, 117.5, 107.5, 97.5, 87.5],
         'llama_350m': [253.5, 233.5, 213.5, 193.5, 173.5, 153.5],
@@ -178,7 +173,9 @@ if __name__ == "__main__":
     FOLDERS = [
         'vanilla',
         'baseline', 
-        'incl_embedding'
+        'incl_embedding',
+        'vanilla_bf16',  
+        'baseline_fp32',
     ]
 
     files = [

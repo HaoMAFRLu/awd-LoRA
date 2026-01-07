@@ -2,6 +2,7 @@
 from the sum of low-rank matrices L and sparse matrices S.
 """
 import sys, os
+import torch.distributed as dist
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from salad.utils import *
@@ -11,9 +12,20 @@ from salad.static_rpca import StaticRPCA
 hf_login_once()
 ROOT = get_parent_path(lvl=1)
 
+def init_distributed():
+    """Initialize distributed environment"""
+    dist.init_process_group(backend='nccl')
+    rank = dist.get_rank()
+    world = dist.get_world_size()
+    return rank, world
+
+def destroy():
+    dist.destroy_process_group()
+
 def main(MODEL_TYPE: str, 
          FOLDER: str,
-         file: str) -> None:
+         file: str,
+         rank: int=0) -> None:
 
     path_folder = os.path.join(ROOT, 'data', FOLDER, MODEL_TYPE, file)
     path_cfg_model = os.path.join(path_folder, MODEL_TYPE+'_model.json')
@@ -22,12 +34,13 @@ def main(MODEL_TYPE: str,
     # load the original model weights X
     load_model(model, os.path.join(path_folder, 'model.pth'))
 
-    static_rpca = StaticRPCA(model, path_folder)
+    static_rpca = StaticRPCA(model, path_folder, rank)
     static_rpca.recover_X()
     # static_rpca.recover_LS()
-    static_rpca.destroy()
 
 if __name__ == "__main__":
+    rank, world_size = init_distributed()   
+
     MODEL_TYPES = [
                    'llama_9m',
                    'llama_60m',
@@ -51,10 +64,18 @@ if __name__ == "__main__":
         '20251209_232356',
         '20251209_233045',
         '20251213_234650',
+        # '20251209_104454',   # for quick test
     ]
 
-    for file in files:
-        print(f'Processing folder: {file}')
+    files = sorted(files)
+    myfiles = files[rank::world_size]
+    
+    if isinstance(myfiles, str):
+        myfiles = [myfiles]
+
+    for file in myfiles:
+        print(f'[Rank {rank}]: Processing folder: {file}')
+
         path_part = determine_path_part(MODEL_TYPES=MODEL_TYPES,
                                         FOLDERS=FOLDERS,
                                         file=file)
@@ -64,5 +85,9 @@ if __name__ == "__main__":
         
         main(MODEL_TYPE, 
              FOLDER,
-             file)
-        print(f'Finished folder: {file}')
+             file,
+             rank)
+        
+        print(f'[Rank {rank}]: Finished folder: {file}')
+    
+    destroy()

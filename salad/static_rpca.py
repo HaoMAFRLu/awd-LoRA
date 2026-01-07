@@ -1,7 +1,6 @@
 """This script is used to analyze pretrained LLaMA models using RPCA.
 """
 import torch
-import torch.distributed as dist
 from loguru import logger
 
 from salad.utils import *
@@ -14,12 +13,12 @@ LAYER_TYPE = ['self_attn.q_proj', 'self_attn.k_proj',
 class StaticRPCA:
     def __init__(self,
                  model: torch.nn.Module,
-                 path_folder: str=None) -> None:
+                 path_folder: str=None,
+                 rank: int=0) -> None:
         self.path_folder = path_folder
-        self.rank, self.world_size = self._init_distributed()
+        self.rank = rank
 
-        if self.rank == 0:
-            print(f'Total rank: {self.world_size}')
+        self.model = model
 
         torch.cuda.set_device(self.rank % torch.cuda.device_count())
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
@@ -30,31 +29,10 @@ class StaticRPCA:
         # distribute the layers
         self.nr_layers = model.config.num_hidden_layers
 
-        if self.rank == 0:
-            all_layers = [f'layers.{i}.{layer_type}' for i in range(self.nr_layers) for layer_type in LAYER_TYPE]
-            all_layers.append('embed_tokens')
-            
-            # split the layers among the ranks
-            layers_per_rank = [[] for _ in range(self.world_size)]
-            for idx, layer_name in enumerate(all_layers):
-                layers_per_rank[idx % self.world_size].append(layer_name)
-        else:
-            layers_per_rank = None
-
-
-        self.ddp_model = DDP(model.cuda(), device_ids=[torch.cuda.current_device()])
-
-        layers_per_rank = [layers_per_rank]
-        dist.broadcast_object_list(layers_per_rank, src=0)
-        self.assigned_layers = layers_per_rank[0][self.rank]
-
+        all_layers = [f'layers.{i}.{layer_type}' for i in range(self.nr_layers) for layer_type in LAYER_TYPE]
+        all_layers.append('embed_tokens')
         
-    def _init_distributed(self):
-        """Initialize distributed environment"""
-        dist.init_process_group(backend='nccl')
-        rank = dist.get_rank()
-        world = dist.get_world_size()
-        return rank, world
+        self.assigned_layers = all_layers
     
     def load_LS(self, path_folder: str = None):
         """Load the low-rank and sparse components from the pretrained analysis."""
@@ -100,7 +78,7 @@ class StaticRPCA:
         SS = {}
         LL = {}
         for layer_name in self.assigned_layers:
-            X = get_weight(self.ddp_model, layer_name).detach().to(torch.float32).to(self.device)
+            X = get_weight(self.model, layer_name).detach().to(torch.float32).to(self.device)
             m, n = X.shape
             L, S = fit_torch(X, lambda_ = 1.0 / np.sqrt(max(m, n)),
                             device=self.device, 
@@ -118,5 +96,4 @@ class StaticRPCA:
                 'LL': LL}
         atomic_pickle_dump(data, os.path.join(self.path_folder, f'rpca_X_rank_{self.rank}.pkl'))
 
-    def destroy(self):
-        dist.destroy_process_group()
+    
