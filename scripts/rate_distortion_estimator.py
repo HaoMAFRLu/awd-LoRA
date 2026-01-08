@@ -109,12 +109,15 @@ def main(MODEL_TYPE: str,
 
     for params in params_tgt:
         
+        print(f'[rank {rank}] Processing target params: {params}M')
+
         opt_ppl = 10000
         opt_rank_quantile = None
         opt_rate_density = None
         opt_gamma = None
 
         for gamma in gamma_list:
+            print(f'[rank {rank}]   Trying gamma: {gamma}')
             gamma = np.clip(gamma, 0, 1)
 
             _rank_quantile, _rate_density = uia.allocate(params_tgt=params, gamma=gamma)
@@ -129,7 +132,7 @@ def main(MODEL_TYPE: str,
                 opt_rate_density = rate_density
                 opt_gamma = gamma
 
-        
+        print(f'[rank {rank}] Finished target params: {params}M')
         nr_params = uia.check_params(opt_rank_quantile, opt_rate_density)
         sepc = {}
         for layer_name in opt_rank_quantile.keys():
@@ -160,7 +163,7 @@ if __name__ == "__main__":
     params_tgts = {
         'llama_9m':   [8.5, 8.2],
         'llama_60m':  [49.5, 46.5, 43.5, 40.5, 37.5],
-        'llama_130m': [127.5, 117.5, 107.5, 97.5, 87.5],
+        'llama_130m': [147.5, 137.5, 127.5, 117.5, 107.5, 97.5],
         'llama_350m': [253.5, 233.5, 213.5, 193.5, 173.5, 153.5],
         'llama_1b':   [646.5, 609.5],
     }
@@ -183,8 +186,10 @@ if __name__ == "__main__":
 
     files = [
         # '20251209_104454',  # for quick test
-        '20251209_204846',
-        '20251204_135646',
+        # '20251209_204846',
+        # '20251204_135646',
+        '20251202_164626',
+        '20251209_232356',
     ]
 
     if rank == 0:
