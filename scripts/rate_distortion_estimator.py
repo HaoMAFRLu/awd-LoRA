@@ -130,7 +130,8 @@ def main(MODEL_TYPE: str,
 
             with timers['time']:
                 results = evaluator._eval_par_lowrank_lowrank_sparsity(val_loader, rank_quantile, rate_density) 
-            print(f'[rank {rank}]   Time taken: {timers['time'].total/60:.1f} mins')
+            tt = timers['time'].total/60
+            print(f'[rank {rank}]   Time taken: {tt:.1f} mins')
             timers['time'].reset()
 
             ppl = results['ppl']
@@ -194,12 +195,12 @@ if __name__ == "__main__":
 
     files = [
         # '20251209_104454',  # for quick test
-        # '20251209_204846',
-        # '20251204_135646',
-        # '20251202_164626',
-        # '20251209_232356',
-        '20251203_102315',
-        '20251209_233045',
+        # '20251209_204846',  # 60m
+        # '20251204_135646',  # 60m
+        # '20251202_164626',  # 130m
+        # '20251209_232356',  # 130m
+        '20251203_102315',   # 350m
+        '20251209_233045',   # 350m
     ]
 
     if rank == 0:
