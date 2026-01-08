@@ -123,6 +123,7 @@ class CrossEvaluator():
         total_loss = 0.0
         total_batches = 0
         loss_list = []
+        
         with torch.inference_mode():
             for batch in dataloader.batch(batch_size=self.batch_size):
                 

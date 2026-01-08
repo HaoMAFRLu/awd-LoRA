@@ -74,8 +74,8 @@ def main(MODEL_TYPE: str,
             if 'embed' in key or 'lm_head' in key:
                 continue
             else:
-                LL[key] = LL_part[key]
-                SS[key] = SS_part[key]
+                LL[key] = LL_part[key].to(device)
+                SS[key] = SS_part[key].to(device)
                 layers.append(key)
 
     # nr_total_params = sum(p.numel() for p in model.parameters())
@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     params_tgts = {
         'llama_9m':   [8.5, 8.2],
-        'llama_60m':  [61.5, 58.5, 55.5, 52.5],
+        'llama_60m':  [61.5, 58.5],
         # 'llama_60m':  [49.5, 46.5, 43.5, 40.5, 37.5],
         'llama_130m': [147.5, 137.5, 127.5, 117.5, 107.5, 97.5],
         'llama_350m': [253.5, 233.5, 213.5, 193.5, 173.5, 153.5],
