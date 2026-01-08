@@ -12,6 +12,7 @@ from salad.slr_block import *
 from salad.memory_estimator import *
 from salad.flops_estimator import *
 from salad.cross_evaluator import CrossEvaluator
+from salad.simple_timer import SimpleTimer
 
 root = get_parent_path(lvl=1)
 
@@ -107,6 +108,10 @@ def main(MODEL_TYPE: str,
                                batch_size=10)
     print(f'[rank {rank}] Evaluator ready.')
 
+    timers = {
+        'time': SimpleTimer('time'),
+    }
+
     for params in params_tgt:
         
         print(f'[rank {rank}] Processing target params: {params}M')
@@ -123,9 +128,12 @@ def main(MODEL_TYPE: str,
             _rank_quantile, _rate_density = uia.allocate(params_tgt=params, gamma=gamma)
             rank_quantile, rate_density = uia.post_allocate(_rank_quantile, _rate_density, params_tgt=params) 
 
-            results = evaluator._eval_par_lowrank_lowrank_sparsity(val_loader, rank_quantile, rate_density) 
-            ppl = results['ppl']
+            with timers['time']:
+                results = evaluator._eval_par_lowrank_lowrank_sparsity(val_loader, rank_quantile, rate_density) 
+            print(f'[rank {rank}]   Time taken: {timers['time'].total/60:.1f} mins')
+            timers['time'].reset()
 
+            ppl = results['ppl']
             if ppl < opt_ppl:
                 opt_ppl = ppl
                 opt_rank_quantile = rank_quantile
@@ -188,8 +196,10 @@ if __name__ == "__main__":
         # '20251209_104454',  # for quick test
         # '20251209_204846',
         # '20251204_135646',
-        '20251202_164626',
-        '20251209_232356',
+        # '20251202_164626',
+        # '20251209_232356',
+        '20251203_102315',
+        '20251209_233045',
     ]
 
     if rank == 0:

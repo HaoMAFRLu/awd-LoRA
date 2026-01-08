@@ -4,6 +4,7 @@ import os, sys
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
+import tikzplotlib
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from salad.utils import *
@@ -61,15 +62,25 @@ def plot_figures(results: list,
         sorted_indices = np.argsort(x_vals)
         x_vals = np.array(x_vals)[sorted_indices]
         y_vals = np.array(y_vals)[sorted_indices]
-        
         plt.plot(x_vals, y_vals, marker='o', label=f'Exp {i+1}')    
     
+    if is_save:
+        path_save = os.path.join(path_fig, f'{base_name}_{x_args}_{y_args}.png')
+        plt.savefig(path_save, dpi=300)
+        print(f'Figure saved to {path_save}')
+
+    if is_tikz:
+        path_save_tikz = os.path.join(path_fig, f'{base_name}_{x_args}_{y_args}.tex')
+        tikzplotlib.save(path_save_tikz)
+        print(f'TikZ figure saved to {path_save_tikz}')
+
     plt.legend()
     plt.xlabel(x_args)
     plt.ylabel(y_args)
     plt.show()
 
-def main(path_parts: list) -> None:
+def main(path_parts: list,
+         x_args: str='params') -> None:
     results = []
     for path_part in path_parts:
         model_type = path_part['model_type']
@@ -84,12 +95,12 @@ def main(path_parts: list) -> None:
     mkdir(path_fig)
 
     plot_figures(results=results,
-                 x_args='params',
+                 x_args=x_args,
                  y_args='ppl',
                  path_fig=path_fig,
                  base_name=model_type,
                  is_save=True,
-                 is_tikz=False)
+                 is_tikz=True)
 
     print('here')
 
@@ -120,4 +131,5 @@ if __name__ == "__main__":
                                         file=file)
         path_parts.append(path_part) 
 
-    main(path_parts=path_parts)   
+    main(path_parts=path_parts,
+         x_args='flops',)   
