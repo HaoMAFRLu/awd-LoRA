@@ -21,6 +21,9 @@ def ddp_setup():
     world = dist.get_world_size()
     return rank, world
 
+def destory():
+    dist.destroy_process_group()
+
 def main(MODEL_TYPE: str,
          FOLDER: str,
          file: str,
@@ -179,7 +182,9 @@ if __name__ == "__main__":
     ]
 
     files = [
-        '20251209_104454',
+        # '20251209_104454',  # for quick test
+        '20251209_204846',
+        '20251204_135646',
     ]
 
     if rank == 0:
@@ -221,3 +226,5 @@ if __name__ == "__main__":
 
         print(f'[rank {rank}] Finished folder: {file}')
         print(f'[rank {rank}] ----------{nr}/{len(my_files)}----------')
+    
+    destory()
