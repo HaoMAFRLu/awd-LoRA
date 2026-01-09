@@ -121,48 +121,50 @@ def main(MODEL_TYPE: str,
         opt_rate_density = None
         opt_gamma = None
 
-        for gamma in gamma_list:
-            print(f'[rank {rank}]   Trying gamma: {gamma}')
-            gamma = np.clip(gamma, 0, 1)
+        if params < uia.nr_params_total / 1e6:
+            for gamma in gamma_list:
+                print(f'[rank {rank}]   Trying gamma: {gamma}')
+                gamma = np.clip(gamma, 0, 1)
 
-            _rank_quantile, _rate_density = uia.allocate(params_tgt=params, gamma=gamma)
-            rank_quantile, rate_density = uia.post_allocate(_rank_quantile, _rate_density, params_tgt=params) 
+                rank_quantile, rate_density = uia.allocate(params_tgt=params, gamma=gamma)        
+                # rank_quantile, rate_density = uia.post_allocate(_rank_quantile, _rate_density, params_tgt=params) 
 
-            with timers['time']:
-                results = evaluator._eval_par_lowrank_lowrank_sparsity(val_loader, rank_quantile, rate_density) 
-            tt = timers['time'].total/60
-            print(f'[rank {rank}]   Time taken: {tt:.1f} mins')
-            timers['time'].reset()
+                with timers['time']:
+                    results = evaluator._eval_par_lowrank_lowrank_sparsity(val_loader, rank_quantile, rate_density) 
+                tt = timers['time'].total/60
+                print(f'[rank {rank}]   Time taken: {tt:.1f} mins')
+                timers['time'].reset()
 
-            ppl = results['ppl']
-            if ppl < opt_ppl:
-                opt_ppl = ppl
-                opt_rank_quantile = rank_quantile
-                opt_rate_density = rate_density
-                opt_gamma = gamma
+                ppl = results['ppl']
+                if ppl < opt_ppl:
+                    opt_ppl = ppl
+                    opt_rank_quantile = rank_quantile
+                    opt_rate_density = rate_density
+                    opt_gamma = gamma
 
-        print(f'[rank {rank}] Finished target params: {params}M')
-        nr_params = uia.check_params(opt_rank_quantile, opt_rate_density)
-        sepc = {}
-        for layer_name in opt_rank_quantile.keys():
-            sepc['model.'+layer_name] = {
-                "rank_ratio": float(opt_rank_quantile[layer_name]),
-                "density": float(opt_rate_density[layer_name])
+            print(f'[rank {rank}] Finished target params: {params}M')
+
+            nr_params = uia.check_params(opt_rank_quantile, opt_rate_density)
+            sepc = {}
+            for layer_name in opt_rank_quantile.keys():
+                sepc['model.'+layer_name] = {
+                    "rank_ratio": float(opt_rank_quantile[layer_name]),
+                    "density": float(opt_rate_density[layer_name])
+                }
+            flops_cost = estimate_per_token_flops(model, sepc)
+            memory_cost = estimate_inference_memory_cost(model, sepc)
+
+            data = {
+                'gamma': opt_gamma,
+                'ppl': opt_ppl,
+                'nr_params': nr_params,
+                'flops_cost': flops_cost,
+                'memory_cost': memory_cost,
             }
-        flops_cost = estimate_per_token_flops(model, sepc)
-        memory_cost = estimate_inference_memory_cost(model, sepc)
 
-        data = {
-            'gamma': opt_gamma,
-            'ppl': opt_ppl,
-            'nr_params': nr_params,
-            'flops_cost': flops_cost,
-            'memory_cost': memory_cost,
-        }
-
-        file_name = f'distortion_{params}'
-        with open(os.path.join(path_folder, file_name+'.pkl'), 'wb') as f:
-            pickle.dump(data, f)
+            file_name = f'distortion_{params}'
+            with open(os.path.join(path_folder, file_name+'.pkl'), 'wb') as f:
+                pickle.dump(data, f)
 
             
 if __name__ == "__main__":
@@ -170,11 +172,10 @@ if __name__ == "__main__":
     rank, world_size = ddp_setup()
 
     params_tgts = {
-        'llama_9m':   [8.5, 8.2],
-        'llama_60m':  [61.5, 58.5],
-        # 'llama_60m':  [49.5, 46.5, 43.5, 40.5, 37.5],
-        'llama_130m': [147.5, 137.5, 127.5, 117.5, 107.5, 97.5],
-        'llama_350m': [353.5, 313.5, 273.5, 233.5, 193.5, 153.5],
+        'llama_9m':   [10.5, 8.5, 8.2],
+        'llama_60m':  [65.5, 60.5, 55.5, 50.5, 45.5, 40.5, 35.5],
+        'llama_130m': [150.5, 140.5, 130.5, 120.5, 110.5, 100.5, 90.5, 80.5],
+        'llama_350m': [400.5, 360.5, 320.5, 280.5, 240.5, 200.5, 160.5, 120.5],
         'llama_1b':   [646.5, 609.5],
     }
 
@@ -196,12 +197,12 @@ if __name__ == "__main__":
 
     files = [
         # '20251209_104454',  # for quick test
-        # '20251209_204846',  # 60m
-        # '20251204_135646',  # 60m
+        '20251209_204846',  # 60m
+        '20251204_135646',  # 60m
         # '20251202_164626',  # 130m
         # '20251209_232356',  # 130m
-        '20251203_102315',   # 350m
-        '20251209_233045',   # 350m
+        # '20251203_102315',   # 350m
+        # '20251209_233045',   # 350m
     ]
 
     if rank == 0:

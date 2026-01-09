@@ -21,6 +21,8 @@ def read_distortion(model_type: str,
     for file in distortion_files:
         with open(os.path.join(path_folder, file), 'rb') as f:
             data = pickle.load(f)
+
+        print(data['nr_params']/1e6)
         exp = {
             'ppl': data['ppl'],
             'gamma': data['gamma'],
@@ -57,7 +59,7 @@ def plot_figures(results: list,
     
     for i, exps in enumerate(results):
         x_vals = [exp[x_args] for exp in exps]
-        y_vals = [-exp[y_args] for exp in exps]
+        y_vals = [-np.log(exp[y_args]) for exp in exps]
         
         sorted_indices = np.argsort(x_vals)
         x_vals = np.array(x_vals)[sorted_indices]
@@ -120,7 +122,7 @@ if __name__ == "__main__":
 
     files = [
         # '20251209_104454',  # for quick test
-        '20251209_204846',
+        # '20251209_204846',
         '20251204_135646',
     ]
 
