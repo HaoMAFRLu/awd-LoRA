@@ -116,12 +116,13 @@ def main(MODEL_TYPE: str,
         
         print(f'[rank {rank}] Processing target params: {params}M')
 
-        opt_ppl = 10000
+        opt_ppl = 100000000000000.0
         opt_rank_quantile = None
         opt_rate_density = None
         opt_gamma = None
 
         if params < uia.nr_params_total / 1e6:
+
             for gamma in gamma_list:
                 print(f'[rank {rank}]   Trying gamma: {gamma}')
                 gamma = np.clip(gamma, 0, 1)
