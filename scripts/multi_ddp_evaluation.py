@@ -140,7 +140,7 @@ def main(cfg_version: str,
         rate_density_list = []
 
         for params in params_tgt:
-            _rank_quantile, _rate_density = uia.allocate(params_tgt=params, gamma=gamma)
+            _rank_quantile, _rate_density, _ = uia.allocate(params_tgt=params, gamma=gamma)
             rank_quantile, rate_density = uia.post_allocate(_rank_quantile, _rate_density, params_tgt=params) 
 
             rank_quantile_list.append(rank_quantile)
@@ -159,28 +159,20 @@ def main(cfg_version: str,
         # with open(os.path.join(path_folder, 'eval_results.pkl'), 'wb') as f:
         #     pickle.dump(data, f)
 
-        with open(os.path.join(path_folder, 'eval_results_'+precision+'_'+str(gamma)+'.pkl'), 'wb') as f:
+        with open(os.path.join(path_folder, 'eval_results_bf16'+'_'+str(gamma)+'.pkl'), 'wb') as f:
             pickle.dump(data, f)
 
 if __name__ == "__main__":
     print('Starting multi-DDP evaluation...')
 
-    # params_tgt = {
-    #     'llama_9m':   [6.5, 5.5],
-    #     'llama_60m':  [44.5, 43.5],
-    #     'llama_130m': [97.5, 94.5],
-    #     'llama_350m': [194.5, 185.5],
-    #     'llama_1b':   [646.5, 609.5],
-    # }
-    
     params_tgt = {
         'llama_9m':   [6.5, 5.5],
-        'llama_60m':  [48.5, 44.5, 40.5, 36.5],
-        'llama_130m': [120.5, 110.5, 100.5, 90.5, 80.5],
-        'llama_350m': [250.5, 230.5, 210.5, 190.5, 170.5, 150.5],
-        'llama_1b':   [780.5, 730.5, 680.5, 630.5, 580.5, 530.5],
+        'llama_60m':  [44.5, 43.5],
+        'llama_130m': [97.5, 94.5],
+        'llama_350m': [194.5, 185.5],
+        'llama_1b':   [646.5, 609.5],
     }
-
+    
     MODEL_TYPES = [
                    'llama_9m',
                    'llama_60m',
@@ -194,6 +186,9 @@ if __name__ == "__main__":
         'incl_embedding',
         'head',
         'baseline_fp32',
+        'head_fp32',
+        'head_bf16',
+        'vanilla_bf16',
     ]
     gamma_list = [round(x, 2) for x in np.arange(0.20, 1.0, 0.05)]
     # gamma_list = [0.25]
@@ -208,6 +203,12 @@ if __name__ == "__main__":
         '20251202_164626',   # 130m baseline fp32
         '20251203_102315',   # 350m baseline fp32
         '20251130_125959',   # 1b baseline fp32
+        '20251204_152747',   # 60m head fp32
+        '20251203_144749',   # 130m head fp32
+        '20251204_134313',   # 350m head fp32
+        '20251227_222811',   # 60m head bf16
+        '20251227_222332',   # 130m head bf16
+        '20260102_233510',   # 350m head bf16
     ]
 
     if rank == 0:
