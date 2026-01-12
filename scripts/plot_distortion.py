@@ -40,8 +40,6 @@ def get_curve(exp: list,
     x_vals = [e[x_args] for e in exp]
     y_vals = [e[y_args] for e in exp]
 
-
-
 def plot_figures(results: list,
                  x_args: str,
                  y_args: str,
@@ -122,8 +120,13 @@ if __name__ == "__main__":
 
     files = [
         # '20251209_104454',  # for quick test
-        # '20251209_204846',
-        '20251204_135646',
+        # '20251209_204846',  # 60m
+        # '20251204_135646',  # 60m
+        # '20251202_164626',  # 130m
+        # '20251209_232356',  # 130m
+        '20251203_102315',   # 350m
+        '20251209_233045',   # 350m
+
     ]
 
     path_parts = []
