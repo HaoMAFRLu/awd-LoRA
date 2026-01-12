@@ -32,7 +32,7 @@ def main(MODEL_TYPE: str,
          params_tgt: list=[1.0],
          precision: float=torch.bfloat16) -> None:
     
-    gamma_list = [round(x, 2) for x in np.arange(0.20, 0.90, 0.1)]
+    gamma_list = [round(x, 2) for x in np.arange(0.20, 0.90, 0.05)]
 
     path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file)
     path_cfg = os.path.join(path_folder, MODEL_TYPE+'.yaml')
@@ -116,68 +116,71 @@ def main(MODEL_TYPE: str,
         
         print(f'[rank {rank}] Processing target params: {params}M')
 
-        opt_ppl = 100000000000000.0
-        opt_rank_quantile = None
-        opt_rate_density = None
-        opt_gamma = None
+        results = []
 
-        if params < uia.nr_params_total / 1e6:
+        if params < uia.nr_params_total / 1e6: # the target params should be smaller than the capacity
 
             for gamma in gamma_list:
                 print(f'[rank {rank}]   Trying gamma: {gamma}')
                 gamma = np.clip(gamma, 0, 1)
 
-                rank_quantile, rate_density = uia.allocate(params_tgt=params, gamma=gamma)        
-                # rank_quantile, rate_density = uia.post_allocate(_rank_quantile, _rate_density, params_tgt=params) 
+                rank_quantile, rate_density, return_state = uia.allocate(params_tgt=params, gamma=gamma)        
+                rank_quantile, rate_density = uia.post_allocate(rank_quantile, rate_density, params_tgt=params) 
 
-                with timers['time']:
-                    results = evaluator._eval_par_lowrank_lowrank_sparsity(val_loader, rank_quantile, rate_density) 
-                tt = timers['time'].total/60
-                print(f'[rank {rank}]   Time taken: {tt:.1f} mins')
-                timers['time'].reset()
+                if return_state == 0:  # only evaluate the model if allocation is successful
+                    with timers['time']:
+                        outputs = evaluator._eval_par_lowrank_lowrank_sparsity(val_loader, rank_quantile, rate_density) 
+                    tt = timers['time'].total/60
+                    print(f'[rank {rank}]   Time taken: {tt:.1f} mins')
+                    timers['time'].reset()
 
-                ppl = results['ppl']
-                if ppl < opt_ppl:
-                    opt_ppl = ppl
-                    opt_rank_quantile = rank_quantile
-                    opt_rate_density = rate_density
-                    opt_gamma = gamma
+                    nr_params = uia.check_params(rank_quantile, rate_density)
 
-            print(f'[rank {rank}] Finished target params: {params}M')
+                    sepc = {}
+                    for layer_name in rank_quantile.keys():
+                        sepc['model.'+layer_name] = {
+                            "rank_ratio": float(rank_quantile[layer_name]),
+                            "density": float(rate_density[layer_name])
+                        }
+                    flops_cost = estimate_per_token_flops(model, sepc)
+                    memory_cost = estimate_inference_memory_cost(model, sepc)
+                    
+                    data = {
+                        'gamma': gamma,
+                        'rank_quantile': rank_quantile,
+                        'rate_density': rate_density,
+                        'ppl': outputs['ppl'],
+                        'nr_params': nr_params,
+                        'flops_cost': flops_cost,
+                        'memory_cost': memory_cost,
+                    }
 
-            nr_params = uia.check_params(opt_rank_quantile, opt_rate_density)
-            sepc = {}
-            for layer_name in opt_rank_quantile.keys():
-                sepc['model.'+layer_name] = {
-                    "rank_ratio": float(opt_rank_quantile[layer_name]),
-                    "density": float(opt_rate_density[layer_name])
-                }
-            flops_cost = estimate_per_token_flops(model, sepc)
-            memory_cost = estimate_inference_memory_cost(model, sepc)
+                    results.append(data)
 
-            data = {
-                'gamma': opt_gamma,
-                'ppl': opt_ppl,
-                'nr_params': nr_params,
-                'flops_cost': flops_cost,
-                'memory_cost': memory_cost,
-            }
-
-            file_name = f'distortion_{params}'
-            with open(os.path.join(path_folder, file_name+'.pkl'), 'wb') as f:
-                pickle.dump(data, f)
+            if len(results) > 0:
+                file_name = f'comp_kappa_{params}'
+                with open(os.path.join(path_folder, file_name+'.pkl'), 'wb') as f:
+                    pickle.dump(results, f)
 
             
 if __name__ == "__main__":
     hf_login_once()
     rank, world_size = ddp_setup()
 
+    # params_tgts = {
+    #     'llama_9m':   [10.5, 8.5, 8.2],
+    #     'llama_60m':  [65.5, 60.5, 55.5, 50.5, 45.5, 40.5, 35.5],
+    #     'llama_130m': [150.5, 140.5, 130.5, 120.5, 110.5, 100.5, 90.5, 80.5],
+    #     'llama_350m': [400.5, 360.5, 320.5, 280.5, 240.5, 200.5, 160.5, 120.5],
+    #     'llama_1b':   [1500.5, 1300.5, 1100.5, 900.5, 700.5, 600.5, 500.5, 400.5],
+    # }
+
     params_tgts = {
-        'llama_9m':   [10.5, 8.5, 8.2],
-        'llama_60m':  [65.5, 60.5, 55.5, 50.5, 45.5, 40.5, 35.5],
+        'llama_9m':   [12.5, 9.5, 8.5, 6.5, 5.5],
+        'llama_60m':  [64.5, 60.5, 56.5, 52.5, 48.5, 44.5, 40.5, 36.5],
         'llama_130m': [150.5, 140.5, 130.5, 120.5, 110.5, 100.5, 90.5, 80.5],
-        'llama_350m': [400.5, 360.5, 320.5, 280.5, 240.5, 200.5, 160.5, 120.5],
-        'llama_1b':   [646.5, 609.5],
+        'llama_350m': [400.5, 360.5, 320.5, 280.5, 250.5, 230.5, 210.5, 190.5, 170.5, 150.5],
+        'llama_1b':   [1500.5, 1300.5, 1100.5, 900.5, 780.5, 730.5, 680.5, 630.5, 580.5, 530.5],
     }
 
     MODEL_TYPES = [
@@ -198,12 +201,20 @@ if __name__ == "__main__":
 
     files = [
         # '20251209_104454',  # for quick test
-        '20251209_204846',  # 60m
-        '20251204_135646',  # 60m
-        '20251202_164626',  # 130m
-        '20251209_232356',  # 130m
-        '20251203_102315',   # 350m
-        '20251209_233045',   # 350m
+        '20251204_135646',  # 60m, baseline fp32
+        # '20251204_152747',  # 60m, head fp32
+        # '20251227_222811',  # 60m, head bf16
+        '20251209_204846',  # 60m, vanilla bf16
+        '20251202_164626',  # 130m, baseline fp32
+        # '20251203_144749',  # 130m, head fp32
+        # '20251227_222332',  # 130m, head bf16
+        '20251209_232356',  # 130m, vanilla bf16
+        '20251203_102315',  # 350m, baseline fp32
+        # '20251204_134313',  # 350m, head fp32
+        # '20260102_233510',  # 350m, head bf16
+        '20251209_233045',  # 350m, vanilla bf16
+        '20251130_125959',  # 1b, baseline fp32
+        '20251213_234650',  # 1b, vanilla bf16
     ]
 
     if rank == 0:

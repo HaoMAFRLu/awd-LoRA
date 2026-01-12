@@ -28,7 +28,7 @@ def main(cfg_version: str,
          params_tgt: list,
          gamma_list: list,
          rank: int=0,
-         precision: str='bf16'
+         precision: str=torch.bfloat16,
          ) -> None:
     
     # load the config
@@ -52,10 +52,7 @@ def main(cfg_version: str,
     print(f'[rank {rank}] Loading model...')
     
     model = get_model(path_cfg_model)
-    if precision == 'fp32':
-        model.to(torch.float32)
-    elif precision == 'bf16':
-        model.to(torch.bfloat16)
+    model.to(precision)
     
     load_model(model, os.path.join(path_folder, 'model.pth'))
     model.to(device)
@@ -168,14 +165,22 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     print('Starting multi-DDP evaluation...')
 
+    # params_tgt = {
+    #     'llama_9m':   [6.5, 5.5],
+    #     'llama_60m':  [44.5, 43.5],
+    #     'llama_130m': [97.5, 94.5],
+    #     'llama_350m': [194.5, 185.5],
+    #     'llama_1b':   [646.5, 609.5],
+    # }
+    
     params_tgt = {
         'llama_9m':   [6.5, 5.5],
-        'llama_60m':  [44.5, 43.5],
-        'llama_130m': [97.5, 94.5],
-        'llama_350m': [194.5, 185.5],
-        'llama_1b':   [646.5, 609.5],
+        'llama_60m':  [48.5, 44.5, 40.5, 36.5],
+        'llama_130m': [120.5, 110.5, 100.5, 90.5, 80.5],
+        'llama_350m': [250.5, 230.5, 210.5, 190.5, 170.5, 150.5],
+        'llama_1b':   [780.5, 730.5, 680.5, 630.5, 580.5, 530.5],
     }
-    
+
     MODEL_TYPES = [
                    'llama_9m',
                    'llama_60m',
@@ -187,9 +192,10 @@ if __name__ == "__main__":
     FOLDERS = [
         'baseline', 
         'incl_embedding',
-        'head'
+        'head',
+        'baseline_fp32',
     ]
-    gamma_list = [round(x, 2) for x in np.arange(0.10, 1.0, 0.05)]
+    gamma_list = [round(x, 2) for x in np.arange(0.20, 1.0, 0.05)]
     # gamma_list = [0.25]
 
     print('Setting up DDP...')
@@ -198,7 +204,10 @@ if __name__ == "__main__":
 
     # rank = 0
     files = [
-        '20260105_090228',
+        '20251204_135646',   # 60m baseline fp32
+        '20251202_164626',   # 130m baseline fp32
+        '20251203_102315',   # 350m baseline fp32
+        '20251130_125959',   # 1b baseline fp32
     ]
 
     if rank == 0:
@@ -230,15 +239,14 @@ if __name__ == "__main__":
         FOLDER = path_part['folder']
         path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file)
 
-        for precision in ['bf16']:
-            main(
-                 MODEL_TYPE,
-                 path_folder,
-                 params_tgt[MODEL_TYPE],
-                 gamma_list=gamma_list,
-                 rank=rank,
-                 precision=precision,
-                )
+        main(
+                MODEL_TYPE,
+                path_folder,
+                params_tgt[MODEL_TYPE],
+                gamma_list=gamma_list,
+                rank=rank,
+                precision=torch.bfloat16,
+            )
 
         print(f'[rank {rank}] Finished folder: {file}')
         print(f'[rank {rank}] ----------{nr}/{len(my_files)}----------')

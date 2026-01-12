@@ -139,6 +139,10 @@ class UIA():
         # whether it has enough parameters to reduce in L and S
         params_reduce_capacity_L = self.nr_params_L - params_diff_L
         params_reduce_capacity_S = self.nr_params_S - params_diff_S
+        if params_reduce_capacity_L >= 0 and params_reduce_capacity_S >= 0:
+            return_state = 0  # success, enough parameters to reduce according to allocation ratio kappa
+        else:
+            return_state = 1  # fail
 
         if params_reduce_capacity_L < 0 and params_reduce_capacity_S < 0: # not enough parameters to reduce
             # reduce all low-rank and sparse components
@@ -159,7 +163,7 @@ class UIA():
             params_diff_L = params_diff_L
             params_diff_S = params_diff_S
 
-        return params_diff_L, params_diff_S
+        return params_diff_L, params_diff_S, return_state
 
     def allocate(self,
                  params_tgt: float,
@@ -172,17 +176,18 @@ class UIA():
         Returns:
             rank_quantile_uia (dict): allocated rank quantile for each layer
             rate_density (dict): allocated density for each layer
+            return state: 0 - success, 1 - fail
         """
         params_tgt = int(params_tgt * 1e6)
         assert 0<=gamma<=1.0, "gamma should be between 0 and 1."
         
         if params_tgt >= self.nr_params_total: # no reduction needed
-            return self.rank_quantile_energy, self.rate_density
+            return self.rank_quantile_energy, self.rate_density, 1
         
-        params_diff_L, params_diff_S = self.allocate_params(params_tgt, gamma)
+        params_diff_L, params_diff_S, return_state = self.allocate_params(params_tgt, gamma)
 
         # allocate ranks for each layer
-        return self.allocate_L_and_S(params_diff_L, 'L'), self.allocate_L_and_S(params_diff_S, 'S')
+        return self.allocate_L_and_S(params_diff_L, 'L'), self.allocate_L_and_S(params_diff_S, 'S'), return_state
 
     def check_params(self,
                      rank_quantile: dict,
