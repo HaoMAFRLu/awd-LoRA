@@ -141,8 +141,12 @@ class UIA():
         params_reduce_capacity_S = self.nr_params_S - params_diff_S
         if params_reduce_capacity_L >= 0 and params_reduce_capacity_S >= 0:
             return_state = 0  # success, enough parameters to reduce according to allocation ratio kappa
-        else:
-            return_state = 1  # fail
+        elif params_reduce_capacity_L < 0 and params_reduce_capacity_S < 0:
+            return_state = 2  # fail, not enough parameters to reduce in both L and S
+        elif params_reduce_capacity_L < 0 and params_reduce_capacity_S >= 0:
+            return_state = 3  # fail, not enough parameters to reduce in L
+        else:   # params_reduce_capacity_L >= 0 and params_reduce_capacity_S < 0:
+            return_state = 4  # fail, not enough parameters to reduce in S
 
         if params_reduce_capacity_L < 0 and params_reduce_capacity_S < 0: # not enough parameters to reduce
             # reduce all low-rank and sparse components

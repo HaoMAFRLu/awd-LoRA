@@ -76,8 +76,8 @@ def main(MODEL_TYPE: str,
               rate=100000000.0,
               rank=rank)
    
-    params = 8.8  # the parameter budget
-    gamma = 0.5  # the allocation ratio
+    params = 44.5  # the parameter budget
+    gamma = 0.7  # the allocation ratio
 
     rank_quantile, rate_density, return_state = uia.allocate(params_tgt=params, gamma=gamma)
 
@@ -129,13 +129,15 @@ if __name__ == "__main__":
                 ]
     
     FOLDERS = [
+        'baseline_fp32',
         'vanilla',
         'baseline', 
         'incl_embedding'
     ]
 
     files = [
-        '20251209_104454',
+        # '20251209_104454',  # for quick test
+        '20251204_135646',
     ]
 
     if rank == 0:
