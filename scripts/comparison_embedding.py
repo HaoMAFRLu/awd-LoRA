@@ -115,9 +115,9 @@ def plot_rank(L_baseline: torch.Tensor,
         label='Head'
     )
 
-    # tikzplotlib.save(os.path.join(path_folder, file_name + '.tex'))
-    # plt.savefig(os.path.join(path_folder, file_name + '.png'))
-    plt.show()
+    tikzplotlib.save(os.path.join(path_folder, file_name + '.tex'))
+    plt.savefig(os.path.join(path_folder, file_name + '.png'))
+    # plt.show()
 
 def plot_loss(loss_baseline: list,
               loss_head: list,
@@ -324,9 +324,9 @@ def main(MODEL_TYPE: str,
          file_head_fp32: str,
          nr_layer: int,
          layer_type: str,
-         if_plot_loss: bool=False,
-         if_plot_layer: bool=False,
-         if_plot_embed: bool=False,
+         if_plot_loss: bool=True,
+         if_plot_layer: bool=True,
+         if_plot_embed: bool=True,
          if_plot_dist: bool=True) -> None:
     
     path_folder = os.path.join(root, 'data', 'figures', 'comparison_embedding')
@@ -384,9 +384,9 @@ def main(MODEL_TYPE: str,
 
 
 if __name__ == "__main__":
-    MODEL_TYPE = 'llama_350m'
-    nr_layer = 21
-    layer_type = 'up'
+    MODEL_TYPE = 'llama_130m'
+    nr_layer = 5
+    layer_type = 'gate'
 
     files_baseline_fp32_list = [
         '20251204_135646',

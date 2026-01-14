@@ -133,8 +133,6 @@ def main(MODEL_TYPE: str,
             path=path_fig,
         )
 
-
-
     plot_ppl_grid(
         df_all,
         eval_order=[key_word_map[k] for k in target_keys],

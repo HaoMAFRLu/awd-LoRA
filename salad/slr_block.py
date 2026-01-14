@@ -120,7 +120,7 @@ def replace_linears(
                 continue
 
         old_mod = name_to_module[layer_name]
-        if not isinstance(old_mod, nn.Linear):
+        if not isinstance(old_mod, nn.Linear) and 'embed' not in layer_name:
             if strict:
                 raise TypeError(f"Target '{layer_name}' is {type(old_mod)}, not nn.Linear.")
             else:

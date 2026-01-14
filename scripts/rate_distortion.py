@@ -76,46 +76,45 @@ def main(MODEL_TYPE: str,
               rate=100000000.0,
               rank=rank)
    
-    params = 43.0
-    gamma = 0.5
+    params = 8.8  # the parameter budget
+    gamma = 0.5  # the allocation ratio
 
-    _rank_quantile, _rate_density = uia.allocate(params_tgt=params, gamma=gamma)
-    rank_quantile, rate_density = uia.post_allocate(_rank_quantile, _rate_density, params_tgt=params) 
+    rank_quantile, rate_density, return_state = uia.allocate(params_tgt=params, gamma=gamma)
 
-    abs_list = []
+    if return_state == 0:  # 0 if the allocation succeeded
+        rank_quantile, rate_density = uia.post_allocate(rank_quantile, rate_density, params_tgt=params) 
 
-    nr_total_params = sum(p.numel() for p in model.parameters())
-    print(f'Total model parameters: {nr_total_params/1e6:.2f}M')
+        abs_list = []
 
-    for layer_name in rank_quantile.keys():
-        print(f'[rank {rank}] Processing layer: {layer_name}')
+        nr_total_params = sum(p.numel() for p in model.parameters())
+        print(f'Total model parameters: {nr_total_params/1e6:.2f}M')
 
-        r_ratio = rank_quantile[layer_name]
-            
-        L = LL[layer_name]
-        S = SS[layer_name]
+        for layer_name in rank_quantile.keys():
+            print(f'[rank {rank}] Processing layer: {layer_name}')
 
-        m, n = L.shape
+            r_ratio = rank_quantile[layer_name]
+                
+            L = LL[layer_name]
+            S = SS[layer_name]
 
-        r = max(1, int(min(m, n) * r_ratio))
+            m, n = L.shape
 
-        U, _s, Vh = torch.linalg.svd(L, full_matrices=False)
-        A = U[:, :r] @ torch.diag(torch.sqrt(_s[:r]))
-        B = torch.diag(torch.sqrt(_s[:r])) @ Vh[:r, :]
+            r = max(1, int(min(m, n) * r_ratio))
 
-        abs_list.append(ABSFactor(name=layer_name, A=A, B=B, S=S))
+            U, _s, Vh = torch.linalg.svd(L, full_matrices=False)
+            A = U[:, :r] @ torch.diag(torch.sqrt(_s[:r]))
+            B = torch.diag(torch.sqrt(_s[:r])) @ Vh[:r, :]
 
-    replaced = replace_linears(model, 
-                               abs_list,
-                               strict=True)
+            abs_list.append(ABSFactor(name=layer_name, A=A, B=B, S=S))
 
-    target_names = ['model.'+x.name for x in abs_list]  # 你传入的层名
-    check_replaced_modules(model, target_names)
+        replaced = replace_linears(model, abs_list, strict=True)
 
-    nr_total_params = sum(p.numel() for p in model.parameters())
-    print(f'Total model parameters: {nr_total_params/1e6:.2f}M')
+        # target_names = ['model.'+x.name for x in abs_list]  # 你传入的层名
+        # check_replaced_modules(model, target_names)
+
+        nr_total_params = sum(p.numel() for p in model.parameters())
+        print(f'Total model parameters: {nr_total_params/1e6:.2f}M')
     
-    print('here')
 
 if __name__ == "__main__":
     hf_login_once()

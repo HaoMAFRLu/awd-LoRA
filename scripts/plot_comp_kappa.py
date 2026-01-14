@@ -66,7 +66,7 @@ def plot_figures(results: list,
             model_type = exp['model_type']
             nr_params = exp['params']
             x_vals = exp['gamma']  # in million
-            y_vals = [xx for xx in exp['ppl']]
+            y_vals = [np.log(xx) for xx in exp['ppl']]
             
             sorted_indices = np.argsort(x_vals)
             x_vals = np.array(x_vals)[sorted_indices]
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         # '20251204_134313',  # 350m, head fp32
         # '20260102_233510',  # 350m, head bf16
         # '20251209_233045',  # 350m, vanilla bf16
-        # '20251130_125959',  # 1b, baseline fp32
+        '20251130_125959',  # 1b, baseline fp32
         # '20251213_234650',  # 1b, vanilla bf16
     ]
 
