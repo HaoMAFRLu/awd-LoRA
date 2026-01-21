@@ -9,13 +9,13 @@ embed_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.24,
         'drate': 1.0,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.0015,
+        'rate_decay': 0.0013,
         'drate': 0.01,
     },
     'rho_dict':            {
@@ -71,17 +71,17 @@ attn_o_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.24,
         'drate': 0.01,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.0015,
+        'rate_decay': 0.0013,
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           6e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -102,17 +102,17 @@ attn_q_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.24,
         'drate': 0.01,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.0015,
+        'rate_decay': 0.0013,
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           6e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -133,17 +133,17 @@ attn_k_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.24,
         'drate': 0.01,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.0015,
+        'rate_decay': 0.0013,
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           6e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -164,17 +164,17 @@ attn_v_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.24,
         'drate': 0.01,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.0015,
+        'rate_decay': 0.0013,
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           6e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -195,17 +195,17 @@ mlp_gate_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.24,
         'drate': 0.01,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.0015,
+        'rate_decay': 0.0013,
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           6e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -226,17 +226,17 @@ mlp_down_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.24,
         'drate': 0.01,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.0015,
+        'rate_decay': 0.0013,
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           6e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -257,17 +257,17 @@ mlp_up_proj_params = {
     'alpha_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut'
-        'rate_decay': 0.2,
+        'rate_decay': 0.24,
         'drate': 0.01,
     },
     'beta_dict': {
         'init': 0.0,
         'mode': 'adaptive',  # 'fixed', 'adaptive' or 'hard_cut
-        'rate_decay': 0.0015,
+        'rate_decay': 0.0013,
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           6e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,

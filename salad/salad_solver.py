@@ -16,7 +16,8 @@ class SALAD():
                  X: torch.Tensor,
                  nr_layers: int,
                  is_full: bool,
-                 precision: str=torch.float32) -> None:
+                 precision: str=torch.float32,
+                 rel_eps: float=2e-8) -> None:
         """
         Args:
             layer_name: Name of the layer this solver applies to
@@ -31,6 +32,8 @@ class SALAD():
             self.X_with_grad = X  # Initial weight matrix
 
         self.precision = precision
+        self.rel_eps = rel_eps  # the element-wise bound for the noise matrix N
+
         self.sum_pre = None
         self.gamma = 0.9
         self.ema_r = None
@@ -57,14 +60,6 @@ class SALAD():
         self.beta_solver = PARAM(beta_cfg)
 
         self.rho = self.rho_solver.rho
-
-        # self.rho = 1.0 / (np.sqrt(nr_layers * max(row, col)))
-        # self.rho = 1.0 / (5 * nr_layers * np.sqrt(row * col))
-        # self.rho = 1.0 / (25 * nr_layers * np.sqrt(row * col))
-        # self.rho = 1.0 / (nr_layers * row * col)
-        # self.rho = 1.0 / (np.sqrt(max(row, col)))
-        # self.rho = 0.1
-        # self.rho = 1.0 / (2.0*np.sqrt(max(row, col)))
         
         self.nr_elements = X.numel()
 
@@ -98,11 +93,12 @@ class SALAD():
     def get_penalty(self,
                     L: torch.Tensor, 
                     S: torch.Tensor,
+                    N: torch.Tensor,
                     Y: torch.Tensor) -> float:
         """
         Compute the loss term for the model.
         """
-        loss = self.rho/2 * torch.norm(self.X_with_grad - L - S + Y/self.rho, p='fro') ** 2        
+        loss = self.rho/2 * torch.norm(self.X_with_grad - L - S - N + Y/self.rho, p='fro') ** 2        
         return loss
     
     def _get_diff(self, 
@@ -121,9 +117,10 @@ class SALAD():
     def get_gradient(X: torch.Tensor,
                      L: torch.Tensor,
                      S: torch.Tensor,
+                     N: torch.Tensor,
                      Y: torch.Tensor,
                      rho: float) -> torch.Tensor:
-        return rho * (X - L - S + Y/rho)
+        return rho * (X - L - S - N + Y/rho)
 
     @torch.no_grad()
     def get_diff(self,
@@ -132,15 +129,6 @@ class SALAD():
                  Y: torch.Tensor) -> torch.Tensor:  
         """Get the difference X - L - S for the layer."""
         loss_r = self._get_diff(self.X_with_grad.detach(), L, S)
-        
-        # loss_s = self.get_loss_pre_term(L, S)
-        # if self.ema_r is None:
-        #     self.ema_r = loss_r.item()
-        #     self.ema_s = loss_s.item()
-        # else:
-        #     self.ema_r = self.gamma * self.ema_r + (1 - self.gamma) * loss_r.item()
-        #     self.ema_s = self.gamma * self.ema_s + (1 - self.gamma) * loss_s.item()
-        
         return loss_r
         
     def reset(self):
@@ -207,6 +195,7 @@ class SALAD():
 
         self.S = torch.zeros_like(self.X_with_grad.detach()).to(self.precision)
         self.Y = torch.zeros_like(self.X_with_grad.detach()).to(self.precision)
+        self.N = torch.zeros_like(self.X_with_grad.detach()).to(self.precision)
 
     def init_T(self, l: int, K: int) -> None:
         """[alpha, beta, dalpha, dbeta, rho, 
@@ -214,11 +203,6 @@ class SALAD():
             loss, rank, nonzero, total_rank, total_elems]
         """
         self.T = torch.zeros(l, K, dtype=torch.float32, device=self.X_with_grad.device)
-
-    # def cal_weights(self) -> None:
-    #     self.results = {'L': self.L,
-    #                     'S': self.S,
-    #                     'Y': self.Y}
 
     def cal_results(self) -> None:
         """
@@ -237,65 +221,61 @@ class SALAD():
         self.T[self.layer_idx, 10] = self.nr_total_rank
         self.T[self.layer_idx, 11] = self.nr_elements
 
-        # self.results = {'L': self.L.to('cpu'),
-        #                 'S': self.S.to('cpu'),
-        #                 'Y': self.Y.to('cpu'),
-        #                 'alpha_mode': self.alpha_solver.mode,
-        #                 'beta_mode': self.beta_solver.mode,
-        #                 'alpha': self.alpha_solver.value,
-        #                 'beta': self.beta_solver.value,
-        #                 'dalpha': self.alpha_solver.dvalue,
-        #                 'dbeta': self.beta_solver.dvalue,
-        #                 'rho': self.rho,
-        #                 'rate_decay_alpha': self.alpha_solver.rate_decay,
-        #                 'rate_decay_beta': self.beta_solver.rate_decay,
-        #                 'nr_rank': self.nr_rank,
-        #                 'nr_nonzero': int(torch.count_nonzero(self.S)),
-        #                 'nr_total_rank': self.nr_total_rank,
-        #                 'nr_elements': self.nr_elements,
-        #                 'avg_loss': (self.total_loss/self.nr_cals)}
-
-    def S_hard_threshold(self, 
-                         S: torch.Tensor,
-                         constant: float=1e4) -> torch.Tensor:
-        """
-        """
-        # max_abs = S.abs().max()
-        # if max_abs > 0:
-        #     tau_hard = max_abs/1e-6
-        #     S = torch.where(S.abs() >= tau_hard, S, torch.zeros_like(S))
-        # else:
-        #     # S is already all zero
-        #     pass
-        return S
-
     def _update_S(self,
                   X: torch.Tensor,
                   L: torch.Tensor,
+                  N: torch.Tensor,
                   Y: torch.Tensor,
                   rho: float,) -> torch.Tensor:
         if self.beta_solver.mode == 'hard_cut':
-            self.beta_solver.update_quantile(X-L+Y/rho, rho)
-        # return soft_threshold(X - L + Y/rho, self.beta_solver.value/rho)
-        return self.S_hard_threshold(soft_threshold(X - L + Y/rho, self.beta_solver.value/rho))
-
+            self.beta_solver.update_quantile(X-L-N+Y/rho, rho)
+        return soft_threshold(X - L - N + Y/rho, self.beta_solver.value/rho)
 
     def update_S(self) -> None:
         """
         Update the sparse component S. 
         """
         self.S = self._update_S(self.X_with_grad.detach().float(), 
-                                self.L.float(), 
+                                self.L.float(),
+                                self.N.float(), 
                                 self.Y.float(),
                                 self.rho).to(self.precision)
+    
+    def _update_N(self,
+                  X: torch.Tensor,
+                  L: torch.Tensor,
+                  S: torch.Tensor,
+                  Y: torch.Tensor,
+                  rho: float,
+                  epsilon: float=1e-3) -> torch.Tensor:
+        N = X - L - S + Y / rho
+        N = torch.clamp(N, min=-epsilon, max=epsilon)
+        return N
+
+    @staticmethod
+    def get_inf_bound(W: torch.Tensor) -> float:
+        return torch.norm(W, p=float('inf')).item()
+
+    def update_N(self) -> None:
+        """
+        Update the noise component N.
+        """
+        X_inf_bound = self.get_inf_bound(self.X_with_grad.detach().float())
+        self.N = self._update_N(self.X_with_grad.detach().float(), 
+                                self.L.float(), 
+                                self.S.float(),
+                                self.Y.float(),
+                                self.rho,
+                                self.rel_eps*X_inf_bound).to(self.precision)
 
     @staticmethod
     def _update_Y(X: torch.Tensor,
                   L: torch.Tensor,
                   S: torch.Tensor,
+                  N: torch.Tensor,
                   Y: torch.Tensor,
                   rho: float) -> torch.Tensor:
-        return Y + rho * (X - L - S)
+        return Y + rho * (X - L - S - N)
     
     def update_Y(self) -> None:
         """
@@ -304,6 +284,7 @@ class SALAD():
         self.Y = self._update_Y(self.X_with_grad.detach(), 
                                 self.L, 
                                 self.S,
+                                self.N,
                                 self.Y, 
                                 self.rho).to(self.precision)
 
@@ -319,21 +300,14 @@ class SALAD():
     @staticmethod
     def _update_L(X: torch.Tensor,
                   S: torch.Tensor,
+                  N: torch.Tensor,
                   Y: torch.Tensor,
                   alpha: float,
                   rho: float,
                   energy: float) -> torch.Tensor:
-        U, s, Vt = torch.linalg.svd(X - S + Y / rho, full_matrices=False)
+        U, s, Vt = torch.linalg.svd(X - S - N + Y / rho, full_matrices=False)
         _s = soft_threshold(s, alpha/rho)
-
-        # with torch.no_grad():
-        #     max_s = _s.max()
-        #     if max_s > 0:
-        #         tau_hard = 1e-2  # try 1e3~1e5
-        #         _s = torch.where(_s >= tau_hard, _s, torch.zeros_like(_s))
-        
         nr_rank = get_energy_quantile(_s, quantile=energy)
-        # _s[nr_rank:] = 0.0
 
         L  = U @ torch.diag(_s) @ Vt
         return L, nr_rank
@@ -344,6 +318,7 @@ class SALAD():
         """
         L, self.nr_rank = self._update_L(self.X_with_grad.detach().float(),
                                         self.S.float(),
+                                        self.N.float(),
                                         self.Y.float(),
                                         self.alpha_solver.value,
                                         self.rho,
