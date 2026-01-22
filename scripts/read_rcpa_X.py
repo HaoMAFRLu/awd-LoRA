@@ -76,12 +76,15 @@ def main(MODEL_TYPE: str,
         std_rank_ratio = np.std(rank_ratio_list)
         std_sparsity_level = np.std(sparsity_level_list)
 
+        print(rank_ratio_list)
+        print(sparsity_level_list)
+        
         print('================ Summary ================')
         print(f'Sparsity Level: {mean_sparsity_level:.3f} ± {std_sparsity_level:.3f}')
         print(f'Rank Ratio: {mean_rank_ratio:.3f} ± {std_rank_ratio:.3f}')
         print('=========================================')
 
-        
+
 if __name__ == "__main__":
     nr_layers = [0, 12, 23]
     MODEL_TYPE = 'llama_1b'
