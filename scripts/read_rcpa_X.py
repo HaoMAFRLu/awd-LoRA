@@ -27,27 +27,61 @@ def main(MODEL_TYPE: str,
         with open(os.path.join(path_folder, 'rpca_X_rank_3.pkl'), 'rb') as f:
             data = pickle.load(f)
         
-        svs = {}
-        SS = {}
-        LL = {}
+        # svs = {}
+        # SS = {}
+        # LL = {}
 
-        for nr_layer in nr_layers:
-            for block in block_list:
-                layer_name = f'layers.{nr_layer}.{layers_mapping[block]}'
-                sv = data['svs'][layer_name]
-                S = data['SS'][layer_name]
-                L = data['LL'][layer_name]
-                svs[layer_name] = sv.to('cpu')
-                SS[layer_name] = S.to('cpu')
-                LL[layer_name] = L.to('cpu')
+        svs = data['svs']
+        SS = data['SS']
+        LL = data['LL']
+
+        rank_ratio_list = []
+        sparsity_level_list = []
+
+        for key in svs:
+            sv = svs[key].to('cpu')
+            S = SS[key].to('cpu')
+            L = LL[key].to('cpu')
+
+            # calculate 0.999 energy coverage
+            singular_values = sv.cpu().numpy()
+            squared_singular_values = singular_values ** 2
+            total_energy = squared_singular_values.sum()
+            cumulative_energy = 0.0
+            rank_999 = 0
+            for i, value in enumerate(squared_singular_values):
+                cumulative_energy += value
+                if cumulative_energy / total_energy >= 0.999:
+                    rank_999 = i + 1
+                    break
+            rank_ratio = rank_999 / len(singular_values)
+            rank_ratio_list.append(rank_ratio)
+
+            # calculate sparsity level
+            S_cpu = S.cpu().numpy()
+            S_max = np.max(np.abs(S_cpu))
+            epsilon = 1e-8 * S_max
+            total_elements = S_cpu.size
+            nonzero_elements = np.sum(S_cpu > epsilon)
+            sparsity_level = 1 - (nonzero_elements / total_elements)
+            sparsity_level_list.append(sparsity_level)
         
-        new_data = {'svs': svs, 
-                    'SS': SS,
-                    'LL': LL}
+        rank_ratio_list = np.array(rank_ratio_list)
+        sparsity_level_list = np.array(sparsity_level_list)
 
-        with open(os.path.join(path_folder, f'rpca_X_small.pkl'), 'wb') as f:
-            pickle.dump(new_data, f)
+        # mean values
+        mean_rank_ratio = np.mean(rank_ratio_list)
+        mean_sparsity_level = np.mean(sparsity_level_list)
+        # std values
+        std_rank_ratio = np.std(rank_ratio_list)
+        std_sparsity_level = np.std(sparsity_level_list)
 
+        print('================ Summary ================')
+        print(f'Sparsity Level: {mean_sparsity_level:.3f} ± {std_sparsity_level:.3f}')
+        print(f'Rank Ratio: {mean_rank_ratio:.3f} ± {std_rank_ratio:.3f}')
+        print('=========================================')
+
+        
 if __name__ == "__main__":
     nr_layers = [0, 12, 23]
     MODEL_TYPE = 'llama_1b'
