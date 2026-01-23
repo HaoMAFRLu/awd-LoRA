@@ -1,8 +1,0 @@
-executable = /bin/bash
-arguments  = -i
-
-request_gpus = 1
-request_memory = 100000
-request_cpus = 1
-
-queue

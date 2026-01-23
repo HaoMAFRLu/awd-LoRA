@@ -408,18 +408,6 @@ def get_weight(model: torch.nn.Module, layer_name: str) -> torch.Tensor:
 
     raise KeyError(f"Weight not found for layer '{layer_name}'. Tried: {candidates}")
 
-def hf_login_once():
-    os.environ.setdefault("HF_HOME", "/lustre/home/hma2/hf")
-    os.environ.setdefault("HF_HUB_CACHE", os.path.join(os.environ["HF_HOME"], "hub"))
-    os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(os.environ["HF_HOME"], "transformers"))
-
-    if not os.environ.get("HF_TOKEN"):
-        try:
-            with open(os.path.join(os.environ["HF_HOME"], "token"), "r") as f:
-                os.environ["HF_TOKEN"] = f.read().strip()
-        except FileNotFoundError:
-            pass
-
 def tanh_ramp(epoch, total_epochs=1100, a=1e-6, b=1e-4, alpha=3.0, inflect_at=0.3):
     """
     """

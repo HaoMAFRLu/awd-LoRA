@@ -2,9 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-from tqdm import tqdm
-import copy
-import math
 
 from salad.utils import *
 from salad.simple_timer import SimpleTimer
@@ -35,9 +32,6 @@ class CrossEvaluator():
             print(f"[Rank {self.dev_idx}] using {props.name}, {props.total_memory / (1024 ** 3):.2f} GiB")
         else:
             print("[Rank -1] using CPU")
-
-        # fk the error 429!!!!!!
-        hf_login_once()
 
         self.pad_idx = pad_idx
         self.model_type = model_type
