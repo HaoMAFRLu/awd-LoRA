@@ -48,7 +48,8 @@ class SALADTrainer():
         self.gradient= config.get('gradient', 'coupled')  # or 'decoupled'
         self.is_asyn = config.get('is_asyn', False)
         self.is_init = config.get('is_init', False)
-        self.is_wandb = config.get('is_wandb', False)
+        # self.is_wandb = config.get('is_wandb', False)
+        self.is_wandb = False  # disable wandb for now
         self.is_monitor = config.get('is_monitor', False)
         self.save_interval = config.get('save_interval', 50)
 
@@ -79,7 +80,7 @@ class SALADTrainer():
             import wandb
             wandb.login(key=os.getenv("WANDB_API_KEY"), relogin=False)
             self.run_wandb = wandb.init(project="SALAD_"+self.config['name'], 
-                                        entity="hao-ma-eth-z-rich", 
+                                        entity="", 
                                         config=self.config,
                                         name=folder_name)
             
