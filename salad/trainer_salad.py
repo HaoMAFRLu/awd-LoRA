@@ -834,67 +834,66 @@ class SALADTrainer():
                 # run admm solvers
                 epoch += 1
 
-                if epoch >= 1000:
-                    if self.training_mode == 'salad':
-                        with self.timers['L']:
-                            self.update_ADMM_single_step(target='L')
-                        self.update_ADMM_single_step(target='alpha')
+                if self.training_mode == 'salad':
+                    with self.timers['L']:
+                        self.update_ADMM_single_step(target='L')
+                    self.update_ADMM_single_step(target='alpha')
 
-                        with self.timers['S']:
-                            self.update_ADMM_single_step(target='S')
-                        self.update_ADMM_single_step(target='beta')
-                        
-                        self.update_ADMM_rho()
-                        
-                        with self.timers['Y']:
-                            self.update_ADMM_single_step(target='Y')
-
-                        with self.timers['sync']:
-                            # self.sync_single_weight(target='S')
-                            # self.sync_single_weight(target='L')
-                            # self.sync_single_weight(target='Y')
-                            # self.sync_all_weights()
-                            pass
-                        
-                            self.update_ADMM_single_step(target='save')
-                            self.sync_layer_info()
-
-                        self.solvers_reset()
-                    else:
-                        self.generate_empty_layer_info()
-
-                    # self.run_ADMM_solvers()
-                    # self.sync_results()
-
-                    # average losses
-                    ep_loss /= self.num_freq
-                    ep_penalty /= self.num_freq
-                    ep_diff /= self.num_freq    
+                    with self.timers['S']:
+                        self.update_ADMM_single_step(target='S')
+                    self.update_ADMM_single_step(target='beta')
                     
-                    # print and save 
-                    with self.timers['save']:
-                        if path_folder is not None and epoch % self.save_interval == 0:
-                            # self.update_ADMM_single_step(target='weight')
-                            # self.sync_weights()
-                            self.save_results(path_folder)
+                    self.update_ADMM_rho()
+                    
+                    with self.timers['Y']:
+                        self.update_ADMM_single_step(target='Y')
 
-                    if self.rank == 0:
-                        self.print_info(epoch, 
-                                        num_epochs,
-                                        self.num_freq,
-                                        ep_loss,
-                                        ep_penalty,
-                                        ep_diff, 
-                                        acc_num_tokens, 
-                                        self.layer_info, 
-                                        self.lr_scheduler.get_last_lr()[0])
-                            
-                        if self.is_monitor:
-                            print(f'Train: {self.timers["train"].total:.1f}s | Avg Train: {self.timers["train"].avg():.1f}s | S: {self.timers["S"].total:.1f}s | L: {self.timers["L"].total:.1f}s | Y: {self.timers["Y"].total:.1f}s | Sync: {self.timers["sync"].total:.1f}s | Save: {self.timers["save"].total:.1f}s')
-                            for key in self.timers:
-                                self.timers[key].reset()
+                    with self.timers['sync']:
+                        # self.sync_single_weight(target='S')
+                        # self.sync_single_weight(target='L')
+                        # self.sync_single_weight(target='Y')
+                        # self.sync_all_weights()
+                        pass
+                    
+                        self.update_ADMM_single_step(target='save')
+                        self.sync_layer_info()
 
-                    ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
+                    self.solvers_reset()
+                else:
+                    self.generate_empty_layer_info()
+
+                # self.run_ADMM_solvers()
+                # self.sync_results()
+
+                # average losses
+                ep_loss /= self.num_freq
+                ep_penalty /= self.num_freq
+                ep_diff /= self.num_freq    
+                
+                # print and save 
+                with self.timers['save']:
+                    if path_folder is not None and epoch % self.save_interval == 0:
+                        # self.update_ADMM_single_step(target='weight')
+                        # self.sync_weights()
+                        self.save_results(path_folder)
+
+                if self.rank == 0:
+                    self.print_info(epoch, 
+                                    num_epochs,
+                                    self.num_freq,
+                                    ep_loss,
+                                    ep_penalty,
+                                    ep_diff, 
+                                    acc_num_tokens, 
+                                    self.layer_info, 
+                                    self.lr_scheduler.get_last_lr()[0])
+                        
+                    if self.is_monitor:
+                        print(f'Train: {self.timers["train"].total:.1f}s | Avg Train: {self.timers["train"].avg():.1f}s | S: {self.timers["S"].total:.1f}s | L: {self.timers["L"].total:.1f}s | Y: {self.timers["Y"].total:.1f}s | Sync: {self.timers["sync"].total:.1f}s | Save: {self.timers["save"].total:.1f}s')
+                        for key in self.timers:
+                            self.timers[key].reset()
+
+                ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
             
             else:
                 if self.is_asyn:
