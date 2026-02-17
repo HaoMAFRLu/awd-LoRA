@@ -1,10 +1,6 @@
 """This script is used to train a model using the SALAD framework.
 """
 import os, sys
-
-os.environ["HF_HUB_DOWNLOAD_TIMEOUT"] = "600"
-os.environ["HF_HUB_HTTP_TIMEOUT"] = "600"
-
 import yaml
 from datetime import datetime
 import shutil
