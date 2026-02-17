@@ -49,11 +49,14 @@ def main(cfg_version: str,
          dbeta: float,
          exclude_layers: list=None) -> None:
     
-    # fk the error 429!!!!!!
-    # fk the error 502!!!!!!
-    hf_login_once()
-
+    
     rank, world_size = _init_distributed()
+    
+    if rank == 0:
+        # fk the error 429!!!!!!
+        # fk the error 502!!!!!!
+        hf_login_once()
+
     print(f'[Rank {rank}] initializing...')
     print(f'[Rank {rank}]: Total world size: {world_size}')
     print(f"[Rank {rank}]: {dist.get_rank()} | [HOST]: {socket.gethostname()}")
