@@ -417,8 +417,9 @@ def hf_login_once():
         try:
             with open(os.path.join(os.environ["HF_HOME"], "token"), "r") as f:
                 os.environ["HF_TOKEN"] = f.read().strip()
+                logger.warning("HF_TOKEN loaded from token file.")
         except FileNotFoundError:
-            pass
+            logger.warning("HF_TOKEN not found in environment or token file. Hugging Face Hub access may be limited.")
 
 def tanh_ramp(epoch, total_epochs=1100, a=1e-6, b=1e-4, alpha=3.0, inflect_at=0.3):
     """
