@@ -2,13 +2,13 @@ seed: 42
 name: llama_1b
 training_mode: salad
 num_total_iters: 140000
-num_freq: 10
+num_freq: 5
 gradient: coupled
 is_asyn: false
 is_init: false
 is_wandb: true
 is_monitor: true
-save_interval: 50
+save_interval: 100
 is_clip: !!float '1'
 max_length: 256
 seed_for_shuffle: 42

@@ -188,11 +188,11 @@ if __name__ == "__main__":
         is_init=False,
         is_wandb=True,
         is_monitor=True,
-        save_interval=50,
+        save_interval=100,
         min_lr_ratio=0.1,
         weight_decay=0.0,
         optimizer_name='AdamW',
-        num_freq=10,
+        num_freq=5,
         seed_for_shuffle=42,
         num_total_iters=140000,  # 254000
         batch_size=468,
