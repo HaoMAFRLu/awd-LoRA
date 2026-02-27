@@ -81,7 +81,7 @@ attn_o_proj_params = {
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           1.8e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -112,7 +112,7 @@ attn_q_proj_params = {
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           1.8e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -143,7 +143,7 @@ attn_k_proj_params = {
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           1.8e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -174,7 +174,7 @@ attn_v_proj_params = {
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           1.8e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -205,7 +205,7 @@ mlp_gate_proj_params = {
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           1.8e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -236,7 +236,7 @@ mlp_down_proj_params = {
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           1.8e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
@@ -267,7 +267,7 @@ mlp_up_proj_params = {
         'drate': 0.01,
     },
     'rho_dict':            {
-        'rho':           2e-8,
+        'rho':           1.8e-8,
         'mode':          'fixed',  # 'fixed', 'shape_dependent', 'adaptive'
         'start_epoch':   2,
         'coeff_rho':     0.1,
