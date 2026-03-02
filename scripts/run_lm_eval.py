@@ -8,6 +8,7 @@ os.environ["HF_DATASETS_TRUST_REMOTE_CODE"] = "1"
 from lm_eval import evaluator
 from lm_eval.models.huggingface import HFLM
 from datetime import datetime
+import pickle
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from salad.utils import *
@@ -19,7 +20,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dtype = torch.bfloat16
 batch_size = 16
 num_fewshot = 5
-TASKS = ['piqa']
+TASKS = ['piqa', 'boolq']
 # TASKS = ['piqa', 'boolq', 'multirc', 'copa']
 
 def main(MODEL_TYPE: str,
@@ -45,8 +46,11 @@ def main(MODEL_TYPE: str,
     mkdir(OUTPUT_DIR)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_path = os.path.join(OUTPUT_DIR, f"{timestamp}.json")
-    evaluator.save_results(results, output_path)
+    output_path = os.path.join(OUTPUT_DIR, f"{timestamp}_results")
+
+    with open(output_path, "wb") as f:
+        pickle.dump(results, f)
+
     print(f"Results saved to: {output_path}")
 
 
