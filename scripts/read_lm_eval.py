@@ -17,7 +17,7 @@ def main(MODEL_TYPE: str,
     
     path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file, 'lm_harness_eval_results')
     files = os.listdir(path_folder)
-    result_files = [f for f in files if f.endswith('_results')]
+    result_files = [f for f in files if f.endswith('results')]
 
     for file in result_files:
         with open(os.path.join(path_folder, file), "rb") as f:
@@ -25,7 +25,8 @@ def main(MODEL_TYPE: str,
         
         print(f"Results from {file}:")
         for task in results['results']:
-            print(f"  {task}: {results['results'][task]['acc,none']:.4f}")
+            if task != 'gsm8k' and task != 'truthfulqa_gen':
+                print(f"  {task}: {results['results'][task]['acc,none']:.4f}")
         print()
 
 if __name__ == '__main__':
