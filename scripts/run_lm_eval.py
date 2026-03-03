@@ -21,7 +21,7 @@ dtype = torch.bfloat16
 batch_size = 16
 num_fewshot = 5
 # TASKS = ['piqa', 'boolq']
-TASKS = ['piqa', 'boolq',                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    'multirc', 'copa']
+TASKS = ['piqa', 'boolq', 'multirc', 'copa']
 
 def main(MODEL_TYPE: str,
          FOLDER: str,
@@ -76,7 +76,8 @@ if __name__ == '__main__':
     ]
 
     files = [
-        '20251209_104454',
+        # '20251209_104454',
+        '20251130_125959',
     ]
 
     for file in files:
