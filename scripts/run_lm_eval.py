@@ -20,8 +20,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dtype = torch.bfloat16
 batch_size = 16
 num_fewshot = 5
-TASKS = ['piqa', 'boolq']
-# TASKS = ['piqa', 'boolq', 'multirc', 'copa']
+# TASKS = ['piqa', 'boolq']
+TASKS = ['piqa', 'boolq',                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    'multirc', 'copa']
 
 def main(MODEL_TYPE: str,
          FOLDER: str,
@@ -90,3 +90,4 @@ if __name__ == '__main__':
         main(MODEL_TYPE=MODEL_TYPE, 
              FOLDER=FOLDER, 
              file=file)
+    
