@@ -19,9 +19,20 @@ root = get_parent_path(lvl=1)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dtype = torch.bfloat16
 batch_size = 16
-num_fewshot = 5
+num_fewshot = 0
 # TASKS = ['piqa', 'boolq']
-TASKS = ['piqa', 'boolq', 'multirc', 'copa']
+TASKS = [
+    "piqa",
+    "winogrande",
+    "arc_easy",
+    "arc_challenge",
+    "boolq",
+    "copa",
+    "mmlu",
+    "hellaswag",
+    "gsm8k",
+    "truthfulqa",
+]
 
 def main(MODEL_TYPE: str,
          FOLDER: str,
@@ -45,8 +56,7 @@ def main(MODEL_TYPE: str,
     OUTPUT_DIR = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file, 'lm_harness_eval_results')
     mkdir(OUTPUT_DIR)
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_path = os.path.join(OUTPUT_DIR, f"{timestamp}_results")
+    output_path = os.path.join(OUTPUT_DIR, f"results")
 
     with open(output_path, "wb") as f:
         pickle.dump(results, f)
