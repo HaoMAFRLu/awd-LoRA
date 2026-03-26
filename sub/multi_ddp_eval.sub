@@ -20,4 +20,4 @@ requirements = (CUDACapability >= 9.0 && CUDACapability < 9.1)
 
 getenv          = True
 
-queue 1
+queue 1k
