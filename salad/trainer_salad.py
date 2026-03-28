@@ -889,7 +889,7 @@ class SALADTrainer():
                                     self.lr_scheduler.get_last_lr()[0])
                         
                     if self.is_monitor:
-                        print(f'Train: {self.timers["train"].total:.1f}s | Avg Train: {self.timers["train"].avg():.1f}s | S: {self.timers["S"].total:.1f}s | L: {self.timers["L"].total:.1f}s | Y: {self.timers["Y"].total:.1f}s | Sync: {self.timers["sync"].total:.1f}s | Save: {self.timers["save"].total:.1f}s')
+                        print(f'Train: {self.timers["train"].total:.3f}s | Avg Train: {self.timers["train"].avg():.3f}s | S: {self.timers["S"].total:.3f}s | L: {self.timers["L"].total:.3f}s | Y: {self.timers["Y"].total:.3f}s | Sync: {self.timers["sync"].total:.3f}s | Save: {self.timers["save"].total:.3f}s')
                         for key in self.timers:
                             self.timers[key].reset()
 
