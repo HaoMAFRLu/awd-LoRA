@@ -229,7 +229,7 @@ if __name__ == "__main__":
         is_init=False,
         is_wandb=True,
         is_monitor=True,
-        save_interval=30,
+        save_interval=1,
         min_lr_ratio=0.1,
         weight_decay=0.0,
         optimizer_name='AdamW',
@@ -384,4 +384,4 @@ if __name__ == "__main__":
         use_cache=True,
         vocab_size=32000)
 
-    generate_config(**cfg_llama_1b)
+    generate_config(**cfg_llama_350m)
