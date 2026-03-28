@@ -8,7 +8,7 @@ is_asyn: false
 is_init: false
 is_wandb: true
 is_monitor: true
-save_interval: 100
+save_interval: 1
 is_clip: !!float '1'
 max_length: 256
 seed_for_shuffle: 42
