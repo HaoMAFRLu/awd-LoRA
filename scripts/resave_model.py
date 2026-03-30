@@ -18,7 +18,6 @@ def main(MODEL_TYEP: str,
          precision: str=torch.bfloat16) -> None:
     
     path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYEP, file)
-
     path_cfg = os.path.join(path_folder, MODEL_TYEP+'.yaml')
     path_cfg_model = os.path.join(path_folder, MODEL_TYEP+'_model.json')
 
@@ -36,59 +35,72 @@ def main(MODEL_TYEP: str,
     load_model(model, os.path.join(path_folder, 'model.pth'))
     model.to(device)
 
-    LL = {}
-    SS = {}
-    files = os.listdir(path_folder)
-    rank_files = [f for f in files if f.startswith('matrix')]
-    for f in rank_files:
-        LL_part, SS_part = get_lowspa_layers(os.path.join(path_folder, f))
-        for key in LL_part:
-            if 'lm_head' in key:
-                LL[key] = LL_part[key].to(device).t()
-                SS[key] = SS_part[key].to(device).t()
-            else:
-                LL[key] = LL_part[key].to(device)
-                SS[key] = SS_part[key].to(device)
-
-    with open(os.path.join(path_folder, 'layer_info.pkl'), 'rb') as f:
-        layer_info = pickle.load(f)
-
-    uia = UIA(LL, SS, model, 
-              layer_info=layer_info, 
-              rate=100000000.0,
-              rank=0)
-    
-    layers = [entry['name'] for entry in cfg['layers']]
-    gamma = np.clip(gamma, 0, 1)
-
-    _rank_quantile, _rate_density, return_flag = uia.allocate(params_tgt=params, gamma=gamma)
-    rank_quantile, rate_density = uia.post_allocate(_rank_quantile, _rate_density, params_tgt=params) 
-
-    # double check the allocation
-    nr_params = uia.check_params(rank_quantile, rate_density)
-    print('-' * 50)
-    print(f'Number of parameters: {nr_params/1e6:.2f} Million')
-    print(f'Target parameters: {params:.2f} Million')
-    print(f'State of return flag: {return_flag}')
-    print(f'States:\n'
-          f'0: success\n'
-          f'1: total params less than target\n'
-          f'2: no enought params to reduce in both L and S\n'
-          f'3: no enought params to reduce in L\n'
-          f'4: no enought params to reduce in S')
-    print('-' * 50)
-    
-    XX = opt_slr(LL, SS, rank_quantile, rate_density, layers, device)
-    opt_replace(model, layers, XX, device)  # replace partial layers with low-rank matrices L
-
     path_folder_resave = os.path.join(path_folder, 'model_resave')
     mkdir(path_folder_resave)
 
-    # save the model in HuggingFace format
-    model.save_pretrained(path_folder_resave, safe_serialization=True)
+    path_folder_resave_folder = os.path.join(path_folder_resave, 'vanilla')
+    mkdir(path_folder_resave_folder)
+
+    model.save_pretrained(path_folder_resave_folder, safe_serialization=True)
 
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
-    tokenizer.save_pretrained(path_folder_resave)
+    tokenizer.save_pretrained(path_folder_resave_folder)
+
+    if 'vanilla' not in FOLDER:
+        # if it's not a vanilla model, save two variants
+        LL = {}
+        SS = {}
+        files = os.listdir(path_folder)
+        rank_files = [f for f in files if f.startswith('matrix')]
+        for f in rank_files:
+            LL_part, SS_part = get_lowspa_layers(os.path.join(path_folder, f))
+            for key in LL_part:
+                if 'lm_head' in key:
+                    LL[key] = LL_part[key].to(device).t()
+                    SS[key] = SS_part[key].to(device).t()
+                else:
+                    LL[key] = LL_part[key].to(device)
+                    SS[key] = SS_part[key].to(device)
+
+        with open(os.path.join(path_folder, 'layer_info.pkl'), 'rb') as f:
+            layer_info = pickle.load(f)
+
+        uia = UIA(LL, SS, model, 
+                layer_info=layer_info, 
+                rate=100000000.0,
+                rank=0)
+        
+        layers = [entry['name'] for entry in cfg['layers']]
+        gamma = np.clip(gamma, 0, 1)
+
+        _rank_quantile, _rate_density, return_flag = uia.allocate(params_tgt=params, gamma=gamma)
+        rank_quantile, rate_density = uia.post_allocate(_rank_quantile, _rate_density, params_tgt=params) 
+
+        # double check the allocation
+        nr_params = uia.check_params(rank_quantile, rate_density)
+        print('-' * 50)
+        print(f'Number of parameters: {nr_params/1e6:.2f} Million')
+        print(f'Target parameters: {params:.2f} Million')
+        print(f'State of return flag: {return_flag}')
+        print(f'States:\n'
+            f'0: success\n'
+            f'1: total params less than target\n'
+            f'2: no enought params to reduce in both L and S\n'
+            f'3: no enought params to reduce in L\n'
+            f'4: no enought params to reduce in S')
+        print('-' * 50)
+        
+        XX = opt_slr(LL, SS, rank_quantile, rate_density, layers, device)
+        opt_replace(model, layers, XX, device)  # replace partial layers with low-rank matrices L
+
+        path_folder_resave_folder = os.path.join(path_folder_resave, 'surrogate')
+        mkdir(path_folder_resave_folder)
+
+        # save the model in HuggingFace format
+        model.save_pretrained(path_folder_resave_folder, safe_serialization=True)
+
+        tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
+        tokenizer.save_pretrained(path_folder_resave_folder)
 
 if __name__== '__main__':
     params_tgt = {
@@ -129,6 +141,7 @@ if __name__== '__main__':
     FILES = [
         # '20251229_134048'
         '20251130_125959',
+        # '20251213_234650', # vanilla bf16 1b
     ]
 
     precisin = torch.bfloat16
