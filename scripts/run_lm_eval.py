@@ -39,9 +39,12 @@ def main(MODEL_TYPE: str,
          file: str,):
     
     MODEL_PATH = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file, 'model_resave')
+    OUTPUT_DIR = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file, 'lm_harness_eval_results')
+    mkdir(OUTPUT_DIR)
+    MODEL_PATH_LOAD = os.path.join(MODEL_PATH, 'vanilla')
 
     model = HFLM(
-        pretrained=MODEL_PATH,
+        pretrained=MODEL_PATH_LOAD,
         dtype=dtype,
         device=str(device),
         batch_size=batch_size,
@@ -53,16 +56,35 @@ def main(MODEL_TYPE: str,
     num_fewshot=num_fewshot,
     )
 
-    OUTPUT_DIR = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file, 'lm_harness_eval_results')
-    mkdir(OUTPUT_DIR)
-
-    output_path = os.path.join(OUTPUT_DIR, f"results")
+    output_path = os.path.join(OUTPUT_DIR, f"results_vanilla")
 
     with open(output_path, "wb") as f:
         pickle.dump(results, f)
 
     print(f"Results saved to: {output_path}")
 
+    if 'vanilla' not in FOLDER:
+        MODEL_PATH_LOAD = os.path.join(MODEL_PATH, 'surrogate')
+
+        model = HFLM(
+            pretrained=MODEL_PATH_LOAD,
+            dtype=dtype,
+            device=str(device),
+            batch_size=batch_size,
+        )
+
+        results = evaluator.simple_evaluate(
+        model=model,
+        tasks=TASKS,
+        num_fewshot=num_fewshot,
+        )
+
+        output_path = os.path.join(OUTPUT_DIR, f"results_surrogate")
+
+        with open(output_path, "wb") as f:
+            pickle.dump(results, f)
+
+        print(f"Results saved to: {output_path}")
 
 if __name__ == '__main__':
 
@@ -88,6 +110,7 @@ if __name__ == '__main__':
     files = [
         # '20251209_104454',
         '20251130_125959',
+        '20251213_234650', # vanilla bf16 1b
     ]
 
     for file in files:
