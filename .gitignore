@@ -48,3 +48,6 @@
 
 # ignore hf_cache
 /hf_cache
+
+# ignore local Codex metadata
+.codex
