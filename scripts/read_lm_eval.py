@@ -17,7 +17,7 @@ def main(MODEL_TYPE: str,
     
     path_folder = os.path.join(root, 'data', FOLDER, MODEL_TYPE, file, 'lm_harness_eval_results')
     files = os.listdir(path_folder)
-    result_files = [f for f in files if f.endswith('results')]
+    result_files = [f for f in files if f.startswith('results')]
 
     for file in result_files:
         with open(os.path.join(path_folder, file), "rb") as f:
@@ -51,7 +51,8 @@ if __name__ == '__main__':
     ]
 
     files = [
-        '20251130_125959',
+        # '20251130_125959',
+        '20251213_234650', # vanilla bf16 1b
     ]
 
     for file in files:
