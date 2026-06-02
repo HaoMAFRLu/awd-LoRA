@@ -51,3 +51,6 @@
 
 # ignore local Codex metadata
 .codex
+
+# ignore local discussion notes
+/discussion_notes
