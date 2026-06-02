@@ -23,7 +23,7 @@ salad/              Core SALAD trainer, solver, operators, and utilities
 models/             Local model definitions, including a LLaMA implementation
 dataloaders/        Iterable dataset wrappers and tokenization utilities
 scripts/            Training, evaluation, config generation, plotting, analysis
-scripts/configs/    YAML training configs and model JSON configs
+configs/            YAML training configs and model JSON configs
 analysis/           One-off analysis scripts used during experiments
 sub/                HTCondor submit-file examples for cluster runs
 utils/              Additional utility code
@@ -67,8 +67,8 @@ export WANDB_API_KEY=...
 
 ## Configuration
 
-Training configs live in `scripts/configs/*.yaml`; matching model architecture
-configs live in `scripts/configs/*_model.json`.
+Training configs live in `configs/*.yaml`; matching model architecture
+configs live in `configs/*_model.json`.
 
 Important fields:
 

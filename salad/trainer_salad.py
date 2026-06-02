@@ -125,14 +125,12 @@ class SALADTrainer():
 
         data = datasets.distributed.split_dataset_by_node(data, rank=self.rank, world_size=self.world_size)
 
-        tokenizer = get_tokenizer(self.max_length)
-        dataset = PreprocessedIterableDataset(data, tokenizer, 
-                                              batch_size=self.batch_size, 
-                                              max_length=self.max_length)
+        tokenizer = get_tokenizer(self.max_length, self.config)
+        dataset = get_preprocessed_dataset(data, tokenizer, self.config, self.batch_size)
         self.dataloader = torch.utils.data.DataLoader(dataset, 
                                                       batch_size=None, 
                                                       num_workers=self.num_workers)
-        self.pad_idx = tokenizer.pad_token_id
+        self.pad_idx = tokenizer.tokenizer.pad_token_id if hasattr(tokenizer, "tokenizer") else tokenizer.pad_token_id
 
         self.optimizer = get_optimizer(*self.get_name_and_params(config['optimizer']), self.ddp_model)
         self.lr_scheduler = get_scheduler(self.optimizer,
@@ -345,7 +343,7 @@ class SALADTrainer():
                 with torch.no_grad():
                     eta = self.optimizer.param_groups[0]['lr']
                     for name, Z in gradient_per_layer.items():
-                        param_dict['module.model.'+name+'.weight'].data -= eta * Z
+                        get_param_tensor(param_dict, name, "weight").data -= eta * Z
                 # broadcast the updated weights
                 self.broadcast_params(self.ddp_model)
             
@@ -376,6 +374,14 @@ class SALADTrainer():
             # broadcast the neural network loss
             global_avg_loss = self.get_global_loss(loss.detach())
             return global_avg_loss, 0.0, 0.0
+
+    def prepare_batch_and_labels(self, batch):
+        batch = {k: v.to(self.device) for k, v in batch.items()}
+        labels = batch.pop("labels", None)
+        if labels is None:
+            labels = batch["input_ids"].clone()
+            labels[labels == self.pad_idx] = -100
+        return batch, labels
 
     def get_penalty_loss(self):
         """User-defined loss; can be overridden or passed via config."""
@@ -492,7 +498,7 @@ class SALADTrainer():
         flat_me = torch.empty(sz_me, device=self.device)
         off = 0
         for n in names_me:
-            p = param_dict['module.model.'+n+'.weight'].data.view(-1)
+            p = get_param_tensor(param_dict, n, "weight").data.view(-1)
             flat_me[off:off+p.numel()] = p
             off += p.numel()
 
@@ -507,7 +513,7 @@ class SALADTrainer():
                 dist.broadcast(buf, src=r)
                 off = 0
                 for n in self.per_owner_names[r]:
-                    p = param_dict['module.model.'+n+'.weight']
+                    p = get_param_tensor(param_dict, n, "weight")
                     k = p.numel()
                     p.data.view(-1).copy_(buf[off:off+k])
                     off += k
@@ -772,9 +778,7 @@ class SALADTrainer():
             if num_step > num_warmup_steps:
                 break
             
-            batch = {k: v.to(self.device) for k, v in batch.items()}
-            labels = batch["input_ids"].clone()
-            labels[labels == self.pad_idx] = -100
+            batch, labels = self.prepare_batch_and_labels(batch)
             self.optimizer.zero_grad()
             loss = self.ddp_model(**batch, labels=labels).loss
             loss.backward()
@@ -809,9 +813,7 @@ class SALADTrainer():
                 break
             
 
-            batch = {k: v.to(self.device) for k, v in batch.items()}
-            labels = batch["input_ids"].clone()
-            labels[labels == self.pad_idx] = -100 
+            batch, labels = self.prepare_batch_and_labels(batch)
             # do one step update
             with self.timers['train']:
                 avg_loss, avg_loss_penalty, avg_diff = self.single_step_train(batch, labels, gradient=self.gradient)
@@ -909,4 +911,3 @@ class SALADTrainer():
         dist.destroy_process_group()
         if self.is_wandb and self.rank == 0:
             self.run_wandb.finish()
-

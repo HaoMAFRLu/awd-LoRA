@@ -1,8 +1,9 @@
 seed: 42
-name: llama_350m
+name: llama_1b
+model_config: llama_1b_model.json
 training_mode: salad
-num_total_iters: 62250
-num_freq: 25
+num_total_iters: 140000
+num_freq: 5
 gradient: coupled
 is_asyn: false
 is_init: false
@@ -12,7 +13,7 @@ save_interval: 1
 is_clip: !!float '1'
 max_length: 256
 seed_for_shuffle: 42
-batch_size: 512
+batch_size: 468
 num_workers: 0
 scheduler:
   name: cosine
@@ -22,7 +23,7 @@ scheduler:
 optimizer:
   name: AdamW
   params:
-    lr: 0.001
+    lr: 0.0005
     betas:
     - 0.9
     - 0.95

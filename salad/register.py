@@ -1,35 +1,97 @@
 """
 """
+import json
 import torch
 import math
 import os, sys
-from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoConfig, AutoProcessor, AutoTokenizer, AutoModelForCausalLM
 import datasets
 from functools import partial
 from torch.optim.lr_scheduler import LambdaLR
 import transformers
+from typing import Optional
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models.Llama import LlamaForCausalLM
+from models.qwen3_vl import build_qwen3_vl_from_config
 from dataloaders.Llama_dataloader import PreprocessedIterableDataset
+from dataloaders.Qwen3VL_dataloader import Qwen3VLIterableDataset
 
 def get_model(cfg: dict):
     """
     Get the model based on the configuration.
     """
+    with open(cfg, "r", encoding="utf-8") as f:
+        raw_cfg = json.load(f)
+
+    model_type = raw_cfg.get("model_type")
+    if model_type == "qwen3_vl":
+        return build_qwen3_vl_from_config(cfg)
+
     model_cfg = AutoConfig.from_pretrained(cfg)
+    if model_cfg.model_type != "llama":
+        raise ValueError(f"Unsupported model_type={model_cfg.model_type!r}")
     return LlamaForCausalLM(model_cfg)
 
-def get_tokenizer(max_length: int = 1024):
+def get_tokenizer(max_length: int = 1024, config: Optional[dict] = None):
     """
     Get the tokenizer for the model.
     """
+    config = config or {}
+    if config.get("model_type") == "qwen3_vl" or config.get("data", {}).get("type") == "vlm":
+        return get_processor(max_length=max_length, config=config)
     return AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
 
-def get_data(seed_for_shuffle: int = 42, split: str = 'train'):
-    data = datasets.load_dataset("allenai/c4", "en", split=split, streaming=True)
+def get_processor(max_length: int = 1024, config: Optional[dict] = None):
+    config = config or {}
+    processor_name = config.get("processor_name") or config.get("data", {}).get("processor_name")
+    if not processor_name:
+        processor_name = "Qwen/Qwen3-VL-2B-Instruct"
+    return AutoProcessor.from_pretrained(processor_name, model_max_length=max_length)
+
+def get_data(config_or_seed=42, split: str = 'train'):
+    if isinstance(config_or_seed, dict):
+        data_cfg = config_or_seed.get("data", {})
+        seed_for_shuffle = config_or_seed.get("seed_for_shuffle", 42)
+        split = data_cfg.get("split", split)
+        name = data_cfg.get("name", "allenai/c4")
+        subset = data_cfg.get("subset")
+        streaming = data_cfg.get("streaming", True)
+    else:
+        seed_for_shuffle = config_or_seed
+        name = "allenai/c4"
+        subset = "en"
+        streaming = True
+
+    if subset:
+        data = datasets.load_dataset(name, subset, split=split, streaming=streaming)
+    else:
+        data = datasets.load_dataset(name, split=split, streaming=streaming)
     data: datasets.Dataset = data.shuffle(seed=seed_for_shuffle)
     return data
+
+def get_preprocessed_dataset(data, processor, config: dict, batch_size: int):
+    data_cfg = config.get("data", {})
+    if data_cfg.get("type", "text") == "vlm":
+        return Qwen3VLIterableDataset(
+            data,
+            processor,
+            batch_size=batch_size,
+            max_length=config.get("max_length", 1024),
+            image_column=data_cfg.get("image_column", "images"),
+            text_column=data_cfg.get("text_column", "texts"),
+            question_column=data_cfg.get("question_column", "question"),
+            answer_column=data_cfg.get("answer_column", "answer"),
+            system_prompt=data_cfg.get("system_prompt"),
+            ignore_visual_tokens=data_cfg.get("ignore_visual_tokens", True),
+        )
+
+    return PreprocessedIterableDataset(
+        data,
+        processor,
+        batch_size=batch_size,
+        max_length=config.get("max_length", 256),
+    )
 
 def get_scheduler(
     optimizer,

@@ -243,8 +243,12 @@ def get_linear_layers_name(model):
     Returns:
         list: A list of names of linear layers in the model.
     """
-    ll = ['model.embed_tokens']
-    return ll + [name for name, module in model.named_modules() if isinstance(module, torch.nn.Linear)]
+    embeddings = [
+        name for name, module in model.named_modules()
+        if isinstance(module, torch.nn.Embedding) and name.endswith("embed_tokens")
+    ]
+    linears = [name for name, module in model.named_modules() if isinstance(module, torch.nn.Linear)]
+    return embeddings + linears
 
 def unwrap(m):
     return m.module if hasattr(m, "module") else m

@@ -1,0 +1,118 @@
+name: qwen3_vl_500m
+model_type: qwen3_vl
+model_config: qwen3_vl_500m_model.json
+processor_name: Qwen/Qwen3-VL-2B-Instruct
+training_mode: salad
+seed: 42
+num_total_iters: 1000
+num_freq: 10
+gradient: coupled
+is_asyn: false
+is_init: false
+is_clip: 1.0
+is_wandb: false
+is_monitor: false
+save_interval: 50
+max_length: 1024
+seed_for_shuffle: 42
+batch_size: 1
+num_workers: 0
+data:
+  type: vlm
+  name: HuggingFaceM4/Docmatix
+  subset: pdf
+  split: train
+  streaming: true
+  processor_name: Qwen/Qwen3-VL-2B-Instruct
+  image_column: images
+  text_column: texts
+  ignore_visual_tokens: true
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 20
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.0003
+    betas:
+    - 0.9
+    - 0.95
+    eps: 0.00000001
+    weight_decay: 0.1
+layers:
+- name: language_model.layers.0.self_attn.q_proj
+  params: &attn_params
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.0000001
+      mode: adaptive
+      rate_decay: 0.02
+    beta_dict:
+      init: 0.0000001
+      mode: hard_cut
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: 1500.0
+      rho_rate: 1.0
+- name: language_model.layers.0.self_attn.k_proj
+  params: *attn_params
+- name: language_model.layers.0.self_attn.v_proj
+  params: *attn_params
+- name: language_model.layers.0.self_attn.o_proj
+  params: *attn_params
+- name: language_model.layers.0.mlp.gate_proj
+  params: &mlp_params
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.35
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: 0.000000001
+      mode: adaptive
+      rate_decay: 0.02
+    beta_dict:
+      init: 0.0000001
+      mode: hard_cut
+      rate_decay: 0.02
+    rho_dict:
+      rho: 0.000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: 1500.0
+      rho_rate: 1.0
+- name: language_model.layers.0.mlp.up_proj
+  params: *mlp_params
+- name: language_model.layers.0.mlp.down_proj
+  params: *mlp_params
+- name: language_model.layers.1.self_attn.q_proj
+  params: *attn_params
+- name: language_model.layers.1.self_attn.k_proj
+  params: *attn_params
+- name: language_model.layers.1.self_attn.v_proj
+  params: *attn_params
+- name: language_model.layers.1.self_attn.o_proj
+  params: *attn_params
+- name: language_model.layers.1.mlp.gate_proj
+  params: *mlp_params
+- name: language_model.layers.1.mlp.up_proj
+  params: *mlp_params
+- name: language_model.layers.1.mlp.down_proj
+  params: *mlp_params

@@ -39,6 +39,8 @@ def parse_args():
     parser.add_argument('--beta_rate', type=float, default=None, help='Beta Rate')
     parser.add_argument('--dalpha', type=float, default=None, help='Delta Alpha')
     parser.add_argument('--dbeta', type=float, default=None, help='Delta Beta')
+    parser.add_argument('--cfg_version', type=str, default='llama_350m', help='Config version in configs/')
+    parser.add_argument('--folder', type=str, default='review_wall_clock', help='Output folder under data/')
 
     return parser.parse_args()
 
@@ -68,6 +70,8 @@ def main(cfg_version: str,
     # load the config
     with open(path_cfg) as f:
         cfg = yaml.safe_load(f)
+    if cfg.get("model_config"):
+        path_cfg_model = os.path.join(root, 'configs', cfg["model_config"])
     
     target_layers = [entry['name'] for entry in cfg['layers']]
 
@@ -121,7 +125,7 @@ def main(cfg_version: str,
     model = get_model(path_cfg_model)
 
     # time.sleep(2.0 * rank)  # 3s per rank is a good starting point
-    data = get_data(cfg["seed_for_shuffle"])
+    data = get_data(cfg)
     # dist.barrier()
 
     ddp_trainer = SALADTrainer(model, data, cfg, 
@@ -133,10 +137,10 @@ def main(cfg_version: str,
 if __name__ == "__main__":
     args = parse_args()
 
-    cfg_version = 'llama_350m'
-    folder = 'review_wall_clock'
-    path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
-    path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
+    cfg_version = args.cfg_version
+    folder = args.folder
+    path_cfg = os.path.join(root, 'configs', cfg_version+'.yaml')
+    path_cfg_model = os.path.join(root, 'configs', cfg_version+'_model.json')
 
     # exclude_layers = ['q_proj', 'k_proj']
     exclude_layers = None

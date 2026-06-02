@@ -75,7 +75,7 @@ tokenizers==0.21.4
 torch==2.8.0+cu126
 torchvision==0.23.0+cu126
 tqdm==4.67.1
-transformers==4.55.0
+transformers>=4.57.0
 triton==3.4.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0

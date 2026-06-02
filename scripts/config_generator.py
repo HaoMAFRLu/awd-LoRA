@@ -1,22 +1,19 @@
-"""This script is used to generate json file
-for llama model.
-"""
+"""Generate training YAML files from fixed model architecture configs."""
 import os, sys
 import yaml
 import copy
 import json
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from salad.utils import get_parent_path
 from params import projection
 
-root = get_parent_path(lvl=1)
+root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 keys = ['self_attn.o_proj', 'self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'mlp.gate_proj', 'mlp.down_proj', 'mlp.up_proj']
 proj = projection()
 
 
 def generate_config(
     name: str = 'llama_9m',
+    model_config: str = None,
     seed: int = 42,
     training_mode: str='salad',
     lr: float = 0.008,
@@ -40,54 +37,24 @@ def generate_config(
     min_lr_ratio: float=0.1,
     include_embeddings: bool=False,
     include_head: bool=False,
-    bos_token_id: int=0,
-    eos_token_id: int=1,
-    hidden_act: str='silu',
-    hidden_size: int=512,
-    intermediate_size: int=1376,
-    initializer_range: float=0.02,
-    max_sequence_length: int=1024, 
-    model_type: str="llama",
-    num_attention_heads: int=8,
-    num_hidden_layers: int=8,
-    pad_token_id: int=-1,
-    rms_norm_eps: float=1e-06,
-    transformers_version: str="4.28.1",
-    use_cache: bool=True,
-    vocab_size: int=32000,  # Common vocabulary size for GPT models
     output_path: str=None):
     """
-    Generate a YAML configuration for GPT model ADMM settings.
-
-    Args:
-        num_layers: Number of transformer blocks (default: 12).
-        include_embeddings: Whether to include embedding layers in the config.
-        output_path: Path to save the generated YAML file.
+    Generate a YAML configuration for training and SALAAD settings.
     """
-    cfg_model = {
-        "architectures": [
-            "LLaMAForCausalLM"
-        ],
-        "bos_token_id": bos_token_id,
-        "eos_token_id": eos_token_id,
-        "hidden_act": hidden_act,
-        "hidden_size": hidden_size,
-        "intermediate_size": intermediate_size,
-        "initializer_range": initializer_range,
-        "max_sequence_length": max_sequence_length,
-        "model_type": model_type,
-        "num_attention_heads": num_attention_heads,
-        "num_hidden_layers": num_hidden_layers,
-        "pad_token_id": pad_token_id,
-        "rms_norm_eps": rms_norm_eps,
-        "transformers_version": transformers_version,
-        "use_cache": use_cache,
-        "vocab_size": vocab_size}
+    if model_config is None:
+        model_config = f"{name}_model.json"
+
+    path_model_config = os.path.join(root, 'configs', model_config)
+    with open(path_model_config, "r", encoding="utf-8") as f:
+        cfg_model = json.load(f)
+
+    num_hidden_layers = cfg_model["num_hidden_layers"]
     
     # Base configuration structure
     cfg = {
         'seed': seed,
         'name': name,
+        'model_config': model_config,
         'training_mode': training_mode,
         'num_total_iters': num_total_iters,
         'num_freq': num_freq,
@@ -161,7 +128,8 @@ def generate_config(
     NoAliasDumper.add_representer(float, represent_float)
 
     # Write configuration to file
-    output_path=os.path.join(root, 'scripts', 'configs', name+'.yaml')
+    if output_path is None:
+        output_path=os.path.join(root, 'configs', name+'.yaml')
     with open(output_path, 'w', encoding='utf-8') as f:
         yaml.dump(
             cfg,
@@ -171,15 +139,12 @@ def generate_config(
             allow_unicode=True
         )
 
-    output_path=os.path.join(root, 'scripts', 'configs', name+'_model.json')
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(cfg_model, f, ensure_ascii=False, indent=4)
-
     print(f"Configuration written to {output_path}")
 
 if __name__ == "__main__":
     cfg_llama_1b = dict(
         name='llama_1b',
+        model_config='llama_1b_model.json',
         seed=42,
         training_mode='salad',  # salad or vanilla
         lr=0.0005,
@@ -202,25 +167,11 @@ if __name__ == "__main__":
         scheduler_type='cosine',
         include_embeddings=True,
         include_head=False,
-        is_clip=1.0,
-        bos_token_id=0,
-        eos_token_id=1,
-        hidden_act='silu',
-        hidden_size=2048,
-        intermediate_size=5461,
-        initializer_range=0.02,
-        max_sequence_length=1024,
-        model_type="llama",
-        num_attention_heads=32,
-        num_hidden_layers=24,
-        pad_token_id=-1,
-        rms_norm_eps=1e-06,
-        transformers_version="4.28.1",
-        use_cache=True,
-        vocab_size=32000)
+        is_clip=1.0)
     
     cfg_llama_350m = dict(
         name='llama_350m',
+        model_config='llama_350m_model.json',
         seed=42,
         training_mode='salad',  # or salad
         lr=0.001,
@@ -243,26 +194,12 @@ if __name__ == "__main__":
         scheduler_type='cosine',
         include_embeddings=True,
         include_head=False,
-        is_clip=1.0,
-        bos_token_id=0,
-        eos_token_id=1,
-        hidden_act='silu',
-        hidden_size=1024,
-        intermediate_size=2736,
-        initializer_range=0.02,
-        max_sequence_length=1024,
-        model_type="llama",
-        num_attention_heads=16,
-        num_hidden_layers=24,
-        pad_token_id=-1,
-        rms_norm_eps=1e-06,
-        transformers_version="4.28.1",
-        use_cache=True,
-        vocab_size=32000)
+        is_clip=1.0)
     
     # Customize parameters as needed
     cfg_llama_130m = dict(
         name='llama_130m',
+        model_config='llama_130m_model.json',
         seed=42,
         training_mode='salad',  # or salad
         lr=0.003,
@@ -285,25 +222,11 @@ if __name__ == "__main__":
         scheduler_type='cosine',
         include_embeddings=True,
         include_head=False,
-        is_clip=1.0,
-        bos_token_id=0,
-        eos_token_id=1,
-        hidden_act='silu',
-        hidden_size=768,
-        intermediate_size=2048,
-        initializer_range=0.02,
-        max_sequence_length=1024,
-        model_type="llama",
-        num_attention_heads=12,
-        num_hidden_layers=12,
-        pad_token_id=-1,
-        rms_norm_eps=1e-06,
-        transformers_version="4.28.1",
-        use_cache=True,
-        vocab_size=32000)
+        is_clip=1.0)
     
     cfg_llama_60m = dict(
         name='llama_60m',
+        model_config='llama_60m_model.json',
         seed=42,
         training_mode='salad',  # or salad
         lr=0.003,
@@ -326,25 +249,11 @@ if __name__ == "__main__":
         scheduler_type='cosine',
         include_embeddings=True,
         include_head=True,
-        is_clip=1.0,
-        bos_token_id=0,
-        eos_token_id=1,
-        hidden_act='silu',
-        hidden_size=512,
-        intermediate_size=1376,
-        initializer_range=0.02,
-        max_sequence_length=1024,
-        model_type="llama",
-        num_attention_heads=8,
-        num_hidden_layers=8,
-        pad_token_id=-1,
-        rms_norm_eps=1e-06,
-        transformers_version="4.28.1",
-        use_cache=True,
-        vocab_size=32000)
+        is_clip=1.0)
 
     cfg_llama_9m = dict(
         name='llama_9m',
+        model_config='llama_9m_model.json',
         training_mode='salad',  # or salad
         seed=42,
         lr=0.008,
@@ -367,21 +276,6 @@ if __name__ == "__main__":
         min_lr_ratio=0.1,
         include_embeddings=True,
         include_head=True,
-        is_clip=1.0,
-        bos_token_id=0,
-        eos_token_id=1,
-        hidden_act='silu',
-        hidden_size=128,
-        intermediate_size=352,
-        initializer_range=0.02,
-        max_sequence_length=1024,
-        model_type="llama",
-        num_attention_heads=4,
-        num_hidden_layers=4,
-        pad_token_id=-1,
-        rms_norm_eps=1e-06,
-        transformers_version="4.28.1",
-        use_cache=True,
-        vocab_size=32000)
+        is_clip=1.0)
 
     generate_config(**cfg_llama_350m)

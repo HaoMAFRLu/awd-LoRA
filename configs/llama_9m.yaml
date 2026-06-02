@@ -1,5 +1,6 @@
 seed: 42
 name: llama_9m
+model_config: llama_9m_model.json
 training_mode: salad
 num_total_iters: 100
 num_freq: 2

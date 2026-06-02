@@ -1,0 +1,44 @@
+name: qwen3_vl_tiny_vanilla
+model_type: qwen3_vl
+model_config: qwen3_vl_tiny_model.json
+processor_name: Qwen/Qwen3-VL-2B-Instruct
+training_mode: vanilla
+seed: 42
+num_total_iters: 20
+num_freq: 2
+gradient: coupled
+is_asyn: false
+is_init: false
+is_clip: !!float '1'
+is_wandb: false
+is_monitor: false
+save_interval: 10
+max_length: 256
+seed_for_shuffle: 42
+batch_size: 1
+num_workers: 0
+data:
+  type: vlm
+  name: HuggingFaceM4/Docmatix
+  subset: pdf
+  split: train
+  streaming: true
+  processor_name: Qwen/Qwen3-VL-2B-Instruct
+  image_column: images
+  text_column: texts
+  ignore_visual_tokens: true
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.0003
+    betas:
+    - 0.9
+    - 0.95
+    eps: 0.00000001
+    weight_decay: 0.1
+layers: []
