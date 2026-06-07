@@ -287,12 +287,12 @@ class SALADTrainer():
     #     world = dist.get_world_size()
     #     return rank, world
 
-    def get_diff_per_rank(self) -> dict:
+    def get_diff_per_rank(self) -> torch.Tensor:
         """Get the difference X - L - S for each layer."""
-        diff = 0.0
+        diff = torch.zeros((), dtype=torch.float32, device=self.device)
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                diff += solver.get_diff(solver.L, solver.S, solver.Y)
+                diff = diff + solver.get_diff(solver.L, solver.S, solver.Y).float().to(self.device)
             # else:
             #     diff += solver.get_diff(self.LL[solver.layer_name].to(self.device),
             #                             self.SS[solver.layer_name].to(self.device),
@@ -909,4 +909,3 @@ class SALADTrainer():
         dist.destroy_process_group()
         if self.is_wandb and self.rank == 0:
             self.run_wandb.finish()
-
