@@ -377,12 +377,12 @@ class SALADTrainer():
             global_avg_loss = self.get_global_loss(loss.detach())
             return global_avg_loss, 0.0, 0.0
 
-    def get_penalty_loss(self):
+    def get_penalty_loss(self) -> torch.Tensor:
         """User-defined loss; can be overridden or passed via config."""
-        loss = 0.0
+        loss = torch.zeros((), dtype=torch.float32, device=self.device)
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                loss += self.world_size * solver.get_penalty(solver.L, solver.S, solver.Y)
+                loss = loss + self.world_size * solver.get_penalty(solver.L, solver.S, solver.Y)
             # else:
             #     loss += solver.get_penalty(self.LL[solver.layer_name].to(self.device),
             #                                self.SS[solver.layer_name].to(self.device),
