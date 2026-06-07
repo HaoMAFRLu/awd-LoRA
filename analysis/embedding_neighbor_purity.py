@@ -37,10 +37,13 @@ VOCAB_SIZE = 32000
 
 BASELINE_FOLDER = "data/baseline_fp32/llama_350m/20251203_102315"
 HEAD_FOLDER = "data/head_fp32/llama_350m/20251204_134313"
+VANILLA_BF16_FOLDER = "data/vanilla_bf16/llama_350m/20251209_233045"
 
 BASELINE_MODEL = os.path.join(BASELINE_FOLDER, "model.pth")
 BASELINE_RPCA = os.path.join(BASELINE_FOLDER, "rpca_X_embed_tokens.pkl")
 HEAD_SALAAD_MATRIX = os.path.join(HEAD_FOLDER, "matrix_rank0.pkl")
+VANILLA_BF16_MODEL = os.path.join(VANILLA_BF16_FOLDER, "model.pth")
+VANILLA_BF16_RPCA = os.path.join(VANILLA_BF16_FOLDER, "rpca_X_embed_tokens.pkl")
 
 OUTPUT_DIR = "data/figures/comparison_embedding/neighbor_purity"
 
@@ -394,6 +397,21 @@ def iter_variants() -> Iterable[Tuple[str, str, callable]]:
         "training_salaad_L_plus_S",
         HEAD_SALAAD_MATRIX,
         lambda: load_pickle_embedding(HEAD_SALAAD_MATRIX, "L_plus_S"),
+    )
+    yield (
+        "vanilla_bf16_dense_E",
+        VANILLA_BF16_MODEL,
+        lambda: load_state_dict_embedding(VANILLA_BF16_MODEL),
+    )
+    yield (
+        "vanilla_bf16_posthoc_rpca_L",
+        VANILLA_BF16_RPCA,
+        lambda: load_pickle_embedding(VANILLA_BF16_RPCA, "L"),
+    )
+    yield (
+        "vanilla_bf16_posthoc_rpca_L_plus_S",
+        VANILLA_BF16_RPCA,
+        lambda: load_pickle_embedding(VANILLA_BF16_RPCA, "L_plus_S"),
     )
 
 

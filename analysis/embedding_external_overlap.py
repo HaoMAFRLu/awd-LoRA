@@ -39,6 +39,8 @@ from analysis.embedding_neighbor_purity import (
     REPRESENTATIVE_WORDS,
     STOPWORDS,
     TOP_KS,
+    VANILLA_BF16_MODEL,
+    VANILLA_BF16_RPCA,
     VOCAB_SIZE,
     build_token_metadata,
     load_pickle_embedding,
@@ -84,6 +86,21 @@ def iter_variants():
         "training_salaad_L_plus_S",
         HEAD_SALAAD_MATRIX,
         lambda: load_pickle_embedding(HEAD_SALAAD_MATRIX, "L_plus_S"),
+    )
+    yield (
+        "vanilla_bf16_dense_E",
+        VANILLA_BF16_MODEL,
+        lambda: load_state_dict_embedding(VANILLA_BF16_MODEL),
+    )
+    yield (
+        "vanilla_bf16_posthoc_rpca_L",
+        VANILLA_BF16_RPCA,
+        lambda: load_pickle_embedding(VANILLA_BF16_RPCA, "L"),
+    )
+    yield (
+        "vanilla_bf16_posthoc_rpca_L_plus_S",
+        VANILLA_BF16_RPCA,
+        lambda: load_pickle_embedding(VANILLA_BF16_RPCA, "L_plus_S"),
     )
 
 

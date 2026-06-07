@@ -650,10 +650,14 @@ class SALADTrainer():
         Returns:
             dict with layer names and their corresponding results.
         """
-        T = 0
+        T = torch.zeros(
+            (len(self.name2idx), 12),
+            dtype=torch.float32,
+            device=self.device,
+        )
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                T += solver.T
+                T = T + solver.T
         return T
     
     def update_ADMM_single_step(self, target: str='L'):
