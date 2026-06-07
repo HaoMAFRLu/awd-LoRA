@@ -134,7 +134,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     cfg_version = 'llama_350m'
-    folder = 'structured_vanilla'
+    folder = 'structured_salaad'
     path_cfg = os.path.join(root, 'scripts', 'configs', cfg_version+'.yaml')
     path_cfg_model = os.path.join(root, 'scripts', 'configs', cfg_version+'_model.json')
 

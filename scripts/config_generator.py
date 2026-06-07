@@ -11,7 +11,14 @@ from salad.utils import get_parent_path
 from params import projection
 
 root = get_parent_path(lvl=1)
-keys = ['self_attn.o_proj', 'self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj', 'mlp.gate_proj', 'mlp.down_proj', 'mlp.up_proj']
+# keys = ['self_attn.o_proj', 
+#         'self_attn.q_proj', 
+#         'self_attn.k_proj', 
+#         'self_attn.v_proj', 
+#         'mlp.gate_proj', 
+#         'mlp.down_proj', 
+#         'mlp.up_proj']
+keys = []
 proj = projection()
 
 
@@ -222,7 +229,7 @@ if __name__ == "__main__":
     cfg_llama_350m = dict(
         name='llama_350m',
         seed=42,
-        training_mode='vanilla',  # or salad
+        training_mode='salad',  # or salad
         lr=0.001,
         gradient='coupled',  # or decoupled
         is_asyn=False,
