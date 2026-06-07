@@ -38,12 +38,16 @@ VOCAB_SIZE = 32000
 BASELINE_FOLDER = "data/baseline_fp32/llama_350m/20251203_102315"
 HEAD_FOLDER = "data/head_fp32/llama_350m/20251204_134313"
 VANILLA_BF16_FOLDER = "data/vanilla_bf16/llama_350m/20251209_233045"
+HEAD_BF16_FOLDER = "data/head_bf16/llama_350m/20260102_233510"
 
 BASELINE_MODEL = os.path.join(BASELINE_FOLDER, "model.pth")
 BASELINE_RPCA = os.path.join(BASELINE_FOLDER, "rpca_X_embed_tokens.pkl")
+HEAD_MODEL = os.path.join(HEAD_FOLDER, "model.pth")
 HEAD_SALAAD_MATRIX = os.path.join(HEAD_FOLDER, "matrix_rank0.pkl")
 VANILLA_BF16_MODEL = os.path.join(VANILLA_BF16_FOLDER, "model.pth")
 VANILLA_BF16_RPCA = os.path.join(VANILLA_BF16_FOLDER, "rpca_X_embed_tokens.pkl")
+HEAD_BF16_MODEL = os.path.join(HEAD_BF16_FOLDER, "model.pth")
+HEAD_BF16_SALAAD_MATRIX = os.path.join(HEAD_BF16_FOLDER, "matrix_rank0.pkl")
 
 OUTPUT_DIR = "data/figures/comparison_embedding/neighbor_purity"
 
@@ -374,32 +378,52 @@ def load_pickle_embedding(path: str, mode: str) -> torch.Tensor:
 
 def iter_variants() -> Iterable[Tuple[str, str, callable]]:
     yield (
-        "baseline_dense_E",
+        "baseline_fp32_trained_X",
         BASELINE_MODEL,
         lambda: load_state_dict_embedding(BASELINE_MODEL),
     )
     yield (
-        "baseline_posthoc_rpca_L",
+        "baseline_fp32_posthoc_rpca_L",
         BASELINE_RPCA,
         lambda: load_pickle_embedding(BASELINE_RPCA, "L"),
     )
     yield (
-        "baseline_posthoc_rpca_L_plus_S",
+        "baseline_fp32_posthoc_rpca_L_plus_S",
         BASELINE_RPCA,
         lambda: load_pickle_embedding(BASELINE_RPCA, "L_plus_S"),
     )
     yield (
-        "training_salaad_L",
+        "head_fp32_trained_X",
+        HEAD_MODEL,
+        lambda: load_state_dict_embedding(HEAD_MODEL),
+    )
+    yield (
+        "head_fp32_training_salaad_L",
         HEAD_SALAAD_MATRIX,
         lambda: load_pickle_embedding(HEAD_SALAAD_MATRIX, "L"),
     )
     yield (
-        "training_salaad_L_plus_S",
+        "head_fp32_training_salaad_L_plus_S",
         HEAD_SALAAD_MATRIX,
         lambda: load_pickle_embedding(HEAD_SALAAD_MATRIX, "L_plus_S"),
     )
     yield (
-        "vanilla_bf16_dense_E",
+        "head_bf16_trained_X",
+        HEAD_BF16_MODEL,
+        lambda: load_state_dict_embedding(HEAD_BF16_MODEL),
+    )
+    yield (
+        "head_bf16_training_salaad_L",
+        HEAD_BF16_SALAAD_MATRIX,
+        lambda: load_pickle_embedding(HEAD_BF16_SALAAD_MATRIX, "L"),
+    )
+    yield (
+        "head_bf16_training_salaad_L_plus_S",
+        HEAD_BF16_SALAAD_MATRIX,
+        lambda: load_pickle_embedding(HEAD_BF16_SALAAD_MATRIX, "L_plus_S"),
+    )
+    yield (
+        "vanilla_bf16_trained_X",
         VANILLA_BF16_MODEL,
         lambda: load_state_dict_embedding(VANILLA_BF16_MODEL),
     )

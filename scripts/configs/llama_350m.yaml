@@ -1,6 +1,6 @@
 seed: 42
 name: llama_350m
-training_mode: salad
+training_mode: vanilla
 num_total_iters: 62250
 num_freq: 25
 gradient: coupled
@@ -41,13 +41,13 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.24
-      drate: !!float '0'
+      rate_decay: 0.2
+      drate: !!float '1'
     beta_dict:
       init: !!float '0'
       mode: adaptive
       rate_decay: 0.0013
-      drate: 0.0
+      drate: 0.01
     rho_dict:
       rho: 0.0000003
       mode: fixed

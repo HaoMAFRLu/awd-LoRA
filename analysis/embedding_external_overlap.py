@@ -32,6 +32,9 @@ from analysis.embedding_neighbor_purity import (
     BASELINE_MODEL,
     BASELINE_RPCA,
     CHUNK_SIZE,
+    HEAD_BF16_MODEL,
+    HEAD_BF16_SALAAD_MATRIX,
+    HEAD_MODEL,
     HEAD_SALAAD_MATRIX,
     MAX_QUERY_TOKENS,
     OUTPUT_DIR as STRING_OUTPUT_DIR,
@@ -63,32 +66,52 @@ MAX_K = max(TOP_KS)
 
 def iter_variants():
     yield (
-        "baseline_dense_E",
+        "baseline_fp32_trained_X",
         BASELINE_MODEL,
         lambda: load_state_dict_embedding(BASELINE_MODEL),
     )
     yield (
-        "baseline_posthoc_rpca_L",
+        "baseline_fp32_posthoc_rpca_L",
         BASELINE_RPCA,
         lambda: load_pickle_embedding(BASELINE_RPCA, "L"),
     )
     yield (
-        "baseline_posthoc_rpca_L_plus_S",
+        "baseline_fp32_posthoc_rpca_L_plus_S",
         BASELINE_RPCA,
         lambda: load_pickle_embedding(BASELINE_RPCA, "L_plus_S"),
     )
     yield (
-        "training_salaad_L",
+        "head_fp32_trained_X",
+        HEAD_MODEL,
+        lambda: load_state_dict_embedding(HEAD_MODEL),
+    )
+    yield (
+        "head_fp32_training_salaad_L",
         HEAD_SALAAD_MATRIX,
         lambda: load_pickle_embedding(HEAD_SALAAD_MATRIX, "L"),
     )
     yield (
-        "training_salaad_L_plus_S",
+        "head_fp32_training_salaad_L_plus_S",
         HEAD_SALAAD_MATRIX,
         lambda: load_pickle_embedding(HEAD_SALAAD_MATRIX, "L_plus_S"),
     )
     yield (
-        "vanilla_bf16_dense_E",
+        "head_bf16_trained_X",
+        HEAD_BF16_MODEL,
+        lambda: load_state_dict_embedding(HEAD_BF16_MODEL),
+    )
+    yield (
+        "head_bf16_training_salaad_L",
+        HEAD_BF16_SALAAD_MATRIX,
+        lambda: load_pickle_embedding(HEAD_BF16_SALAAD_MATRIX, "L"),
+    )
+    yield (
+        "head_bf16_training_salaad_L_plus_S",
+        HEAD_BF16_SALAAD_MATRIX,
+        lambda: load_pickle_embedding(HEAD_BF16_SALAAD_MATRIX, "L_plus_S"),
+    )
+    yield (
+        "vanilla_bf16_trained_X",
         VANILLA_BF16_MODEL,
         lambda: load_state_dict_embedding(VANILLA_BF16_MODEL),
     )
