@@ -127,7 +127,7 @@ EVAL_LIMIT = env_optional_int("EVAL_LIMIT")
 
 USE_WANDB = env_bool("USE_WANDB", False)
 WANDB_PROJECT = os.environ.get("WANDB_PROJECT", "SALAD_llama_350m_fine_tune")
-WANDB_ENTITY = os.environ.get("WANDB_ENTITY", "").strip() or None
+WANDB_ENTITY = os.environ.get("WANDB_ENTITY", "hao-ma-eth-z-rich").strip() or None
 WANDB_GROUP = os.environ.get("WANDB_GROUP", "svd_delta")
 WANDB_TAGS = env_list("WANDB_TAGS", ["svd_delta", MODEL_TYPE, TRAIN_TASK])
 WANDB_LOG_HISTOGRAMS = env_bool("WANDB_LOG_HISTOGRAMS", True)
