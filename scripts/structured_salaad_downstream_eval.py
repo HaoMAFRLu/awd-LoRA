@@ -31,6 +31,7 @@ CACHE_DIR = os.path.join(OUTPUT_ROOT, "hf_cache")
 os.environ.setdefault("HF_HOME", CACHE_DIR)
 os.environ.setdefault("HF_DATASETS_CACHE", os.path.join(CACHE_DIR, "datasets"))
 os.environ.setdefault("TRANSFORMERS_CACHE", os.path.join(CACHE_DIR, "transformers"))
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 import torch
 from transformers import AutoTokenizer
@@ -96,8 +97,15 @@ def jsonable(obj: Any) -> Any:
             return obj.tolist()
         if isinstance(obj, np.generic):
             return obj.item()
+        if isinstance(obj, np.dtype):
+            return str(obj)
     except Exception:
         pass
+    try:
+        json.dumps(obj)
+        return obj
+    except TypeError:
+        return str(obj)
     return obj
 
 
