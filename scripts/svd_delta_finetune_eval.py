@@ -124,14 +124,13 @@ RUN_EVAL = env_bool("RUN_EVAL", True)
 SAVE_FULL_RESULTS = env_bool("SAVE_FULL_RESULTS", False)
 EVAL_BATCH_SIZE = int(os.environ.get("EVAL_BATCH_SIZE", "8"))
 EVAL_LIMIT = env_optional_int("EVAL_LIMIT")
+RUN_EVAL_LOSS = env_bool("RUN_EVAL_LOSS", True)
+EVAL_LOSS_SPLIT = os.environ.get("EVAL_LOSS_SPLIT", "validation")
+EVAL_LOSS_BATCH_SIZE = int(os.environ.get("EVAL_LOSS_BATCH_SIZE", str(EVAL_BATCH_SIZE)))
 
 USE_WANDB = env_bool("USE_WANDB", False)
 WANDB_PROJECT = os.environ.get("WANDB_PROJECT", "SALAD_llama_350m_fine_tune")
 WANDB_ENTITY = os.environ.get("WANDB_ENTITY", "hao-ma-eth-z-rich").strip() or None
-WANDB_GROUP = os.environ.get("WANDB_GROUP", "svd_delta")
-WANDB_TAGS = env_list("WANDB_TAGS", ["svd_delta", MODEL_TYPE, TRAIN_TASK])
-WANDB_LOG_HISTOGRAMS = env_bool("WANDB_LOG_HISTOGRAMS", True)
-WANDB_HIST_FREQ = int(os.environ.get("WANDB_HIST_FREQ", "50"))
 
 DEVICE_ENV = os.environ.get("DEVICE", "")
 SVD_DEVICE = os.environ.get("SVD_DEVICE", "cpu")
@@ -296,13 +295,12 @@ def env_snapshot(target_layers: Sequence[str]) -> Dict[str, Any]:
         "save_full_results": SAVE_FULL_RESULTS,
         "eval_batch_size": EVAL_BATCH_SIZE,
         "eval_limit": EVAL_LIMIT,
+        "run_eval_loss": RUN_EVAL_LOSS,
+        "eval_loss_split": EVAL_LOSS_SPLIT,
+        "eval_loss_batch_size": EVAL_LOSS_BATCH_SIZE,
         "use_wandb": USE_WANDB,
         "wandb_project": WANDB_PROJECT,
         "wandb_entity": WANDB_ENTITY,
-        "wandb_group": WANDB_GROUP,
-        "wandb_tags": WANDB_TAGS,
-        "wandb_log_histograms": WANDB_LOG_HISTOGRAMS,
-        "wandb_hist_freq": WANDB_HIST_FREQ,
         "device": DEVICE_ENV,
         "svd_device": SVD_DEVICE,
         "train_dtype": TRAIN_DTYPE,
@@ -363,20 +361,27 @@ def init_wandb(target_layers: Sequence[str]):
         api_key = os.environ.get("WANDB_API_KEY")
         if api_key:
             wandb.login(key=api_key, relogin=False)
-        config = jsonable(env_snapshot(target_layers))
-        config["estimated_svd_delta_params"] = estimate_sv_params_from_config(target_layers)
-        run = wandb.init(
-            project=WANDB_PROJECT,
-            entity=WANDB_ENTITY,
-            name=RUN_NAME,
-            group=WANDB_GROUP,
-            tags=WANDB_TAGS,
-            config=config,
-        )
-        wandb.define_metric("train/optimizer_step")
-        wandb.define_metric("train/*", step_metric="train/optimizer_step")
-        wandb.define_metric("svd_delta/*", step_metric="train/optimizer_step")
-        wandb.define_metric("eval/*")
+        settings = None
+        try:
+            settings = wandb.Settings(
+                disable_code=True,
+                disable_git=True,
+                _disable_stats=True,
+            )
+        except Exception:
+            try:
+                settings = wandb.Settings(disable_code=True, disable_git=True)
+            except Exception:
+                settings = None
+        init_kwargs = {
+            "project": WANDB_PROJECT,
+            "entity": WANDB_ENTITY,
+            "name": RUN_NAME,
+            "config": {},
+        }
+        if settings is not None:
+            init_kwargs["settings"] = settings
+        run = wandb.init(**init_kwargs)
         ACTIVE_WANDB_RUN = run
         print(f"[wandb] initialized project={WANDB_PROJECT} run={RUN_NAME}", flush=True)
         return run
@@ -488,14 +493,19 @@ def tokenize_example(tokenizer: AutoTokenizer, prompt: str, target: str) -> Dict
     }
 
 
-def build_dataset(tokenizer: AutoTokenizer) -> datasets.Dataset:
-    data = load_train_examples(TRAIN_TASK, TRAIN_SPLIT)
+def build_task_dataset(tokenizer: AutoTokenizer, split: str, *, shuffle: bool) -> datasets.Dataset:
+    data = load_train_examples(TRAIN_TASK, split)
 
     def tok(row: Dict[str, str]) -> Dict[str, List[int]]:
         return tokenize_example(tokenizer, row["prompt"], row["target"])
 
-    data = data.shuffle(seed=SEED)
+    if shuffle:
+        data = data.shuffle(seed=SEED)
     return data.map(tok, remove_columns=data.column_names)
+
+
+def build_dataset(tokenizer: AutoTokenizer) -> datasets.Dataset:
+    return build_task_dataset(tokenizer, TRAIN_SPLIT, shuffle=True)
 
 
 def collate(batch: List[Dict[str, List[int]]]) -> Dict[str, torch.Tensor]:
@@ -572,32 +582,6 @@ def svd_delta_modules(model: nn.Module) -> Dict[str, SingularValueDeltaLinear]:
     return modules
 
 
-def delta_sigma_stats(model: nn.Module) -> Tuple[Dict[str, float], Optional[torch.Tensor], Optional[torch.Tensor]]:
-    modules = list(svd_delta_modules(model).values())
-    if not modules:
-        return {}, None, None
-    with torch.no_grad():
-        deltas = torch.cat([module.delta_sigma.detach().float().cpu() for module in modules])
-        sigmas = torch.cat([module.sigma0.detach().float().cpu() for module in modules])
-        abs_delta = deltas.abs()
-        abs_sigma = sigmas.abs()
-        denom = torch.linalg.vector_norm(sigmas).clamp_min(1e-12)
-        rel = abs_delta / abs_sigma.clamp_min(1e-12)
-        stats = {
-            "svd_delta/param_count": float(deltas.numel()),
-            "svd_delta/l2_norm": float(torch.linalg.vector_norm(deltas)),
-            "svd_delta/rms": float(torch.sqrt(torch.mean(deltas.square()))),
-            "svd_delta/mean_abs": float(abs_delta.mean()),
-            "svd_delta/max_abs": float(abs_delta.max()),
-            "svd_delta/relative_l2_to_sigma0": float(torch.linalg.vector_norm(deltas) / denom),
-            "svd_delta/relative_mean_abs": float(rel.mean()),
-            "svd_delta/relative_max_abs": float(rel.max()),
-            "svd_delta/nonzero_frac_1e_8": float((abs_delta > 1e-8).float().mean()),
-            "svd_delta/nonzero_frac_1e_6": float((abs_delta > 1e-6).float().mean()),
-        }
-    return stats, deltas, sigmas
-
-
 def wandb_log(payload: Dict[str, Any], step: Optional[int] = None) -> None:
     if ACTIVE_WANDB_RUN is None:
         return
@@ -610,27 +594,6 @@ def wandb_log(payload: Dict[str, Any], step: Optional[int] = None) -> None:
             wandb.log(payload, step=step)
     except Exception as exc:
         print(f"[wandb] log failed: {exc}", flush=True)
-
-
-def add_delta_histograms(
-    payload: Dict[str, Any],
-    deltas: Optional[torch.Tensor],
-    sigmas: Optional[torch.Tensor],
-) -> None:
-    if ACTIVE_WANDB_RUN is None or not WANDB_LOG_HISTOGRAMS or deltas is None or sigmas is None:
-        return
-    try:
-        import wandb
-
-        relative = deltas / sigmas.abs().clamp_min(1e-12)
-        payload["svd_delta/delta_sigma_hist"] = wandb.Histogram(deltas.numpy())
-        payload["svd_delta/relative_delta_hist"] = wandb.Histogram(relative.numpy())
-    except Exception as exc:
-        print(f"[wandb] histogram log skipped: {exc}", flush=True)
-
-
-def metric_key(name: str) -> str:
-    return name.replace(",", "_").replace("/", "_").replace(" ", "_")
 
 
 def load_base_model(device: torch.device, dtype: torch.dtype) -> nn.Module:
@@ -811,23 +774,6 @@ def train_svd_delta() -> Tuple[nn.Module, AutoTokenizer, Dict[str, Any]]:
         f"original_params={original_params:,} ratio={trainable / original_params:.8f}",
         flush=True,
     )
-    if wandb_run is not None:
-        wandb_run.summary["params/trainable"] = trainable
-        wandb_run.summary["params/original"] = original_params
-        wandb_run.summary["params/trainable_ratio_vs_original"] = trainable / original_params
-        wandb_run.summary["svd_delta/target_layer_count"] = len(target_layers)
-        wandb_run.summary["svd_delta/estimated_params"] = estimate_sv_params_from_config(target_layers)
-        wandb_log(
-            {
-                "params/trainable": trainable,
-                "params/original": original_params,
-                "params/trainable_ratio_vs_original": trainable / original_params,
-                "svd_delta/target_layer_count": len(target_layers),
-                "svd_delta/estimated_params": estimate_sv_params_from_config(target_layers),
-                "data/avg_tokens_per_example": avg_tokens_per_example,
-            },
-            step=0,
-        )
 
     tokens_per_optimizer_step = max(1.0, avg_tokens_per_example * MICRO_BATCH_SIZE * GRAD_ACCUM_STEPS)
     estimated_steps = max(1, math.ceil(TOKEN_BUDGET / tokens_per_optimizer_step))
@@ -873,22 +819,7 @@ def train_svd_delta() -> Tuple[nn.Module, AutoTokenizer, Dict[str, Any]]:
 
                 if optimizer_steps % 10 == 0 or seen_tokens >= TOKEN_BUDGET:
                     avg_loss = running_loss / max(1, micro_steps)
-                    delta_stats, deltas, sigmas = delta_sigma_stats(model)
-                    train_payload = {
-                        "train/optimizer_step": optimizer_steps,
-                        "train/micro_step": micro_steps,
-                        "train/seen_tokens": seen_tokens,
-                        "train/token_progress": seen_tokens / max(1, TOKEN_BUDGET),
-                        "train/loss_running_mean": avg_loss,
-                        "train/loss_last_micro_batch": loss_value,
-                        "train/lr": scheduler.get_last_lr()[0],
-                        "train/supervised_tokens_last_micro_batch": supervised_tokens,
-                        "train/total_tokens_last_micro_batch": total_tokens,
-                    }
-                    train_payload.update(delta_stats)
-                    if optimizer_steps % max(1, WANDB_HIST_FREQ) == 0 or seen_tokens >= TOKEN_BUDGET:
-                        add_delta_histograms(train_payload, deltas, sigmas)
-                    wandb_log(train_payload, step=optimizer_steps)
+                    wandb_log({"train/loss": avg_loss}, step=optimizer_steps)
                     print(
                         f"[train] opt_step={optimizer_steps} micro_step={micro_steps} "
                         f"tokens={seen_tokens}/{TOKEN_BUDGET} supervised_tokens={supervised_tokens} "
@@ -917,22 +848,70 @@ def train_svd_delta() -> Tuple[nn.Module, AutoTokenizer, Dict[str, Any]]:
     with open(os.path.join(OUTPUT_DIR, "train_summary.json"), "w", encoding="utf-8") as f:
         json.dump(train_summary, f, indent=2)
     if wandb_run is not None:
-        wandb_run.summary["train/seen_tokens"] = seen_tokens
-        wandb_run.summary["train/optimizer_steps"] = optimizer_steps
-        wandb_run.summary["train/mean_loss"] = train_summary["mean_loss"]
-        artifact = None
-        try:
-            import wandb
-
-            artifact = wandb.Artifact(name=f"{RUN_NAME}_svd_delta", type="svd_delta_state")
-            artifact.add_file(DELTA_STATE_PATH)
-            artifact.add_file(os.path.join(OUTPUT_DIR, "train_summary.json"))
-            artifact.add_file(os.path.join(OUTPUT_DIR, "run_config.json"))
-            wandb_run.log_artifact(artifact)
-        except Exception as exc:
-            print(f"[wandb] artifact log skipped: {exc}", flush=True)
+        wandb_run.summary["train/loss"] = train_summary["mean_loss"]
     print(f"[train] saved delta state: {DELTA_STATE_PATH}", flush=True)
     return model, tokenizer, train_summary
+
+
+def compute_eval_loss(
+    model: nn.Module,
+    tokenizer: AutoTokenizer,
+    optimizer_steps: int,
+) -> Optional[Dict[str, Any]]:
+    if not RUN_EVAL_LOSS:
+        print("[eval_loss] skipped because RUN_EVAL_LOSS=0", flush=True)
+        return None
+
+    eval_data = build_task_dataset(tokenizer, EVAL_LOSS_SPLIT, shuffle=False)
+    loader = DataLoader(
+        eval_data,
+        batch_size=EVAL_LOSS_BATCH_SIZE,
+        shuffle=False,
+        collate_fn=collate,
+        drop_last=False,
+    )
+    device = next(model.parameters()).device
+    model.eval()
+    loss_sum = 0.0
+    supervised_token_count = 0
+    batch_count = 0
+    with torch.no_grad():
+        for batch in loader:
+            batch = {k: v.to(device) for k, v in batch.items()}
+            supervised_tokens = int((batch["labels"] != -100).sum().item())
+            if supervised_tokens == 0:
+                continue
+            loss = model(**batch).loss
+            loss_sum += float(loss.detach().cpu()) * supervised_tokens
+            supervised_token_count += supervised_tokens
+            batch_count += 1
+
+    if supervised_token_count == 0:
+        raise RuntimeError(f"No supervised tokens found for eval split {EVAL_LOSS_SPLIT!r}.")
+
+    eval_loss = loss_sum / supervised_token_count
+    summary = {
+        "task": TRAIN_TASK,
+        "split": EVAL_LOSS_SPLIT,
+        "batch_size": EVAL_LOSS_BATCH_SIZE,
+        "num_examples": len(eval_data),
+        "num_batches": batch_count,
+        "supervised_tokens": supervised_token_count,
+        "loss": eval_loss,
+    }
+    path = os.path.join(OUTPUT_DIR, "eval_loss_summary.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    wandb_log({"eval/loss": eval_loss}, step=optimizer_steps)
+    if ACTIVE_WANDB_RUN is not None:
+        ACTIVE_WANDB_RUN.summary["eval/loss"] = eval_loss
+    print(
+        f"[eval_loss] split={EVAL_LOSS_SPLIT} examples={len(eval_data)} "
+        f"supervised_tokens={supervised_token_count} loss={eval_loss:.4f}",
+        flush=True,
+    )
+    return summary
 
 
 def run_lm_harness(model: nn.Module, tokenizer: AutoTokenizer) -> None:
@@ -961,15 +940,11 @@ def run_lm_harness(model: nn.Module, tokenizer: AutoTokenizer) -> None:
             limit=EVAL_LIMIT,
         )
 
-        eval_payload: Dict[str, Any] = {}
-        preferred_values: List[float] = []
         for task, task_result in results.get("results", {}).items():
             metric = preferred_metric(task_result)
             if metric is None:
                 continue
             metric_name, metric_value = metric
-            preferred_values.append(metric_value)
-            eval_payload[f"eval/fewshot_{num_fewshot}/{task}/{metric_key(metric_name)}"] = metric_value
             summary_rows.append(
                 {
                     "checkpoint": os.path.basename(CHECKPOINT_FOLDER),
@@ -981,10 +956,6 @@ def run_lm_harness(model: nn.Module, tokenizer: AutoTokenizer) -> None:
                     "value": metric_value,
                 }
             )
-        if preferred_values:
-            eval_payload[f"eval/fewshot_{num_fewshot}/macro_avg"] = sum(preferred_values) / len(preferred_values)
-        if eval_payload:
-            wandb_log(eval_payload)
 
         if SAVE_FULL_RESULTS:
             out_dir = os.path.join(RESULTS_DIR, f"fewshot_{num_fewshot}")
@@ -999,17 +970,6 @@ def run_lm_harness(model: nn.Module, tokenizer: AutoTokenizer) -> None:
     summary_path = os.path.join(RESULTS_DIR, "eval_summary.json")
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary_rows, f, indent=2)
-    if ACTIVE_WANDB_RUN is not None:
-        try:
-            import wandb
-
-            table = wandb.Table(columns=["fewshot", "task", "metric", "value"])
-            for row in summary_rows:
-                table.add_data(row["fewshot"], row["task"], row["metric"], row["value"])
-            wandb_log({"eval/summary_table": table})
-            ACTIVE_WANDB_RUN.summary["eval/summary_path"] = summary_path
-        except Exception as exc:
-            print(f"[wandb] eval table log skipped: {exc}", flush=True)
     print(f"[eval] saved summary: {summary_path}", flush=True)
 
 
@@ -1032,6 +992,13 @@ def main() -> None:
 
         model, tokenizer, train_summary = train_svd_delta()
         print("[train_summary]", train_summary, flush=True)
+        eval_loss_summary = compute_eval_loss(
+            model,
+            tokenizer,
+            int(train_summary["optimizer_steps"]),
+        )
+        if eval_loss_summary is not None:
+            print("[eval_loss_summary]", eval_loss_summary, flush=True)
         if RUN_EVAL:
             run_lm_harness(model, tokenizer)
         else:
