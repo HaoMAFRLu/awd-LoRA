@@ -54,3 +54,6 @@
 
 # ignore local discussion notes
 /discussion_notes
+
+# ignore local helper scripts
+/local_scripts

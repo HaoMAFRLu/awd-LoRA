@@ -1,0 +1,30 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = -u scripts/structured_salaad_downstream_eval.py
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs_eval/structured_salaad_downstream_$(Cluster)_$(Process).log
+error           = jobs_eval/structured_salaad_downstream_$(Cluster)_$(Process).err
+output          = jobs_eval/structured_salaad_downstream_$(Cluster)_$(Process).out
+
+request_cpus    = 4
+request_memory  = 100000
+request_gpus    = 1
+
+requirements = ( \
+    CUDACapability >= 9.0 && \
+    CUDACapability < 9.1 && \
+    !regexp("GPU-4c275e72", TARGET.DetectedGPUs) && \
+    !regexp("GPU-a0e440fb", TARGET.DetectedGPUs) && \
+    !regexp("GPU-b50eee5a", TARGET.DetectedGPUs) && \
+    !regexp("GPU-57cf3c62", TARGET.DetectedGPUs) && \
+    !regexp("GPU-b65aba4e", TARGET.DetectedGPUs) && \
+    !regexp("GPU-90f1a7d5", TARGET.DetectedGPUs) && \
+    !regexp("GPU-2d57d3d7", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1feef0b3", TARGET.DetectedGPUs) \
+)
+
+getenv          = True
+environment     = "RUN_PREPARE=1 RUN_EVAL=1 FEWSHOTS=0,5 BATCH_SIZE=16"
+
+queue 1
