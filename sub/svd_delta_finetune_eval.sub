@@ -1,0 +1,30 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = -u scripts/svd_delta_finetune_eval.py
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs_eval/svd_delta_finetune_eval_$(Cluster)_$(Process).log
+error           = jobs_eval/svd_delta_finetune_eval_$(Cluster)_$(Process).err
+output          = jobs_eval/svd_delta_finetune_eval_$(Cluster)_$(Process).out
+
+request_cpus    = 8
+request_memory  = 100000
+request_gpus    = 1
+
+requirements = ( \
+    CUDACapability >= 9.0 && \
+    CUDACapability < 9.1 && \
+    !regexp("GPU-4c275e72", TARGET.DetectedGPUs) && \
+    !regexp("GPU-a0e440fb", TARGET.DetectedGPUs) && \
+    !regexp("GPU-b50eee5a", TARGET.DetectedGPUs) && \
+    !regexp("GPU-57cf3c62", TARGET.DetectedGPUs) && \
+    !regexp("GPU-b65aba4e", TARGET.DetectedGPUs) && \
+    !regexp("GPU-90f1a7d5", TARGET.DetectedGPUs) && \
+    !regexp("GPU-2d57d3d7", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1feef0b3", TARGET.DetectedGPUs) \
+)
+
+getenv          = True
+environment     = "MODEL_TYPE=llama_350m CHECKPOINT_FOLDER=/lustre/home/hma2/projects/awd-LoRA/data/head_bf16/llama_350m/20260102_233510 TOKENIZER_NAME_OR_PATH=t5-base TRAIN_TASK=boolq TOKEN_BUDGET=1000000 MAX_LENGTH=256 MICRO_BATCH_SIZE=1 GRAD_ACCUM_STEPS=32 LEARNING_RATE=2e-4 RUN_EVAL=1 SAVE_FULL_RESULTS=0 FEWSHOTS=0 EVAL_BATCH_SIZE=8 TRAIN_DTYPE=bfloat16 SVD_DEVICE=cpu USE_WANDB=1 WANDB_PROJECT=SALAD_llama_350m_fine_tune WANDB_GROUP=svd_delta WANDB_TAGS=svd_delta,llama_350m,boolq WANDB_LOG_HISTOGRAMS=1 WANDB_HIST_FREQ=50"
+
+queue 1
