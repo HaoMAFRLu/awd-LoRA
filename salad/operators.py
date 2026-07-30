@@ -3,12 +3,13 @@
 import torch
 import torch.nn as nn
 
-@torch.no_grad()        
-def opt_copy(model_source: nn.Module,
-             model_target: nn.Module
-            ) -> None:
-    """Copy the weights from source model to target model for specified layers."""
-    model_target.load_state_dict(model_source, strict=True)
+@torch.no_grad()
+def opt_copy(
+    model_source: nn.Module,
+    model_target: nn.Module,
+) -> None:
+    """Copy the complete source-model state into the target model."""
+    model_target.load_state_dict(model_source.state_dict(), strict=True)
 
 @torch.no_grad()        
 def opt_lowrank(model: nn.Module, 

@@ -17,6 +17,7 @@ import time, random
 import wandb
 from torch.nn.parallel import DistributedDataParallel as DDP
 import io
+import json
 
 from salad.register import *
 
@@ -216,15 +217,24 @@ def set_seed(seed: int):
 
 def read_cfg(cfg_path: str) -> dict:
     """
-    Read a configuration file and return its contents as a dictionary.
+    Read a YAML or JSON configuration file into a dictionary.
     Args:
         cfg_path: Path to the configuration file.
     Returns:
         Dictionary containing the configuration parameters.
     """
-    with open(cfg_path) as f:
-        cfg = yaml.safe_load(f)
-    return cfg
+    with open(cfg_path, "r", encoding="utf-8") as config_file:
+        if Path(cfg_path).suffix.lower() == ".json":
+            return json.load(config_file)
+        return yaml.safe_load(config_file)
+
+
+def freeze_model(model: nn.Module) -> nn.Module:
+    """Freeze every parameter and put the model in inference mode."""
+    model.requires_grad_(False)
+    model.eval()
+    return model
+
 
 def get_model_layer_names(model: torch.nn.Module):
     """

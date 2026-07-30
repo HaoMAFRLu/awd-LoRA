@@ -6,6 +6,7 @@ import os
 import datasets
 import datasets.distributed
 from loguru import logger
+from typing import Optional
 
 from salad.salad_solver import SALAD
 from salad.utils import *
@@ -19,7 +20,8 @@ class SALADTrainer():
                  config: dict,
                  rank: int=0,
                  world_size: int=0,
-                 folder_name: str=None) -> None:
+                 folder_name: str=None,
+                 teacher_model: Optional[nn.Module]=None) -> None:
         """
         Args:
             model: the nn.Module to train
@@ -33,6 +35,7 @@ class SALADTrainer():
         # torch.set_printoptions(precision=8)
 
         self.model = model
+        self.teacher_model = teacher_model
         self.config = config
 
         self.rank = rank
@@ -97,7 +100,17 @@ class SALADTrainer():
         props   = torch.cuda.get_device_properties(dev_idx)
         logger.info(f"[Rank {self.rank}] using {props.name}, {props.total_memory / (1024 ** 3):.2f} GiB")       
 
-        # Wrap model in DDP
+        # The frozen teacher is local to each rank. Only the trainable student
+        # is wrapped in DDP and managed by the optimizer/SALAAD solver.
+        if self.teacher_model is not None:
+            if self.teacher_model.training or any(
+                parameter.requires_grad
+                for parameter in self.teacher_model.parameters()
+            ):
+                raise ValueError("teacher_model must be frozen in eval mode")
+            self.teacher_model.to(self.device, dtype=torch.bfloat16)
+
+        # Wrap the student model in DDP.
         self.model.cuda()
         # get all the names of the model layers
         self.names_model_layers = get_linear_layers_name(self.model)

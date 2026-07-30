@@ -1,0 +1,1348 @@
+seed: 42
+name: vit_b8
+model_config: vit_b8_model.json
+training_mode: salad
+model_type: dino_vitb8
+task: dino_feature_distillation
+runtime: cluster
+precision: bfloat16
+num_total_iters: 200
+num_freq: 25
+gradient: coupled
+is_asyn: false
+is_init: false
+is_wandb: true
+is_monitor: true
+save_interval: 1
+is_clip: !!float '1'
+seed_for_shuffle: 42
+batch_size: 1
+num_workers: 0
+data:
+  type: vision
+  dataset: ILSVRC/imagenet-1k
+  location: cluster_snapshot
+  root: /lustre/fast/fast/hma2/data/imagenet2012/hf_snapshot
+  root_env: SALAAD_VISION_CLUSTER_IMAGENET_ROOT
+  cache_dir: /lustre/fast/fast/hma2/data/imagenet2012/hf_datasets_cache
+  cache_dir_env: SALAAD_VISION_CLUSTER_DATASETS_CACHE
+  split: train
+  streaming: true
+  shuffle: true
+  shuffle_buffer_size: 10000
+distillation:
+  initialization: random_init
+  loss: cosine
+  global_weight: !!float '1'
+  patch_weight: !!float '1'
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 20
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.00001
+    betas:
+    - 0.9
+    - 0.95
+    eps: 0.00000001
+    weight_decay: !!float '0'
+layers:
+- name: backbone.blocks.0.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.0.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.0.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.0.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.1.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.1.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.1.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.1.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.2.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.2.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.2.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.2.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.3.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.3.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.3.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.3.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.4.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.4.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.4.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.4.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.5.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.5.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.5.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.5.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.6.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.6.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.6.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.6.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.7.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.7.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.7.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.7.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.8.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.8.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.8.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.8.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.9.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.9.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.9.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.9.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.10.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.10.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.10.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.10.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.11.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.11.attn.proj
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.11.mlp.fc1
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+- name: backbone.blocks.11.mlp.fc2
+  params:
+    energy: 0.999
+    init_energy: 0.35
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.0013
+      drate: 0.01
+    rho_dict:
+      rho: 0.00000001
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'

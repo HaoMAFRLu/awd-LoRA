@@ -17,6 +17,14 @@ from models.qwen3_vl import build_qwen3_vl_from_config
 from dataloaders.Llama_dataloader import PreprocessedIterableDataset
 from dataloaders.Qwen3VL_dataloader import Qwen3VLIterableDataset
 
+
+def _build_dino_vitb8():
+    """Build one uninitialized DINO ViT-B/8 backbone."""
+    from salaad_vision.models.dino import DinoViTBase8
+
+    return DinoViTBase8()
+
+
 def get_model(cfg: dict):
     """
     Get the model based on the configuration.
@@ -27,6 +35,8 @@ def get_model(cfg: dict):
     model_type = raw_cfg.get("model_type")
     if model_type == "qwen3_vl":
         return build_qwen3_vl_from_config(cfg)
+    if model_type == "dino_vitb8":
+        return _build_dino_vitb8()
 
     model_cfg = AutoConfig.from_pretrained(cfg)
     if model_cfg.model_type != "llama":

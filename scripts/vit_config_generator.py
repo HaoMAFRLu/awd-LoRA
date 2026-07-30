@@ -1,0 +1,272 @@
+"""Generate the DINO ViT-B/8 training YAML used by train_salad.py.
+
+Edit the dictionary at the bottom of this file and run:
+
+    python scripts/vit_config_generator.py
+"""
+
+import copy
+import json
+import os
+
+import yaml
+
+try:
+    from .vit_params import projection
+except ImportError:
+    from vit_params import projection
+
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+ATTENTION_KEYS = [
+    "attn.qkv",
+    "attn.proj",
+]
+MLP_KEYS = [
+    "mlp.fc1",
+    "mlp.fc2",
+]
+
+PROJECTION_PARAMS = projection()
+
+
+class NoAliasDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
+
+
+def _represent_none(dumper, data):
+    return dumper.represent_scalar("tag:yaml.org,2002:null", "null")
+
+
+def _represent_float(dumper, value):
+    text = f"{value:.12f}".rstrip("0").rstrip(".")
+    return dumper.represent_scalar("tag:yaml.org,2002:float", text)
+
+
+NoAliasDumper.add_representer(type(None), _represent_none)
+NoAliasDumper.add_representer(float, _represent_float)
+
+
+def load_model_config(model_config):
+    path_model_config = os.path.join(ROOT, "configs", model_config)
+    with open(path_model_config, "r", encoding="utf-8") as config_file:
+        return json.load(config_file)
+
+
+def _select_indices(total, count):
+    if count < 0:
+        return range(total)
+    return range(min(total, count))
+
+
+def add_vit_layers(
+    layers,
+    num_hidden_layers,
+    params,
+    *,
+    layer_count,
+    include_attention,
+    include_mlp,
+):
+    """Add bare-student ViT Linear layers in deterministic block order."""
+    for block_index in _select_indices(num_hidden_layers, layer_count):
+        base = f"backbone.blocks.{block_index}"
+        if include_attention:
+            for key in ATTENTION_KEYS:
+                layers.append(
+                    {
+                        "name": f"{base}.{key}",
+                        "params": copy.deepcopy(params[key]),
+                    }
+                )
+        if include_mlp:
+            for key in MLP_KEYS:
+                layers.append(
+                    {
+                        "name": f"{base}.{key}",
+                        "params": copy.deepcopy(params[key]),
+                    }
+                )
+
+
+def generate_vit_config(
+    *,
+    name="vit_b8",
+    model_config="vit_b8_model.json",
+    seed=42,
+    training_mode="salad",
+    lr=1e-5,
+    num_freq=25,
+    weight_decay=0.0,
+    optimizer_name="AdamW",
+    gradient="coupled",
+    is_asyn=False,
+    is_init=False,
+    is_wandb=True,
+    is_monitor=True,
+    save_interval=1,
+    seed_for_shuffle=42,
+    is_clip=1.0,
+    num_total_iters=200,
+    batch_size=1,
+    warmup_steps=20,
+    num_workers=0,
+    scheduler_type="cosine",
+    min_lr_ratio=0.1,
+    precision="bfloat16",
+    data_root="/lustre/fast/fast/hma2/data/imagenet2012/hf_snapshot",
+    data_root_env="SALAAD_VISION_CLUSTER_IMAGENET_ROOT",
+    data_cache_dir="/lustre/fast/fast/hma2/data/imagenet2012/hf_datasets_cache",
+    data_cache_dir_env="SALAAD_VISION_CLUSTER_DATASETS_CACHE",
+    data_split="train",
+    data_streaming=True,
+    data_shuffle=True,
+    shuffle_buffer_size=10_000,
+    distillation_initialization="random_init",
+    distillation_loss="cosine",
+    global_weight=1.0,
+    patch_weight=1.0,
+    include_attention=True,
+    include_mlp=True,
+    vit_layers=-1,
+    output_path=None,
+):
+    """Generate one ViT task config selected through --cfg_version."""
+    cfg_model = load_model_config(model_config)
+    if cfg_model.get("model_type") != "dino_vitb8":
+        raise ValueError(
+            f"Expected dino_vitb8 model config, got {cfg_model.get('model_type')!r}"
+        )
+    num_hidden_layers = cfg_model["num_hidden_layers"]
+
+    layers = []
+    if training_mode == "salad":
+        add_vit_layers(
+            layers,
+            num_hidden_layers,
+            PROJECTION_PARAMS,
+            layer_count=vit_layers,
+            include_attention=include_attention,
+            include_mlp=include_mlp,
+        )
+
+    cfg = {
+        "seed": seed,
+        "name": name,
+        "model_config": model_config,
+        "training_mode": training_mode,
+        "model_type": "dino_vitb8",
+        "task": "dino_feature_distillation",
+        "runtime": "cluster",
+        "precision": precision,
+        "num_total_iters": num_total_iters,
+        "num_freq": num_freq,
+        "gradient": gradient,
+        "is_asyn": is_asyn,
+        "is_init": is_init,
+        "is_wandb": is_wandb,
+        "is_monitor": is_monitor,
+        "save_interval": save_interval,
+        "is_clip": is_clip,
+        "seed_for_shuffle": seed_for_shuffle,
+        "batch_size": batch_size,
+        "num_workers": num_workers,
+        "data": {
+            "type": "vision",
+            "dataset": "ILSVRC/imagenet-1k",
+            "location": "cluster_snapshot",
+            "root": data_root,
+            "root_env": data_root_env,
+            "cache_dir": data_cache_dir,
+            "cache_dir_env": data_cache_dir_env,
+            "split": data_split,
+            "streaming": data_streaming,
+            "shuffle": data_shuffle,
+            "shuffle_buffer_size": shuffle_buffer_size,
+        },
+        "distillation": {
+            "initialization": distillation_initialization,
+            "loss": distillation_loss,
+            "global_weight": global_weight,
+            "patch_weight": patch_weight,
+        },
+        "scheduler": {
+            "name": scheduler_type,
+            "params": {
+                "warmup_steps": warmup_steps,
+                "min_lr_ratio": min_lr_ratio,
+            },
+        },
+        "optimizer": {
+            "name": optimizer_name,
+            "params": {
+                "lr": lr,
+                "betas": (0.9, 0.95),
+                "eps": 1e-8,
+                "weight_decay": weight_decay,
+            },
+        },
+        "layers": layers,
+    }
+
+    if output_path is None:
+        output_path = os.path.join(ROOT, "configs", f"{name}.yaml")
+    with open(output_path, "w", encoding="utf-8") as config_file:
+        yaml.dump(
+            cfg,
+            config_file,
+            Dumper=NoAliasDumper,
+            sort_keys=False,
+            allow_unicode=True,
+        )
+
+    print(f"Configuration written to {output_path}")
+    print(f"Generated {len(layers)} SALAAD layers.")
+    return cfg
+
+
+if __name__ == "__main__":
+    cfg_vit_b8 = dict(
+        name="vit_b8",
+        model_config="vit_b8_model.json",
+        seed=42,
+        training_mode="salad",
+        lr=1e-5,
+        num_freq=25,
+        weight_decay=0.0,
+        optimizer_name="AdamW",
+        gradient="coupled",
+        is_asyn=False,
+        is_init=False,
+        is_wandb=True,
+        is_monitor=True,
+        save_interval=1,
+        seed_for_shuffle=42,
+        is_clip=1.0,
+        num_total_iters=200,
+        batch_size=1,
+        warmup_steps=20,
+        num_workers=0,
+        scheduler_type="cosine",
+        min_lr_ratio=0.1,
+        precision="bfloat16",
+        data_root="/lustre/fast/fast/hma2/data/imagenet2012/hf_snapshot",
+        data_root_env="SALAAD_VISION_CLUSTER_IMAGENET_ROOT",
+        data_cache_dir="/lustre/fast/fast/hma2/data/imagenet2012/hf_datasets_cache",
+        data_cache_dir_env="SALAAD_VISION_CLUSTER_DATASETS_CACHE",
+        data_split="train",
+        data_streaming=True,
+        data_shuffle=True,
+        shuffle_buffer_size=10_000,
+        distillation_initialization="random_init",
+        distillation_loss="cosine",
+        global_weight=1.0,
+        patch_weight=1.0,
+        include_attention=True,
+        include_mlp=True,
+        vit_layers=-1,  # -1 means all 12 DINO blocks
+    )
+
+    generate_vit_config(**cfg_vit_b8)

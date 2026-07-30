@@ -1,0 +1,15 @@
+{
+  "architectures": [
+    "DinoViTBase8"
+  ],
+  "model_type": "dino_vitb8",
+  "backbone": "dino_vitbase8",
+  "image_size": 224,
+  "patch_size": 8,
+  "num_channels": 3,
+  "hidden_size": 768,
+  "intermediate_size": 3072,
+  "num_hidden_layers": 12,
+  "num_attention_heads": 12,
+  "fused_qkv": true
+}

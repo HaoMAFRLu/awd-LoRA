@@ -10,6 +10,7 @@ from datetime import datetime
 import shutil
 import transformers
 import argparse
+import torch
 import torch.distributed as dist
 import socket 
 
@@ -17,6 +18,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from salad.utils import *
 from salad.trainer_salad import SALADTrainer
 from salad.register import get_model, get_data
+from salad.operators import opt_copy
+from salaad_vision.models.dino import DINO_VITB8_CHECKPOINT_SHA256
 
 transformers.logging.set_verbosity_error()
 torch.backends.cuda.enable_mem_efficient_sdp(False)
@@ -39,8 +42,8 @@ def parse_args():
     parser.add_argument('--beta_rate', type=float, default=None, help='Beta Rate')
     parser.add_argument('--dalpha', type=float, default=None, help='Delta Alpha')
     parser.add_argument('--dbeta', type=float, default=None, help='Delta Beta')
-    parser.add_argument('--cfg_version', type=str, default='llama_350m', help='Config version in configs/')
-    parser.add_argument('--folder', type=str, default='review_wall_clock', help='Output folder under data/')
+    parser.add_argument('--cfg_version', type=str, default='vit_b8', help='Config version in configs/')
+    parser.add_argument('--folder', type=str, default='salaad_vision', help='Output folder under data/')
 
     return parser.parse_args()
 
@@ -68,8 +71,7 @@ def main(cfg_version: str,
     torch.cuda.set_device(rank % torch.cuda.device_count())
 
     # load the config
-    with open(path_cfg) as f:
-        cfg = yaml.safe_load(f)
+    cfg = read_cfg(path_cfg)
     if cfg.get("model_config"):
         path_cfg_model = os.path.join(root, 'configs', cfg["model_config"])
     
@@ -121,17 +123,48 @@ def main(cfg_version: str,
     dist.broadcast_object_list(path_folder_list, src=0)
     path_folder = path_folder_list[0]
 
-    # get the data loader
-    model = get_model(path_cfg_model)
+    teacher_model = None
+    if cfg.get("model_type") == "dino_vitb8":
+        initialization = cfg["distillation"]["initialization"]
+
+        if initialization not in {"teacher_init", "random_init"}:
+            raise ValueError(
+                "DINO Student initialization must be 'teacher_init' or "
+                f"'random_init', got {initialization!r}"
+            )
+
+        teacher_model = get_model(path_cfg_model)
+        student_model = get_model(path_cfg_model)
+
+        teacher_model.load_checkpoint(
+            os.path.join(
+                root,
+                "data",
+                "salaad_vision",
+                "pretrained",
+                "dino_vitbase8_pretrain.pth",
+            ),
+            expected_sha256=DINO_VITB8_CHECKPOINT_SHA256,
+        )
+        if initialization == "teacher_init":
+            opt_copy(teacher_model, student_model)
+        freeze_model(teacher_model)
+    else:
+        student_model = get_model(path_cfg_model)
 
     # time.sleep(2.0 * rank)  # 3s per rank is a good starting point
     data = get_data(cfg)
     # dist.barrier()
 
-    ddp_trainer = SALADTrainer(model, data, cfg, 
-                               rank=rank, 
-                               world_size=world_size,
-                               folder_name=folder_name)
+    ddp_trainer = SALADTrainer(
+        student_model,
+        data,
+        cfg,
+        rank=rank,
+        world_size=world_size,
+        folder_name=folder_name,
+        teacher_model=teacher_model,
+    )
     ddp_trainer.train(path_folder=path_folder)
     
 if __name__ == "__main__":
