@@ -59,19 +59,28 @@ def get_processor(max_length: int = 1024, config: Optional[dict] = None):
         processor_name = "Qwen/Qwen3-VL-2B-Instruct"
     return AutoProcessor.from_pretrained(processor_name, model_max_length=max_length)
 
-def get_data(config_or_seed=42, split: str = 'train'):
-    if isinstance(config_or_seed, dict):
-        data_cfg = config_or_seed.get("data", {})
-        seed_for_shuffle = config_or_seed.get("seed_for_shuffle", 42)
-        split = data_cfg.get("split", split)
-        name = data_cfg.get("name", "allenai/c4")
-        subset = data_cfg.get("subset")
-        streaming = data_cfg.get("streaming", True)
-    else:
-        seed_for_shuffle = config_or_seed
-        name = "allenai/c4"
-        subset = "en"
-        streaming = True
+def get_data(
+    config: dict,
+    split: str = 'train',
+    *,
+    rank: int = 0,
+    world_size: int = 1,
+):
+    data_cfg = config.get("data", {})
+    if data_cfg.get("type") == "vision":
+        from salaad_vision.data import build_imagenet_dataloader
+
+        return build_imagenet_dataloader(
+            config,
+            rank=rank,
+            world_size=world_size,
+        )
+
+    seed_for_shuffle = config.get("seed_for_shuffle", 42)
+    split = data_cfg.get("split", split)
+    name = data_cfg.get("name", "allenai/c4")
+    subset = data_cfg.get("subset", "en")
+    streaming = data_cfg.get("streaming", True)
 
     if subset:
         data = datasets.load_dataset(name, subset, split=split, streaming=streaming)

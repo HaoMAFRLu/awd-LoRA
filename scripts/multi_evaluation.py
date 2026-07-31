@@ -51,11 +51,11 @@ def main(cfg_version: str,
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
     pad_idx = tokenizer.pad_token_id
     # get the data loader
-    val_loader = get_eval_data('validation', seed_for_shuffle=cfg['seed_for_shuffle'],
+    val_loader = get_eval_data(cfg, 'validation',
                              tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
-    train_loader = get_eval_data('train', seed_for_shuffle=cfg['seed_for_shuffle'],
+    train_loader = get_eval_data(cfg, 'train',
                               tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
-    
+
     layers = [entry['name'] for entry in cfg['layers']]
     
     rank_quantile_target = {entry['name']: entry['params']['rate_rank'] for entry in cfg['layers']}
@@ -186,4 +186,3 @@ if __name__ == "__main__":
              rank_cfg=rank_cfg)
         print(f'Finished folder: {file}')
         print(f'----------{nr}/{len(files)}----------') 
-    

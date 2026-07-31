@@ -31,8 +31,8 @@ def _init_distributed():
     """Initialize distributed environment"""
     dist.init_process_group(backend='nccl')
     rank = dist.get_rank()
-    world = dist.get_world_size()
-    return rank, world
+    world_size = dist.get_world_size()
+    return rank, world_size
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -153,7 +153,7 @@ def main(cfg_version: str,
         student_model = get_model(path_cfg_model)
 
     # time.sleep(2.0 * rank)  # 3s per rank is a good starting point
-    data = get_data(cfg)
+    data = get_data(cfg, rank=rank, world_size=world_size)
     # dist.barrier()
 
     ddp_trainer = SALADTrainer(

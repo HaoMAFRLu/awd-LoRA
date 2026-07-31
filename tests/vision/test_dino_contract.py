@@ -7,10 +7,7 @@ from pathlib import Path
 
 import torch
 
-from salaad_vision.data.imagenet import (
-    ImageNetLoaderConfig,
-    build_imagenet_dataloader,
-)
+from salaad_vision.data.imagenet import build_imagenet_dataloader
 from salaad_vision.models.dino import (
     DINO_VITB8_CHECKPOINT_SHA256,
     DINO_VITB8_EMBED_DIM,
@@ -25,6 +22,13 @@ DEFAULT_CHECKPOINT = (
     / "salaad_vision"
     / "pretrained"
     / "dino_vitbase8_pretrain.pth"
+)
+LOCAL_SMOKE_ROOT = (
+    REPOSITORY_ROOT
+    / "data"
+    / "salaad_vision"
+    / "smoke"
+    / "imagenet_val64_parquet"
 )
 class DinoViTBase8ContractTest(unittest.TestCase):
     @classmethod
@@ -52,13 +56,28 @@ class DinoViTBase8ContractTest(unittest.TestCase):
 
     def test_official_checkpoint_on_local_imagenet_sample(self) -> None:
         checkpoint = DEFAULT_CHECKPOINT
-        data_config = ImageNetLoaderConfig.local_smoke(batch_size=1)
         if not checkpoint.is_file():
             self.skipTest(f"local DINO checkpoint is absent: {checkpoint}")
-        if not data_config.root.is_dir():
-            self.skipTest(f"local ImageNet smoke set is absent: {data_config.root}")
+        if not LOCAL_SMOKE_ROOT.is_dir():
+            self.skipTest(f"local ImageNet smoke set is absent: {LOCAL_SMOKE_ROOT}")
 
-        loader = build_imagenet_dataloader(data_config)
+        loader = build_imagenet_dataloader(
+            {
+                "batch_size": 1,
+                "num_workers": 0,
+                "data": {
+                    "dataset": "ILSVRC/imagenet-1k",
+                    "location": "local_smoke",
+                    "root": str(LOCAL_SMOKE_ROOT),
+                    "cache_dir": str(LOCAL_SMOKE_ROOT / "cache"),
+                    "split": "validation",
+                    "streaming": True,
+                    "shuffle": False,
+                },
+            },
+            rank=0,
+            world_size=1,
+        )
         batch = next(iter(loader))
 
         self.model.load_checkpoint(

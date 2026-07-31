@@ -2,76 +2,154 @@
 
 from __future__ import annotations
 
-import os
 import tempfile
 import unittest
 from io import BytesIO
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 import torch
 from PIL import Image
+from torch.utils.data import DataLoader
 
-from salaad_vision.data.imagenet import (
-    CLUSTER_DATASETS_CACHE_ENV,
-    CLUSTER_IMAGENET_ROOT_ENV,
-    DEFAULT_CLUSTER_DATASETS_CACHE,
-    DEFAULT_CLUSTER_IMAGENET_ROOT,
-    DEFAULT_LOCAL_IMAGENET_ROOT,
-    LOCAL_IMAGENET_ROOT_ENV,
-    ImageNetDataLocation,
-    ImageNetLoaderConfig,
-    build_imagenet_dataloader,
+from salad.register import get_data
+from salaad_vision.data.imagenet import build_imagenet_dataloader
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+LOCAL_SMOKE_ROOT = (
+    REPOSITORY_ROOT
+    / "data"
+    / "salaad_vision"
+    / "smoke"
+    / "imagenet_val64_parquet"
 )
 
 
+def _write_validation_snapshot(root: Path, labels: list[int]) -> None:
+    image_type = pa.struct(
+        [
+            pa.field("bytes", pa.binary()),
+            pa.field("path", pa.string()),
+        ]
+    )
+    images = []
+    for label in labels:
+        image_buffer = BytesIO()
+        Image.new("RGB", (256, 256), color=(label, 40, 60)).save(
+            image_buffer,
+            format="JPEG",
+        )
+        images.append(
+            {
+                "bytes": image_buffer.getvalue(),
+                "path": f"sample_{label:04d}.jpg",
+            }
+        )
+
+    data_directory = root / "data"
+    data_directory.mkdir()
+    pq.write_table(
+        pa.table(
+            {
+                "image": pa.array(images, type=image_type),
+                "label": pa.array(labels, type=pa.int64()),
+            }
+        ),
+        data_directory / "validation-00000-of-00001.parquet",
+    )
+
+
 class ImageNetDataLoaderTest(unittest.TestCase):
-    def test_local_and_cluster_paths_are_explicitly_distinct(self) -> None:
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop(LOCAL_IMAGENET_ROOT_ENV, None)
-            os.environ.pop(CLUSTER_IMAGENET_ROOT_ENV, None)
-            os.environ.pop(CLUSTER_DATASETS_CACHE_ENV, None)
-            os.environ.pop("IMAGENET_SMOKE_ROOT", None)
-            local = ImageNetLoaderConfig.local_smoke()
-            cluster = ImageNetLoaderConfig.cluster_snapshot()
+    def test_get_data_preserves_text_dataset_path(self) -> None:
+        dataset = Mock()
+        shuffled_dataset = object()
+        dataset.shuffle.return_value = shuffled_dataset
+        config = {"seed_for_shuffle": 7}
 
-        self.assertEqual(local.location, ImageNetDataLocation.LOCAL_SMOKE)
-        self.assertEqual(local.root, DEFAULT_LOCAL_IMAGENET_ROOT)
-        self.assertEqual(local.split, "validation")
-        self.assertFalse(local.shuffle)
+        with patch("salad.register.datasets.load_dataset", return_value=dataset) as load:
+            result = get_data(config, rank=0, world_size=1)
 
-        self.assertEqual(cluster.location, ImageNetDataLocation.CLUSTER_SNAPSHOT)
-        self.assertEqual(cluster.root, DEFAULT_CLUSTER_IMAGENET_ROOT)
-        self.assertEqual(cluster.cache_dir, DEFAULT_CLUSTER_DATASETS_CACHE)
-        self.assertEqual(cluster.split, "train")
-        self.assertTrue(cluster.shuffle)
-        self.assertTrue(cluster.drop_last)
-        self.assertNotEqual(local.root, cluster.root)
-
-        cluster_validation = ImageNetLoaderConfig.cluster_snapshot(
-            split="validation"
+        load.assert_called_once_with(
+            "allenai/c4",
+            "en",
+            split="train",
+            streaming=True,
         )
-        self.assertFalse(cluster_validation.shuffle)
-        self.assertFalse(cluster_validation.drop_last)
+        dataset.shuffle.assert_called_once_with(seed=7)
+        self.assertIs(result, shuffled_dataset)
 
-    def test_environment_overrides_do_not_cross_locations(self) -> None:
-        environment = {
-            LOCAL_IMAGENET_ROOT_ENV: "/tmp/local-imagenet-smoke",
-            CLUSTER_IMAGENET_ROOT_ENV: "/tmp/cluster-imagenet-snapshot",
-            CLUSTER_DATASETS_CACHE_ENV: "/tmp/cluster-imagenet-cache",
+    def test_get_data_dispatches_local_smoke(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            _write_validation_snapshot(root, [17])
+            config = {
+                "batch_size": 1,
+                "num_workers": 0,
+                "data": {
+                    "type": "vision",
+                    "dataset": "ILSVRC/imagenet-1k",
+                    "location": "local_smoke",
+                    "root": temporary_root,
+                    "cache_dir": str(root / "cache"),
+                    "split": "validation",
+                    "streaming": True,
+                    "shuffle": False,
+                },
+            }
+            loader = get_data(config, rank=0, world_size=1)
+            batch = next(iter(loader))
+
+        self.assertIsInstance(loader, DataLoader)
+        self.assertEqual(tuple(batch["pixel_values"].shape), (1, 3, 224, 224))
+        self.assertEqual(batch["labels"].tolist(), [17])
+
+    def test_local_smoke_is_split_across_distributed_ranks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            _write_validation_snapshot(root, list(range(4)))
+
+            config = {
+                "batch_size": 1,
+                "num_workers": 0,
+                "data": {
+                    "type": "vision",
+                    "dataset": "ILSVRC/imagenet-1k",
+                    "location": "local_smoke",
+                    "root": temporary_root,
+                    "cache_dir": str(root / "cache"),
+                    "split": "validation",
+                    "streaming": True,
+                    "shuffle": False,
+                },
+            }
+
+            labels_by_rank = []
+            for rank in range(2):
+                loader = get_data(
+                    config,
+                    rank=rank,
+                    world_size=2,
+                )
+                labels_by_rank.append(
+                    {int(batch["labels"].item()) for batch in loader}
+                )
+
+        self.assertTrue(labels_by_rank[0].isdisjoint(labels_by_rank[1]))
+        self.assertEqual(labels_by_rank[0] | labels_by_rank[1], set(range(4)))
+
+    def test_data_root_is_required(self) -> None:
+        config = {
+            "data": {
+                "dataset": "ILSVRC/imagenet-1k",
+                "location": "local_smoke",
+                "split": "validation",
+                "shuffle": False,
+            }
         }
-        with patch.dict(os.environ, environment, clear=False):
-            local = ImageNetLoaderConfig.local_smoke()
-            cluster = ImageNetLoaderConfig.cluster_snapshot()
-
-        self.assertEqual(str(local.root), environment[LOCAL_IMAGENET_ROOT_ENV])
-        self.assertEqual(str(cluster.root), environment[CLUSTER_IMAGENET_ROOT_ENV])
-        self.assertEqual(
-            str(cluster.cache_dir),
-            environment[CLUSTER_DATASETS_CACHE_ENV],
-        )
+        with self.assertRaisesRegex(ValueError, "data.root"):
+            build_imagenet_dataloader(config, rank=0, world_size=1)
 
     def test_cluster_snapshot_streaming_batch_contract(self) -> None:
         image_buffer = BytesIO()
@@ -102,25 +180,168 @@ class ImageNetDataLoaderTest(unittest.TestCase):
                 table,
                 data_directory / "validation-00000-of-00001.parquet",
             )
-            config = ImageNetLoaderConfig.cluster_snapshot(
-                root=temporary_root,
-                split="validation",
-                batch_size=1,
-                num_workers=0,
-                cache_dir=Path(temporary_root) / "cache",
-                pin_memory=False,
+            config = {
+                "batch_size": 1,
+                "num_workers": 0,
+                "data": {
+                    "dataset": "ILSVRC/imagenet-1k",
+                    "location": "cluster_snapshot",
+                    "root": temporary_root,
+                    "cache_dir": str(Path(temporary_root) / "cache"),
+                    "split": "validation",
+                    "streaming": True,
+                    "shuffle": False,
+                    "pin_memory": False,
+                },
+            }
+            loader = build_imagenet_dataloader(
+                config,
+                rank=0,
+                world_size=1,
             )
-            batch = next(iter(build_imagenet_dataloader(config)))
+            batch = next(iter(loader))
 
         self.assertEqual(tuple(batch["pixel_values"].shape), (1, 3, 224, 224))
         self.assertEqual(batch["labels"].tolist(), [17])
 
-    def test_local_smoke_batch_contract(self) -> None:
-        config = ImageNetLoaderConfig.local_smoke(batch_size=4)
-        if not config.root.is_dir():
-            self.skipTest(f"local ImageNet smoke set is absent: {config.root}")
+    def test_cluster_snapshot_is_split_across_distributed_ranks(self) -> None:
+        image_buffer = BytesIO()
+        Image.new("RGB", (256, 256), color=(20, 40, 60)).save(
+            image_buffer,
+            format="JPEG",
+        )
+        image_type = pa.struct(
+            [
+                pa.field("bytes", pa.binary()),
+                pa.field("path", pa.string()),
+            ]
+        )
 
-        loader = build_imagenet_dataloader(config)
+        with tempfile.TemporaryDirectory() as temporary_root:
+            data_directory = Path(temporary_root) / "data"
+            data_directory.mkdir()
+            for label in range(4):
+                table = pa.table(
+                    {
+                        "image": pa.array(
+                            [{"bytes": image_buffer.getvalue(), "path": None}],
+                            type=image_type,
+                        ),
+                        "label": pa.array([label], type=pa.int64()),
+                    }
+                )
+                pq.write_table(
+                    table,
+                    data_directory
+                    / f"validation-{label:05d}-of-00004.parquet",
+                )
+
+            config = {
+                "seed_for_shuffle": 42,
+                "batch_size": 1,
+                "num_workers": 0,
+                "data": {
+                    "type": "vision",
+                    "dataset": "ILSVRC/imagenet-1k",
+                    "location": "cluster_snapshot",
+                    "root": temporary_root,
+                    "cache_dir": str(Path(temporary_root) / "cache"),
+                    "split": "validation",
+                    "streaming": True,
+                    "shuffle": True,
+                    "shuffle_buffer_size": 4,
+                    "pin_memory": False,
+                },
+            }
+
+            labels_by_rank = []
+            for rank in range(2):
+                loader = get_data(
+                    config,
+                    rank=rank,
+                    world_size=2,
+                )
+                labels_by_rank.append(
+                    {int(batch["labels"].item()) for batch in loader}
+                )
+
+        self.assertTrue(labels_by_rank[0].isdisjoint(labels_by_rank[1]))
+        self.assertEqual(labels_by_rank[0] | labels_by_rank[1], set(range(4)))
+
+    def test_get_data_dispatches_cluster_snapshot(self) -> None:
+        image_buffer = BytesIO()
+        Image.new("RGB", (256, 256), color=(20, 40, 60)).save(
+            image_buffer,
+            format="JPEG",
+        )
+        image_type = pa.struct(
+            [
+                pa.field("bytes", pa.binary()),
+                pa.field("path", pa.string()),
+            ]
+        )
+        table = pa.table(
+            {
+                "image": pa.array(
+                    [{"bytes": image_buffer.getvalue(), "path": None}],
+                    type=image_type,
+                ),
+                "label": pa.array([23], type=pa.int64()),
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_root:
+            data_directory = Path(temporary_root) / "data"
+            data_directory.mkdir()
+            pq.write_table(
+                table,
+                data_directory / "validation-00000-of-00001.parquet",
+            )
+            config = {
+                "seed_for_shuffle": 42,
+                "batch_size": 1,
+                "num_workers": 0,
+                "data": {
+                    "type": "vision",
+                    "dataset": "ILSVRC/imagenet-1k",
+                    "location": "cluster_snapshot",
+                    "root": temporary_root,
+                    "cache_dir": str(Path(temporary_root) / "cache"),
+                    "split": "validation",
+                    "streaming": True,
+                    "shuffle": False,
+                    "pin_memory": False,
+                },
+            }
+            loader = get_data(config, rank=0, world_size=1)
+            batch = next(iter(loader))
+
+        self.assertIsInstance(loader, DataLoader)
+        self.assertEqual(tuple(batch["pixel_values"].shape), (1, 3, 224, 224))
+        self.assertEqual(batch["labels"].tolist(), [23])
+
+    def test_local_smoke_batch_contract(self) -> None:
+        if not LOCAL_SMOKE_ROOT.is_dir():
+            self.skipTest(f"local ImageNet smoke set is absent: {LOCAL_SMOKE_ROOT}")
+
+        task_config = {
+            "batch_size": 4,
+            "num_workers": 0,
+            "data": {
+                "dataset": "ILSVRC/imagenet-1k",
+                "location": "local_smoke",
+                "root": str(LOCAL_SMOKE_ROOT),
+                "cache_dir": str(LOCAL_SMOKE_ROOT / "cache"),
+                "split": "validation",
+                "streaming": True,
+                "shuffle": False,
+            },
+        }
+        loader = build_imagenet_dataloader(
+            task_config,
+            rank=0,
+            world_size=1,
+        )
         batch = next(iter(loader))
 
         self.assertEqual(set(batch), {"pixel_values", "labels"})

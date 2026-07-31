@@ -58,9 +58,9 @@ def main(path_part: dict,
     tokenizer = AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
     pad_idx = tokenizer.pad_token_id
     # get the data loader
-    val_loader = get_eval_data('validation', seed_for_shuffle=cfg['seed_for_shuffle'],
+    val_loader = get_eval_data(cfg, 'validation',
                              tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
-    train_loader = get_eval_data('train', seed_for_shuffle=cfg['seed_for_shuffle'],
+    train_loader = get_eval_data(cfg, 'train',
                               tokenizer=tokenizer, max_length=max_length, batch_size=batch_size)
     print(f'[rank {rank}] Data loaders ready.')
 

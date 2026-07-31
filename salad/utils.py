@@ -540,12 +540,12 @@ def get_lowspa_layers(pth: str) -> tuple:
         torch.storage._load_from_bytes = orig
     return obj['LL'], obj['SS']
 
-def get_eval_data(split: str, 
-                  seed_for_shuffle: int = 42, 
+def get_eval_data(config: dict,
+                  split: str,
                   tokenizer=None, 
                   max_length=1024,
                   batch_size: int = 32):
-    _data = get_data(seed_for_shuffle, split=split)
+    _data = get_data(config, split=split)
     _data_mapped = _data.map(
         preprocess_batched,
         batched=True,

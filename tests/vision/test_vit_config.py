@@ -8,17 +8,22 @@ import unittest
 from pathlib import Path
 
 import yaml
-
-from salaad_vision.data.imagenet import (
-    DEFAULT_CLUSTER_DATASETS_CACHE,
-    DEFAULT_CLUSTER_IMAGENET_ROOT,
-)
 from scripts.vit_config_generator import generate_vit_config
 from scripts.vit_params import projection
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 TRAIN_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8.yaml"
 MODEL_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8_model.json"
+LOCAL_PARQUET_ROOT = (
+    REPOSITORY_ROOT
+    / "data"
+    / "salaad_vision"
+    / "smoke"
+    / "imagenet_val64_parquet"
+)
+LOCAL_CACHE_DIR = (
+    REPOSITORY_ROOT / "data" / "salaad_vision" / "hf_cache_smoke" / "datasets"
+)
 
 
 class VitB8TrainingConfigTest(unittest.TestCase):
@@ -81,16 +86,30 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertNotIn("teacher_checkpoint_env", self.model_config)
         self.assertNotIn("teacher_checkpoint_sha256", self.model_config)
 
-    def test_cluster_data_paths_are_explicit(self) -> None:
+    def test_local_parquet_data_is_selected(self) -> None:
         data = self.train_config["data"]
+        self.assertEqual(self.train_config["runtime"], "local")
         self.assertEqual(data["type"], "vision")
-        self.assertEqual(data["location"], "cluster_snapshot")
-        self.assertEqual(Path(data["root"]), DEFAULT_CLUSTER_IMAGENET_ROOT)
-        self.assertEqual(
-            Path(data["cache_dir"]),
-            DEFAULT_CLUSTER_DATASETS_CACHE,
-        )
+        self.assertEqual(data["location"], "local_smoke")
+        self.assertEqual(Path(data["root"]), LOCAL_PARQUET_ROOT)
+        self.assertEqual(Path(data["cache_dir"]), LOCAL_CACHE_DIR)
+        self.assertEqual(data["split"], "validation")
         self.assertTrue(data["streaming"])
+        self.assertFalse(data["shuffle"])
+
+    def test_generator_local_defaults_use_the_parquet_slice(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            generated_path = Path(temporary_directory) / "vit_b8.yaml"
+            generated_config = generate_vit_config(output_path=str(generated_path))
+
+        data = generated_config["data"]
+        self.assertEqual(generated_config["runtime"], "local")
+        self.assertEqual(data["location"], "local_smoke")
+        self.assertEqual(Path(data["root"]), LOCAL_PARQUET_ROOT)
+        self.assertEqual(Path(data["cache_dir"]), LOCAL_CACHE_DIR)
+        self.assertEqual(data["split"], "validation")
+        self.assertTrue(data["streaming"])
+        self.assertFalse(data["shuffle"])
 
     def test_all_vit_target_layers_are_student_only(self) -> None:
         suffixes = ("attn.qkv", "attn.proj", "mlp.fc1", "mlp.fc2")
