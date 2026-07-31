@@ -13,6 +13,7 @@ from scripts.vit_params import projection
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 TRAIN_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8.yaml"
+VANILLA_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8_vanilla.yaml"
 MODEL_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8_model.json"
 LOCAL_PARQUET_ROOT = (
     REPOSITORY_ROOT
@@ -31,6 +32,8 @@ class VitB8TrainingConfigTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         with TRAIN_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
             cls.train_config = yaml.safe_load(config_file)
+        with VANILLA_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
+            cls.vanilla_config = yaml.safe_load(config_file)
         with MODEL_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
             cls.model_config = json.load(config_file)
 
@@ -77,6 +80,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             self.train_config["distillation"]["initialization"],
             "random_init",
         )
+        self.assertEqual(self.train_config["distillation"]["loss"], "mse")
         self.assertEqual(self.model_config["model_type"], "dino_vitb8")
         self.assertEqual(
             self.model_config["architectures"],
@@ -111,11 +115,11 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertTrue(data["streaming"])
         self.assertFalse(data["shuffle"])
 
-    def test_all_vit_target_layers_are_student_only(self) -> None:
+    def test_selected_vit_target_layers_are_student_only(self) -> None:
         suffixes = ("attn.qkv", "attn.proj", "mlp.fc1", "mlp.fc2")
         expected = [
             f"backbone.blocks.{block}.{suffix}"
-            for block in range(12)
+            for block in range(1)
             for suffix in suffixes
         ]
         layers = self.train_config["layers"]
@@ -148,6 +152,35 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 generated_config = yaml.safe_load(config_file)
 
         self.assertEqual(generated_config, self.train_config)
+
+    def test_vanilla_config_only_disables_salaad(self) -> None:
+        salad_config = dict(self.train_config)
+        vanilla_config = dict(self.vanilla_config)
+
+        self.assertEqual(vanilla_config["name"], "vit_b8_vanilla")
+        self.assertEqual(vanilla_config["training_mode"], "vanilla")
+        self.assertEqual(vanilla_config["layers"], [])
+
+        salad_config.pop("name")
+        salad_config.pop("training_mode")
+        salad_config.pop("layers")
+        vanilla_config.pop("name")
+        vanilla_config.pop("training_mode")
+        vanilla_config.pop("layers")
+        self.assertEqual(vanilla_config, salad_config)
+
+    def test_generator_reproduces_committed_vanilla_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            generated_path = Path(temporary_directory) / "vit_b8_vanilla.yaml"
+            generate_vit_config(
+                name="vit_b8_vanilla",
+                training_mode="vanilla",
+                output_path=str(generated_path),
+            )
+            with generated_path.open("r", encoding="utf-8") as config_file:
+                generated_config = yaml.safe_load(config_file)
+
+        self.assertEqual(generated_config, self.vanilla_config)
 
 
 if __name__ == "__main__":

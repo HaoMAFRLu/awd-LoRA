@@ -98,7 +98,7 @@ def generate_vit_config(
     seed=42,
     training_mode="salad",
     lr=1e-5,
-    num_freq=25,
+    num_freq=5,
     weight_decay=0.0,
     optimizer_name="AdamW",
     gradient="coupled",
@@ -137,12 +137,12 @@ def generate_vit_config(
     data_shuffle=False,
     shuffle_buffer_size=10_000,
     distillation_initialization="random_init",
-    distillation_loss="cosine",
+    distillation_loss="mse",
     global_weight=1.0,
     patch_weight=1.0,
     include_attention=True,
     include_mlp=True,
-    vit_layers=-1,
+    vit_layers=1,
     output_path=None,
 ):
     """Generate one ViT task config selected through --cfg_version."""
@@ -246,7 +246,7 @@ if __name__ == "__main__":
         seed=42,
         training_mode="salad",
         lr=1e-5,
-        num_freq=25,
+        num_freq=5,
         weight_decay=0.0,
         optimizer_name="AdamW",
         gradient="coupled",
@@ -285,12 +285,19 @@ if __name__ == "__main__":
         data_shuffle=False,
         shuffle_buffer_size=10_000,
         distillation_initialization="random_init",
-        distillation_loss="cosine",
+        distillation_loss="mse",
         global_weight=1.0,
         patch_weight=1.0,
         include_attention=True,
         include_mlp=True,
-        vit_layers=-1,  # -1 means all 12 DINO blocks
+        vit_layers=1,  # block 0: qkv, proj, fc1, and fc2
+    )
+
+    cfg_vit_b8_vanilla = copy.deepcopy(cfg_vit_b8)
+    cfg_vit_b8_vanilla.update(
+        name="vit_b8_vanilla",
+        training_mode="vanilla",
     )
 
     generate_vit_config(**cfg_vit_b8)
+    generate_vit_config(**cfg_vit_b8_vanilla)

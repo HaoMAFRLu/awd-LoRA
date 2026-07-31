@@ -79,7 +79,7 @@ def print_wandb(
         total_epochs: int,
         num_freq: int,
         lr: float,
-        num_tokens: float,
+        num_images: int,
         losses: dict,
         layer_stats: list,
     ):
@@ -90,7 +90,7 @@ def print_wandb(
 
     Logged (per run epoch):
       Global series:
-        - train/loss, train/layer_diff, train/penalty, train/lr, train/tokens_M, epoch
+        - train/loss, train/layer_diff, train/penalty, train/lr, train/images, epoch
       Per-layer series (for each layer name):
         - layer/<name>/layer_diff
         - layer/<name>/non_zero_ratio
@@ -110,7 +110,7 @@ def print_wandb(
         "train/layer_diff": float(losses.get("avg_diff", float("nan"))),
         "train/penalty": float(losses.get("avg_loss_penalty", float("nan"))),
         "train/lr": float(lr),
-        "train/tokens_M": float(num_tokens) / 1e6,
+        "train/images": int(num_images),
         # DO NOT add "epoch": step already carries this
     }
 
@@ -154,14 +154,14 @@ def print_epoch(epoch: int,
                 total_epochs: int, 
                 num_freq: int,
                 lr: float,
-                num_tokens: int,
+                num_images: int,
                 losses: dict, 
                 layer_stats: list):
 
     header = (f"Epoch {epoch}/{total_epochs} | "
               f"It {epoch * num_freq}/{total_epochs * num_freq} | "
               f"Lr: {lr:.6f} | "
-              f"Tokens: {num_tokens / 1000000:.3f}M | "
+              f"Images: {num_images:,} | "
               f"Loss: {losses['avg_loss']:.6f} | "
               f"Layer diff: {losses['avg_diff']:.6f} | "
               f"Penalty: {losses['avg_loss_penalty']:.6f}")

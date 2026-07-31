@@ -1,0 +1,50 @@
+seed: 42
+name: vit_b8_vanilla
+model_config: vit_b8_model.json
+training_mode: vanilla
+model_type: dino_vitb8
+task: dino_feature_distillation
+runtime: local
+precision: bfloat16
+num_total_iters: 200
+num_freq: 5
+gradient: coupled
+is_asyn: false
+is_init: false
+is_wandb: true
+is_monitor: true
+save_interval: 1
+is_clip: !!float '1'
+seed_for_shuffle: 42
+batch_size: 1
+num_workers: 0
+data:
+  type: vision
+  dataset: ILSVRC/imagenet-1k
+  location: local_smoke
+  root: /home/hao/Desktop/MPI/awd-LoRA/data/salaad_vision/smoke/imagenet_val64_parquet
+  cache_dir: /home/hao/Desktop/MPI/awd-LoRA/data/salaad_vision/hf_cache_smoke/datasets
+  split: validation
+  streaming: true
+  shuffle: false
+  shuffle_buffer_size: 10000
+distillation:
+  initialization: random_init
+  loss: mse
+  global_weight: !!float '1'
+  patch_weight: !!float '1'
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 20
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.00001
+    betas:
+    - 0.9
+    - 0.95
+    eps: 0.00000001
+    weight_decay: !!float '0'
+layers: []

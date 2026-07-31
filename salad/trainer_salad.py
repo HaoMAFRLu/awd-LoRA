@@ -1,22 +1,34 @@
+import os
+from typing import Optional
+
 import torch
 import torch.distributed as dist
 import torch.nn as nn
-from torch.nn.parallel import DistributedDataParallel as DDP
-import os
-import datasets
-import datasets.distributed
 from loguru import logger
-from typing import Optional
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data import DataLoader
 
+from salad.register import get_scheduler
 from salad.salad_solver import SALAD
-from salad.utils import *
-from salad.register import *
 from salad.simple_timer import SimpleTimer
+from salad.utils import (
+    atomic_pickle_dump,
+    atomic_torch_save,
+    get_linear_layers_name,
+    get_optimizer,
+    get_param_tensor,
+    get_weight,
+    print_epoch,
+    print_setting,
+    print_wandb,
+)
+from salaad_vision.distillation import dino_feature_mse
 
-class SALADTrainer():
+
+class SALADTrainer:
     def __init__(self, 
                  model: nn.Module,
-                 data: datasets.Dataset,
+                 data: DataLoader,
                  config: dict,
                  rank: int=0,
                  world_size: int=0,
@@ -31,9 +43,6 @@ class SALADTrainer():
                 - gpu_map: optional mapping layer_name -> gpu id
                 - training: dict with optimizer, lr, num_epochs
         """
-        # for debug
-        # torch.set_printoptions(precision=8)
-
         self.model = model
         self.teacher_model = teacher_model
         self.config = config
@@ -41,33 +50,24 @@ class SALADTrainer():
         self.rank = rank
         self.world_size = world_size
 
-        self.num_warmup_steps = 40
         self.num_total_iters = config.get('num_total_iters', 1000)
 
         self.num_freq = config.get('num_freq', 1)
         self.is_clip = config.get('is_clip', 1.0)
-        self.max_length = config.get('max_length', 256)
-        self.num_workers = config.get('num_workers', 4)
-        self.gradient= config.get('gradient', 'coupled')  # or 'decoupled'
-        self.is_asyn = config.get('is_asyn', False)
-        self.is_init = config.get('is_init', False)
+        self.gradient = config.get('gradient', 'coupled')  # or 'decoupled'
         self.is_wandb = config.get('is_wandb', False)
         self.is_monitor = config.get('is_monitor', False)
         self.save_interval = config.get('save_interval', 50)
 
-        self.training_mode = config.get('training_mode', 'salad')  # or 'vanilla'
-        # self.rank, self.world_size = self._init_distributed()
+        self.training_mode = config.get('training_mode', 'salad')
+        if self.training_mode not in {'salad', 'vanilla'}:
+            raise ValueError(
+                "training_mode must be 'salad' or 'vanilla', "
+                f"got {self.training_mode!r}"
+            )
 
         if self.rank == 0:
-            # self.path_folder = path_folder
             print(f'Total rank: {self.world_size}')
-        # else:
-        #     self.path_folder = None
-
-        # broadcast the path folder to all ranks
-        # path_folder = [self.path_folder]
-        # dist.broadcast_object_list(path_folder, src=0)
-        # self.path_folder = path_folder[0]
 
         self.timers = {
             "train": SimpleTimer("train"),
@@ -81,19 +81,14 @@ class SALADTrainer():
         if self.is_wandb and self.rank == 0:
             import wandb
             wandb.login(key=os.getenv("WANDB_API_KEY"), relogin=False)
-            self.run_wandb = wandb.init(project="SALAD_"+self.config['name'], 
+            self.run_wandb = wandb.init(project=f"SALAAD_VISION_{self.config['name']}",
                                         entity="hao-ma-eth-z-rich", 
                                         config=self.config,
                                         name=folder_name)
-            
 
-        # torch.cuda.set_device(self.rank % torch.cuda.device_count())
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
         if self.rank == 0:
             print_setting(config)
-
-        # self.batch_size = config.get('batch_size', 32)
-        self.batch_size = int(config.get('batch_size', 32)/self.world_size) + 1
 
         # print device info
         dev_idx = torch.cuda.current_device()
@@ -112,15 +107,13 @@ class SALADTrainer():
 
         # Wrap the student model in DDP.
         self.model.cuda()
-        # get all the names of the model layers
-        self.names_model_layers = get_linear_layers_name(self.model)
-        # get specified layers in the config
         if self.training_mode == 'salad':
-            self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
+            names_model_layers = get_linear_layers_name(self.model)
+            self.cfg_layers = self.get_cfg_layers(self.config, names_model_layers)
         else:
-            self.cfg_layers = [{'name': 'layers.0.self_attn.q_proj'}]  # dummy for vanilla training
+            self.cfg_layers = []
 
-        if self.is_init:
+        if config.get('is_init', False):
             for entry in self.cfg_layers:
                 name = entry['name']
                 params = entry['params']
@@ -136,14 +129,7 @@ class SALADTrainer():
         self.ddp_model = DDP(self.model.to(torch.bfloat16), 
                              device_ids=[torch.cuda.current_device()])
 
-        data = datasets.distributed.split_dataset_by_node(data, rank=self.rank, world_size=self.world_size)
-
-        tokenizer = get_tokenizer(self.max_length, self.config)
-        dataset = get_preprocessed_dataset(data, tokenizer, self.config, self.batch_size)
-        self.dataloader = torch.utils.data.DataLoader(dataset, 
-                                                      batch_size=None, 
-                                                      num_workers=self.num_workers)
-        self.pad_idx = tokenizer.tokenizer.pad_token_id if hasattr(tokenizer, "tokenizer") else tokenizer.pad_token_id
+        self.dataloader = data
 
         self.optimizer = get_optimizer(*self.get_name_and_params(config['optimizer']), self.ddp_model)
         self.lr_scheduler = get_scheduler(self.optimizer,
@@ -151,14 +137,17 @@ class SALADTrainer():
                                         num_training_steps=self.num_total_iters,
                                         warmup_steps=config['scheduler']['params'].get('warmup_steps', 0),
                                         min_lr_ratio=config['scheduler']['params'].get('min_lr_ratio', 0.0))
-        # warmup the model
-        # self.warmup(self.num_warmup_steps)
-        
-        
         if self.training_mode == 'salad':  # only do the admm for the salad training
-            # assign layers to different GPUs
-            self.assigned_layers, self.owner_map = self.assign_layers(self.cfg_layers, self.rank, self.world_size)
-            self.per_owner_names, self.owner_sizes = self.build_per_owner_static(self.ddp_model, self.owner_map, self.world_size)
+            assigned_layers, owner_map = self.assign_layers(
+                self.cfg_layers,
+                self.rank,
+                self.world_size,
+            )
+            self.per_owner_names, self.owner_sizes = self.build_per_owner_static(
+                self.ddp_model,
+                owner_map,
+                self.world_size,
+            )
 
             # initialize the ADMM solvers
             self.ADMM_solvers = []
@@ -169,15 +158,10 @@ class SALADTrainer():
                             params, 
                             get_weight(self.ddp_model, name), 
                             len(self.cfg_layers),
-                            is_full=name in self.assigned_layers)
-                solver.layer_gpu_map = self.rank if name in self.assigned_layers else -1
+                            is_full=name in assigned_layers)
+                solver.layer_gpu_map = self.rank if name in assigned_layers else -1
                 self.ADMM_solvers.append(solver)
-            
-            # after initialization, sync the initial weights
-            # self.LL = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
-            # self.SS = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
-            # self.YY = {entry['name']: torch.zeros_like(self.get_weight(self.ddp_model, entry['name']), device='cpu') for entry in self.cfg_layers}
-            # self.sync_weights()
+
             if self.rank == 0:
                 global_layer_names = sorted({s.layer_name for s in self.ADMM_solvers})
             else:
@@ -191,10 +175,6 @@ class SALADTrainer():
             for solver in self.ADMM_solvers:
                 solver.layer_idx = self.name2idx[solver.layer_name]
                 solver.init_T(len(global_layer_names), K=12)
-
-            self.LL = {}
-            self.SS = {}
-            self.YY = {}
 
         self.layer_info = {entry['name']: {
             'loss': [],
@@ -215,15 +195,10 @@ class SALADTrainer():
         self.layer_info['avg_loss'] = []
         self.layer_info['avg_loss_penalty'] = []
         self.layer_info['avg_diff'] = []
-        self.layer_info['num_tokens'] = []
-    @staticmethod    
-    def canon(name: str) -> str:
-        if name.startswith('module.'): name = name[7:]
-        if name.startswith('model.'):  name = name[6:]
-        if name.endswith('.weight'):   name = name[:-7]
-        return name
+        self.layer_info['num_images'] = []
 
-    def build_per_owner_static(self, ddp_model, owner_map, world_size):
+    @staticmethod
+    def build_per_owner_static(ddp_model, owner_map, world_size):
         per_owner_names = {r: [] for r in range(world_size)}
 
         for n, item in owner_map.items():
@@ -234,7 +209,6 @@ class SALADTrainer():
             r: sum(get_param_tensor(param_dict, n, "weight").numel() for n in per_owner_names[r])
             for r in range(world_size)
         }
-        # owner_sizes = {r: sum(param_dict['module.model.'+n+'.weight'].numel() for n in per_owner_names[r]) for r in range(world_size)}
         return per_owner_names, owner_sizes
 
     @staticmethod
@@ -290,13 +264,6 @@ class SALADTrainer():
             entry['name']: idx % world_size for idx, entry in enumerate(layers)
         }
         return assigned_layers, owner_map
-    
-    # def _init_distributed(self):
-    #     """Initialize distributed environment"""
-    #     dist.init_process_group(backend='nccl')
-    #     rank = dist.get_rank()
-    #     world = dist.get_world_size()
-    #     return rank, world
 
     def get_diff_per_rank(self) -> dict:
         """Get the difference X - L - S for each layer."""
@@ -304,10 +271,6 @@ class SALADTrainer():
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
                 diff += solver.get_diff(solver.L, solver.S, solver.Y)
-            # else:
-            #     diff += solver.get_diff(self.LL[solver.layer_name].to(self.device),
-            #                             self.SS[solver.layer_name].to(self.device),
-            #                             self.YY[solver.layer_name].to(self.device))
         return diff
 
     def get_gradient_per_layer(self) -> dict:
@@ -319,12 +282,26 @@ class SALADTrainer():
                 gradient_per_layer[solver.layer_name] = Z
         return gradient_per_layer
 
-    def single_step_train(self, batch, labels, gradient: str='coupled'):
+    def single_step_train(self, images, gradient: str='coupled'):
+        if self.teacher_model is None:
+            raise RuntimeError("DINO feature distillation requires a teacher model")
+
+        self.optimizer.zero_grad(set_to_none=True)
+
+        with torch.no_grad():
+            teacher_features = self.teacher_model(images)
+        student_features = self.ddp_model(images)
+        distillation_loss = dino_feature_mse(
+            student_features,
+            teacher_features,
+        )
+        distillation_config = self.config['distillation']
+        loss = (
+            distillation_config.get('global_weight', 1.0) * distillation_loss.cls
+            + distillation_config.get('patch_weight', 1.0) * distillation_loss.patches
+        )
+
         if self.training_mode == 'salad':
-            # reset the gradient
-            self.optimizer.zero_grad(set_to_none=True)
-            # calculate the loss of the neural network
-            loss = self.ddp_model(**batch, labels=labels).loss
             # get the loss for each layer, (X - L - S)
             # update ema_r and ema_s for updating rho
             diff_per_rank = self.get_diff_per_rank()
@@ -334,11 +311,9 @@ class SALADTrainer():
             # X with gradient -> rho/2 * (X - L - S + Y/rho)^2
             # only used for coupled gradient
             loss_penalty = self.get_penalty_loss()
-            # get the closed-form gradient for each layer, rho * (X - L -S + Y/rho)
-            # used only for decoupled gradient
-            gradient_per_layer = self.get_gradient_per_layer()     
-
             if gradient == 'decoupled':
+                # Closed-form gradient: rho * (X - L - S + Y / rho).
+                gradient_per_layer = self.get_gradient_per_layer()
                 loss.backward()
             elif gradient == 'coupled':
                 loss_total = loss + loss_penalty
@@ -366,14 +341,8 @@ class SALADTrainer():
             global_avg_loss = self.get_global_loss(loss.detach())
             # broadcast the penalty loss
             global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
-            # broadcast the avg_diff
-            # global_avg_diff = self.get_global_loss(avg_diff.detach())
             return global_avg_loss, global_avg_loss_penalty, global_avg_diff
         elif self.training_mode == 'vanilla':
-            # reset the gradient
-            self.optimizer.zero_grad(set_to_none=True)
-            # calculate the loss of the neural network
-            loss = self.ddp_model(**batch, labels=labels).loss
             loss.backward()
 
             if self.is_clip > 0:
@@ -388,13 +357,12 @@ class SALADTrainer():
             global_avg_loss = self.get_global_loss(loss.detach())
             return global_avg_loss, 0.0, 0.0
 
-    def prepare_batch_and_labels(self, batch):
-        batch = {k: v.to(self.device) for k, v in batch.items()}
-        labels = batch.pop("labels", None)
-        if labels is None:
-            labels = batch["input_ids"].clone()
-            labels[labels == self.pad_idx] = -100
-        return batch, labels
+    def prepare_batch(self, batch):
+        return batch["pixel_values"].to(
+            device=self.device,
+            dtype=torch.bfloat16,
+            non_blocking=True,
+        )
 
     def get_penalty_loss(self):
         """User-defined loss; can be overridden or passed via config."""
@@ -402,10 +370,6 @@ class SALADTrainer():
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
                 loss += self.world_size * solver.get_penalty(solver.L, solver.S, solver.Y)
-            # else:
-            #     loss += solver.get_penalty(self.LL[solver.layer_name].to(self.device),
-            #                                self.SS[solver.layer_name].to(self.device),
-            #                                self.YY[solver.layer_name].to(self.device))
         return loss
 
     def sync_layer_info(self):
@@ -417,26 +381,6 @@ class SALADTrainer():
         dist.all_reduce(T, op=dist.ReduceOp.SUM)
         if self.rank == 0:
             self.gather_layer_info(T)
-
-    def generate_empty_layer_info(self):
-        """Empty layer info for vanilla training."""
-        if self.rank == 0:
-            info = self.layer_info['layers.0.self_attn.q_proj']
-            info['alpha_mode'].append('N/A')
-            info['beta_mode'].append('N/A')
-            info['alpha'].append(0.0)
-            info['beta'].append(0.0)
-            info['dalpha'].append(0.0)
-            info['dbeta'].append(0.0)
-            info['rho'].append(0.0)
-            info['rate_decay_alpha'].append(0.0)
-            info['rate_decay_beta'].append(0.0)
-            info['loss'].append(0.0)
-            info['rank'].append(1)
-            info['nonzero'].append(1)
-            info['total_rank'].append(1)
-            info['total_elements'].append(1)
-    
 
     def gather_layer_info(self, T):
         """
@@ -459,28 +403,6 @@ class SALADTrainer():
                 info['nonzero'].append(int(row[9].item()))
                 info['total_rank'].append(int(row[10].item()))
                 info['total_elements'].append(int(row[11].item()))
-
-    # def gather_results(self, local_results):
-    #     """Gather dicts from all ranks to rank 0"""
-    #     gathered = [None] * self.world_size
-    #     dist.all_gather_object(gathered, local_results)
-    #     if self.rank == 0:
-    #         for p in gathered:
-    #             for layer_name, data in p.items():
-    #                 self.LL[layer_name] = data['L'].to('cpu')
-    #                 self.SS[layer_name] = data['S'].to('cpu')
-    #                 self.YY[layer_name] = data['Y'].to('cpu')
-    #                 self.layer_info[layer_name]['alpha'].append(data['alpha'])
-    #                 self.layer_info[layer_name]['beta'].append(data['beta'])
-    #                 self.layer_info[layer_name]['dalpha'].append(data['dalpha'])
-    #                 self.layer_info[layer_name]['dbeta'].append(data['dbeta'])
-    #                 self.layer_info[layer_name]['rho'].append(data['rho'])
-    #                 self.layer_info[layer_name]['rate_decay'].append(data['rate_decay'])
-    #                 self.layer_info[layer_name]['loss'].append(data['avg_loss'])
-    #                 self.layer_info[layer_name]['rank'].append(data['nr_rank'])
-    #                 self.layer_info[layer_name]['nonzero'].append(data['nr_nonzero'])
-    #                 self.layer_info[layer_name]['total_rank'].append(data['nr_total_rank'])
-    #                 self.layer_info[layer_name]['total_elements'].append(data['nr_elements'])
     
     def get_global_loss(self, log_loss):
         """
@@ -494,12 +416,6 @@ class SALADTrainer():
             dist.all_reduce(log_loss, op=dist.ReduceOp.SUM)
             log_loss = log_loss / self.world_size
         return log_loss.item()
-
-    def _resolve_name(self, name, param_dict):
-        if name in param_dict: return name
-        if f"module.{name}" in param_dict: return f"module.{name}"
-        if name.startswith("module.") and name[7:] in param_dict: return name[7:]
-        return None
 
     @torch.no_grad()
     def broadcast_params(self, ddp_model):
@@ -557,112 +473,6 @@ class SALADTrainer():
 
             atomic_pickle_dump(MATRIX, os.path.join(path_folder, 'matrix_rank'+str(self.rank)+'.pkl'))
 
-    # def get_local_single_weight(self,
-    #                             target: str='L'):
-    #     """
-    #     Get local single weight for the current rank.
-    #     Returns:
-    #         dict with layer names and their corresponding weights.
-    #     """
-    #     local_weights = {}
-    #     for solver in self.ADMM_solvers:
-    #         if solver.layer_gpu_map == self.rank:
-    #             if target == 'L':
-    #                 local_weights[solver.layer_name] = solver.L.to('cpu')
-    #             elif target == 'S':
-    #                 local_weights[solver.layer_name] = solver.S.to('cpu')
-    #             elif target == 'Y':
-    #                 local_weights[solver.layer_name] = solver.Y.to('cpu')
-    #     return local_weights
-
-    # def gather_single_weight(self, local_weights, target: str='L'):
-    #     """Gather dicts from all ranks to rank 0"""
-    #     gathered = [None] * self.world_size
-    #     dist.all_gather_object(gathered, local_weights)
-    #     if self.rank == 0:
-    #         for p in gathered:
-    #             for layer_name, data in p.items():
-    #                 if target == 'L':
-    #                     self.LL[layer_name] = data.to('cpu')  # L
-    #                 elif target == 'S':
-    #                     self.SS[layer_name] = data.to('cpu')  # S
-    #                 elif target == 'Y':
-    #                     self.YY[layer_name] = data.to('cpu')  # Y
-    
-    # def broadcast_single_weight(self, target: str='L'):
-    #     """
-    #     Broadcast weights from rank 0 to all ranks.
-    #     Returns:
-    #         L, S, Y: broadcasted weights
-    #     """
-    #     if target == 'L':
-    #         brd = self.LL
-    #     elif target == 'S':
-    #         brd = self.SS
-    #     elif target == 'Y':
-    #         brd = self.YY
-    #     dist.broadcast_object_list([brd], src=0)
-    #     return brd
-
-    # def get_local_weights(self):
-    #     """
-    #     Get local weights for the current rank.
-    #     Returns:
-    #         dict with layer names and their corresponding weights.
-    #     """
-    #     local_weights = {}
-    #     for solver in self.ADMM_solvers:
-    #         if solver.layer_gpu_map == self.rank:
-    #             local_weights[solver.layer_name] = (solver.L.to('cpu'), solver.S.to('cpu'), solver.Y.to('cpu'))
-    #     return local_weights
-    
-    # def gather_weights(self, local_weights):
-    #     """Gather dicts from all ranks to rank 0"""
-    #     gathered = None
-    #     if self.rank == 0:
-    #         gathered = [None] * self.world_size
-
-    #     dist.gather_object(local_weights, gathered, dst=0)
-
-    #     if self.rank == 0:
-    #         for p in gathered:
-    #             for layer_name, data in p.items():
-    #                 self.LL[layer_name] = data[0].to("cpu")  # L
-    #                 self.SS[layer_name] = data[1].to("cpu")  # S
-    #                 self.YY[layer_name] = data[2].to("cpu")  # Y
-
-    # def sync_weights(self):
-    #     """
-    #     Synchronize weights across all ranks.
-    #     This is called after the optimizer step.
-    #     """
-    #     local_results = {}
-    #     for solver in self.ADMM_solvers:
-    #         if solver.layer_gpu_map == self.rank:
-    #             local_results[solver.layer_name] = (solver.L, solver.S, solver.Y)
-    #     self.gather_weights(local_results)
-
-    # def broadcast_weights(self):
-    #     """
-    #     Broadcast weights from rank 0 to all ranks.
-    #     Returns:
-    #         L, S, Y: broadcasted weights
-    #     """
-    #     brd = [self.LL, 
-    #            self.SS, 
-    #            self.YY]
-    #     dist.broadcast_object_list(brd, src=0)
-    #     return brd[0], brd[1], brd[2]
-    
-    # def sync_results(self):
-    #     """
-    #     Synchronize results across all ranks.
-    #     This is called after the optimizer step.
-    #     """
-    #     local_results = self.get_local_results()
-    #     self.gather_results(local_results)
-    #     self.LL, self.SS, self.YY = self.broadcast_weights()
-        
     def get_local_results(self):
         """
         Get local results for the current rank.
@@ -680,8 +490,6 @@ class SALADTrainer():
         """
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                # if solver.layer_name == 'layers.0.mlp.gate_proj':
-                #     print('here')
                 if target == 'L':
                     solver.update_L()
                 elif target == 'S':
@@ -693,36 +501,13 @@ class SALADTrainer():
                 elif target == 'beta':
                     solver.update_beta()
                 elif target == 'save':
-                    # save the results
                     solver.cal_results()
-                elif target == 'weight':
-                    # update the weights
-                    solver.cal_weights()
-
-    # def sync_single_weight(self, target: str='L'):
-    #     """ Synchronize the low-rank component L across all ranks.
-    #     """
-    #     local_weights = self.get_local_single_weight(target=target)
-    #     self.gather_single_weight(local_weights, target=target)
-    #     if target == 'L':
-    #         self.LL = self.broadcast_single_weight(target=target)
-    #     elif target == 'S':
-    #         self.SS = self.broadcast_single_weight(target=target)
-    #     elif target == 'Y':
-    #         self.YY = self.broadcast_single_weight(target=target)
 
     def update_ADMM_rho(self): 
         """ Update the penalty parameter rho for all layers.
         """
         for solver in self.ADMM_solvers:
             solver.update_rho()
-
-    def run_ADMM_solvers(self):
-        """ Run ADMM solvers for the current rank.
-        """
-        for solver in self.ADMM_solvers:
-            if solver.layer_gpu_map == self.rank:
-                solver.run()
 
     def solvers_reset(self):
         """
@@ -738,7 +523,7 @@ class SALADTrainer():
                    loss: float,
                    loss_penalty: float,
                    loss_diff: float,
-                   acc_num_tokens: int,
+                   acc_num_images: int,
                    layer_info: dict,
                    lr: float):
         """
@@ -768,56 +553,27 @@ class SALADTrainer():
                         'total_rank': layer_info[entry['name']]['total_rank'][-1],
                         'total_elements': layer_info[entry['name']]['total_elements'][-1]} for entry in self.cfg_layers]
         
-        print_epoch(epoch, total_epochs, num_freq, lr, acc_num_tokens, losses, layer_stats)
+        print_epoch(epoch, total_epochs, num_freq, lr, acc_num_images, losses, layer_stats)
         if self.is_wandb and self.rank == 0:
             print_wandb(self.run_wandb, 
                         epoch=epoch, 
                         total_epochs=total_epochs, 
                         num_freq=num_freq, 
                         lr=lr, 
-                        num_tokens=acc_num_tokens, 
+                        num_images=acc_num_images,
                         losses=losses, 
                         layer_stats=layer_stats)
 
-    def warmup(self, num_warmup_steps: int = 30):
-        """
-        Perform a warmup step to initialize the model and solvers.
-        This is useful for distributed training to ensure all processes are synchronized.
-        """
-        num_step = 0
-        self.ddp_model.train()
-        for batch in self.dataloader:
-            num_step += 1
-            if num_step > num_warmup_steps:
-                break
-            
-            batch, labels = self.prepare_batch_and_labels(batch)
-            self.optimizer.zero_grad()
-            loss = self.ddp_model(**batch, labels=labels).loss
-            loss.backward()
-
-            if self.is_clip > 0:
-                # Clip gradients to avoid exploding gradients
-                # This is a common practice in training large models
-                torch.nn.utils.clip_grad_norm_(self.ddp_model.parameters(), max_norm=self.is_clip)
-
-            self.optimizer.step()
-            self.lr_scheduler.step()
-
     def train(self, path_folder: str=None):
-        # switch to train mode     
-        # if path_folder is None:
-        #     path_folder = self.path_folder
-            
         self.ddp_model.train()
         num_it = 0
         num_epochs = self.num_total_iters // self.num_freq
         epoch = 0
         ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
-        num_tokens = 0
-        acc_num_tokens = 0
+        acc_num_images = 0
+        last_save_index = 0
 
-        for batch_idx, batch in enumerate(self.dataloader):
+        for batch in self.dataloader:
             num_it += 1
             # terminate training if reached max iterations
             if num_it > self.num_total_iters:
@@ -826,27 +582,27 @@ class SALADTrainer():
                 break
             
 
-            batch, labels = self.prepare_batch_and_labels(batch)
+            images = self.prepare_batch(batch)
             # do one step update
             with self.timers['train']:
-                avg_loss, avg_loss_penalty, avg_diff = self.single_step_train(batch, labels, gradient=self.gradient)
+                avg_loss, avg_loss_penalty, avg_diff = self.single_step_train(
+                    images,
+                    gradient=self.gradient,
+                )
 
             # calculate the constants
-            num_tokens = (batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()) * self.world_size
+            num_images = images.shape[0] * self.world_size
             self.layer_info['avg_loss'].append(avg_loss)
             self.layer_info['avg_loss_penalty'].append(avg_loss_penalty)
             self.layer_info['avg_diff'].append(avg_diff)
-            self.layer_info['num_tokens'].append(num_tokens)
+            self.layer_info['num_images'].append(num_images)
             
             ep_loss += avg_loss
             ep_penalty += avg_loss_penalty
             ep_diff += avg_diff
-            acc_num_tokens += num_tokens
+            acc_num_images += num_images
 
-            # now we update S and Y at each iteration
-            # asynchronous update for 
             if num_it % self.num_freq == 0:
-                # run admm solvers
                 epoch += 1
 
                 if self.training_mode == 'salad':
@@ -864,34 +620,15 @@ class SALADTrainer():
                         self.update_ADMM_single_step(target='Y')
 
                     with self.timers['sync']:
-                        # self.sync_single_weight(target='S')
-                        # self.sync_single_weight(target='L')
-                        # self.sync_single_weight(target='Y')
-                        # self.sync_all_weights()
-                        pass
-                    
                         self.update_ADMM_single_step(target='save')
                         self.sync_layer_info()
 
                     self.solvers_reset()
-                else:
-                    self.generate_empty_layer_info()
-
-                # self.run_ADMM_solvers()
-                # self.sync_results()
-
                 # average losses
                 ep_loss /= self.num_freq
                 ep_penalty /= self.num_freq
                 ep_diff /= self.num_freq    
                 
-                # print and save 
-                with self.timers['save']:
-                    if path_folder is not None and epoch % self.save_interval == 0:
-                        # self.update_ADMM_single_step(target='weight')
-                        # self.sync_weights()
-                        self.save_results(path_folder)
-
                 if self.rank == 0:
                     self.print_info(epoch, 
                                     num_epochs,
@@ -899,7 +636,7 @@ class SALADTrainer():
                                     ep_loss,
                                     ep_penalty,
                                     ep_diff, 
-                                    acc_num_tokens, 
+                                    acc_num_images,
                                     self.layer_info, 
                                     self.lr_scheduler.get_last_lr()[0])
                         
@@ -909,17 +646,13 @@ class SALADTrainer():
                             self.timers[key].reset()
 
                 ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
-            
-            else:
-                if self.is_asyn:
-                    pass
-                    # self.update_ADMM_single_step(target='beta')
-                    
-                    # self.update_ADMM_single_step(target='S')
-                    # self.update_ADMM_single_step(target='Y')
 
-                    # self.sync_single_weight(target='S')
-                    # self.sync_single_weight(target='Y')
+            # Treat save_interval as the desired number of evenly spaced saves.
+            save_index = num_it * self.save_interval // self.num_total_iters
+            if path_folder is not None and save_index > last_save_index:
+                with self.timers['save']:
+                    self.save_results(path_folder)
+                last_save_index = save_index
 
         dist.destroy_process_group()
         if self.is_wandb and self.rank == 0:
