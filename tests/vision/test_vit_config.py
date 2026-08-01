@@ -170,7 +170,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(vanilla_config["num_total_iters"], 120_000)
         self.assertEqual(vanilla_config["num_freq"], 20)
         self.assertEqual(vanilla_config["batch_size"], 32)
-        self.assertEqual(vanilla_config["num_workers"], 0)
+        self.assertEqual(vanilla_config["num_workers"], 2)
         self.assertEqual(data["location"], "cluster_snapshot")
         self.assertEqual(Path(data["root"]), CLUSTER_PARQUET_ROOT)
         self.assertEqual(Path(data["cache_dir"]), CLUSTER_CACHE_DIR)
@@ -192,7 +192,9 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 num_freq=20,
                 save_interval=5_000,
                 batch_size=32,
-                num_workers=0,
+                lr=1e-4,
+                warmup_steps=2_000,
+                num_workers=2,
                 runtime="cluster",
                 data_location="cluster_snapshot",
                 data_root=str(CLUSTER_PARQUET_ROOT),

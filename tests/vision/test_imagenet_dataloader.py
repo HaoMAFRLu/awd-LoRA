@@ -27,38 +27,47 @@ LOCAL_SMOKE_ROOT = (
 )
 
 
-def _write_validation_snapshot(root: Path, labels: list[int]) -> None:
+def _write_validation_snapshot(
+    root: Path,
+    labels: list[int],
+    *,
+    shard_count: int = 1,
+) -> None:
+    if shard_count <= 0 or shard_count > len(labels):
+        raise ValueError("shard_count must be between 1 and len(labels)")
     image_type = pa.struct(
         [
             pa.field("bytes", pa.binary()),
             pa.field("path", pa.string()),
         ]
     )
-    images = []
-    for label in labels:
-        image_buffer = BytesIO()
-        Image.new("RGB", (256, 256), color=(label, 40, 60)).save(
-            image_buffer,
-            format="JPEG",
-        )
-        images.append(
-            {
-                "bytes": image_buffer.getvalue(),
-                "path": f"sample_{label:04d}.jpg",
-            }
-        )
-
     data_directory = root / "data"
     data_directory.mkdir()
-    pq.write_table(
-        pa.table(
-            {
-                "image": pa.array(images, type=image_type),
-                "label": pa.array(labels, type=pa.int64()),
-            }
-        ),
-        data_directory / "validation-00000-of-00001.parquet",
-    )
+    for shard_index in range(shard_count):
+        shard_labels = labels[shard_index::shard_count]
+        images = []
+        for label in shard_labels:
+            image_buffer = BytesIO()
+            Image.new("RGB", (256, 256), color=(label, 40, 60)).save(
+                image_buffer,
+                format="JPEG",
+            )
+            images.append(
+                {
+                    "bytes": image_buffer.getvalue(),
+                    "path": f"sample_{label:04d}.jpg",
+                }
+            )
+        pq.write_table(
+            pa.table(
+                {
+                    "image": pa.array(images, type=image_type),
+                    "label": pa.array(shard_labels, type=pa.int64()),
+                }
+            ),
+            data_directory
+            / f"validation-{shard_index:05d}-of-{shard_count:05d}.parquet",
+        )
 
 
 def _jpeg_with_invalid_xmp() -> bytes:
@@ -131,7 +140,11 @@ class ImageNetDataLoaderTest(unittest.TestCase):
     def test_local_smoke_is_split_across_distributed_ranks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_root:
             root = Path(temporary_root)
-            _write_validation_snapshot(root, list(range(4)))
+            _write_validation_snapshot(
+                root,
+                list(range(4)),
+                shard_count=4,
+            )
 
             config = {
                 "batch_size": 1,
@@ -286,7 +299,7 @@ class ImageNetDataLoaderTest(unittest.TestCase):
         self.assertEqual(tuple(batch["pixel_values"].shape), (1, 3, 224, 224))
         self.assertEqual(batch["labels"].tolist(), [887])
 
-    def test_cluster_snapshot_is_split_across_distributed_ranks(self) -> None:
+    def test_non_divisible_shards_are_assigned_once_across_ranks(self) -> None:
         image_buffer = BytesIO()
         Image.new("RGB", (256, 256), color=(20, 40, 60)).save(
             image_buffer,
@@ -302,7 +315,7 @@ class ImageNetDataLoaderTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_root:
             data_directory = Path(temporary_root) / "data"
             data_directory.mkdir()
-            for label in range(4):
+            for label in range(5):
                 table = pa.table(
                     {
                         "image": pa.array(
@@ -315,13 +328,13 @@ class ImageNetDataLoaderTest(unittest.TestCase):
                 pq.write_table(
                     table,
                     data_directory
-                    / f"validation-{label:05d}-of-00004.parquet",
+                    / f"validation-{label:05d}-of-00005.parquet",
                 )
 
             config = {
                 "seed_for_shuffle": 42,
                 "batch_size": 1,
-                "num_workers": 0,
+                "num_workers": 2,
                 "data": {
                     "type": "vision",
                     "dataset": "ILSVRC/imagenet-1k",
@@ -348,7 +361,8 @@ class ImageNetDataLoaderTest(unittest.TestCase):
                 )
 
         self.assertTrue(labels_by_rank[0].isdisjoint(labels_by_rank[1]))
-        self.assertEqual(labels_by_rank[0] | labels_by_rank[1], set(range(4)))
+        self.assertEqual(labels_by_rank[0] | labels_by_rank[1], set(range(5)))
+        self.assertEqual([len(labels) for labels in labels_by_rank], [3, 2])
 
     def test_get_data_dispatches_cluster_snapshot(self) -> None:
         image_buffer = BytesIO()

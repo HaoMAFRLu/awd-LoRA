@@ -297,11 +297,13 @@ if __name__ == "__main__":
     cfg_vit_b8_vanilla.update(
         name="vit_b8_vanilla",
         training_mode="vanilla",
+        lr=1e-4,
         num_total_iters=120_000,
         num_freq=20,
         save_interval=5_000,
         batch_size=32,
-        num_workers=0,
+        warmup_steps=2_000,
+        num_workers=2,
         runtime="cluster",
         data_location="cluster_snapshot",
         data_root=(

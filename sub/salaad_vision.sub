@@ -15,7 +15,7 @@ log             = jobs/salaad_vision_$(Cluster)_$(Process).log
 error           = jobs/salaad_vision_$(Cluster)_$(Process).err
 output          = jobs/salaad_vision_$(Cluster)_$(Process).out
 
-request_cpus    = 4
+request_cpus    = 12
 request_memory  = 64000
 request_gpus    = 4
 requirements = ( \

@@ -91,16 +91,7 @@ def _build_dataloader(
     num_workers: int,
     pin_memory: bool,
     drop_last: bool,
-    rank: int,
-    world_size: int,
 ) -> DataLoader:
-    from datasets.distributed import split_dataset_by_node
-
-    dataset = split_dataset_by_node(
-        dataset,
-        rank=rank,
-        world_size=world_size,
-    )
     streaming_dataset = _StreamingImageNetDataset(
         dataset,
         transform=_build_transform(split),
@@ -168,6 +159,19 @@ def build_imagenet_dataloader(
         raise FileNotFoundError(
             f"no {split!r} parquet shards found under {data_directory}"
         )
+    rank_shards = shards[rank::world_size]
+    if not rank_shards:
+        raise ValueError(
+            f"rank {rank} received no {split!r} shards: "
+            f"{len(shards)} shards cannot cover world_size={world_size}"
+        )
+    logger.info(
+        "[Rank {}] assigned {} of {} ImageNet {} shards",
+        rank,
+        len(rank_shards),
+        len(shards),
+        split,
+    )
 
     from datasets import Image as HuggingFaceImage
     from datasets import load_dataset
@@ -175,7 +179,7 @@ def build_imagenet_dataloader(
     cache_dir.mkdir(parents=True, exist_ok=True)
     dataset = load_dataset(
         "parquet",
-        data_files={split: [str(shard) for shard in shards]},
+        data_files={split: [str(shard) for shard in rank_shards]},
         split=split,
         streaming=True,
         cache_dir=str(cache_dir),
@@ -209,6 +213,4 @@ def build_imagenet_dataloader(
             location == "cluster_snapshot",
         ),
         drop_last=data_config.get("drop_last", split == "train"),
-        rank=rank,
-        world_size=world_size,
     )
