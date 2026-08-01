@@ -108,6 +108,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(self.train_config["training_mode"], "salad")
         self.assertEqual(self.train_config["num_total_iters"], 200)
         self.assertEqual(self.train_config["num_freq"], 5)
+        self.assertEqual(self.train_config["save_interval"], 200)
         self.assertEqual(self.train_config["batch_size"], 128)
         self.assertEqual(self.train_config["num_workers"], 2)
         self.assertEqual(data["type"], "vision")
@@ -207,6 +208,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(vanilla_config["runtime"], "cluster")
         self.assertEqual(vanilla_config["num_total_iters"], 120_000)
         self.assertEqual(vanilla_config["num_freq"], 20)
+        self.assertEqual(vanilla_config["save_interval"], 5_000)
         self.assertEqual(vanilla_config["batch_size"], 128)
         self.assertEqual(vanilla_config["num_workers"], 2)
         self.assertEqual(data["location"], "cluster_snapshot")
@@ -251,7 +253,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             name="vit_b8_vanilla_throughput",
             num_total_iters=400,
             num_freq=10,
-            save_interval=1,
+            save_interval=400,
         )
         self.assertEqual(self.throughput_config, expected)
 

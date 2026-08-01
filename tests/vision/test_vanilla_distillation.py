@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from io import StringIO
+from pathlib import Path
 from unittest.mock import Mock, call, patch
 
 import torch
@@ -141,6 +143,69 @@ class VanillaDistillationTest(unittest.TestCase):
         self.assertEqual(dataset.set_epoch.call_args_list, [call(1), call(2)])
         self.assertEqual(len(trainer.layer_info["avg_loss"]), 5)
         self.assertEqual(trainer.layer_info["num_images"], [1, 1, 1, 1, 1])
+
+    def test_checkpoint_interval_counts_optimizer_iterations(self) -> None:
+        trainer = SALADTrainer.__new__(SALADTrainer)
+        trainer.ddp_model = nn.Linear(1, 1)
+        trainer.dataloader = [
+            {"pixel_values": torch.tensor([[float(index)]])}
+            for index in range(12)
+        ]
+        trainer.num_total_iters = 12
+        trainer.num_freq = 20
+        trainer.gradient = "coupled"
+        trainer.training_mode = "vanilla"
+        trainer.world_size = 1
+        trainer.rank = 0
+        trainer.save_interval = 5
+        trainer.is_wandb = False
+        trainer.timers = {
+            "train": SimpleTimer("train", sync_cuda=False),
+            "save": SimpleTimer("save", sync_cuda=False),
+        }
+        trainer.layer_info = {
+            "avg_loss": [],
+            "avg_loss_penalty": [],
+            "avg_diff": [],
+            "num_images": [],
+        }
+        trainer.prepare_batch = lambda batch: batch["pixel_values"]
+        trainer.single_step_train = lambda images, gradient: (0.0, 0.0, 0.0)
+
+        saved_at = []
+        trainer.save_results = lambda path: saved_at.append(
+            len(trainer.layer_info["avg_loss"])
+        )
+
+        with patch("salad.trainer_salad.dist.destroy_process_group"):
+            trainer.train(path_folder="fixed-run-directory")
+
+        self.assertEqual(saved_at, [5, 10, 12])
+
+    def test_save_results_overwrites_the_fixed_checkpoint(self) -> None:
+        trainer = SALADTrainer.__new__(SALADTrainer)
+        trainer.rank = 0
+        trainer.training_mode = "vanilla"
+        trainer.ddp_model = nn.Linear(1, 1, bias=False)
+        trainer.layer_info = {"iteration": 1}
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            trainer.save_results(temporary_directory)
+
+            with torch.no_grad():
+                trainer.ddp_model.weight.fill_(7.0)
+            trainer.layer_info = {"iteration": 2}
+            trainer.save_results(temporary_directory)
+
+            files = sorted(path.name for path in Path(temporary_directory).iterdir())
+            state = torch.load(
+                Path(temporary_directory) / "model.pth",
+                map_location="cpu",
+                weights_only=True,
+            )
+
+        self.assertEqual(files, ["layer_info.pkl", "model.pth"])
+        self.assertTrue(torch.equal(state["weight"], torch.tensor([[7.0]])))
 
 
 if __name__ == "__main__":

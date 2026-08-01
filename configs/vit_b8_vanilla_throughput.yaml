@@ -13,7 +13,7 @@ is_asyn: false
 is_init: false
 is_wandb: true
 is_monitor: true
-save_interval: 1
+save_interval: 400
 is_clip: !!float '1'
 seed_for_shuffle: 42
 batch_size: 128

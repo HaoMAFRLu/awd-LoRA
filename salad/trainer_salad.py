@@ -58,6 +58,12 @@ class SALADTrainer:
         self.is_wandb = config.get('is_wandb', False)
         self.is_monitor = config.get('is_monitor', False)
         self.save_interval = config.get('save_interval', 50)
+        if (
+            not isinstance(self.save_interval, int)
+            or isinstance(self.save_interval, bool)
+            or self.save_interval <= 0
+        ):
+            raise ValueError("save_interval must be a positive integer")
 
         self.training_mode = config.get('training_mode', 'salad')
         if self.training_mode not in {'salad', 'vanilla'}:
@@ -571,7 +577,6 @@ class SALADTrainer:
         epoch = 0
         ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
         acc_num_images = 0
-        last_save_index = 0
 
         data_epoch = 0
         data_iterator = iter(self.dataloader)
@@ -656,12 +661,17 @@ class SALADTrainer:
 
                 ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
 
-            # Treat save_interval as the desired number of evenly spaced saves.
-            save_index = num_it * self.save_interval // self.num_total_iters
-            if path_folder is not None and save_index > last_save_index:
+            # Save every configured number of optimizer iterations. The final
+            # iteration is also saved when the run length is not divisible by
+            # save_interval. save_results uses fixed filenames and overwrites
+            # the previous checkpoint atomically.
+            should_save = (
+                num_it % self.save_interval == 0
+                or num_it == self.num_total_iters
+            )
+            if path_folder is not None and should_save:
                 with self.timers['save']:
                     self.save_results(path_folder)
-                last_save_index = save_index
 
         device = getattr(self, "device", None)
         if getattr(device, "type", None) == "cuda":

@@ -106,7 +106,7 @@ def generate_vit_config(
     is_init=False,
     is_wandb=True,
     is_monitor=True,
-    save_interval=1,
+    save_interval=200,
     seed_for_shuffle=42,
     is_clip=1.0,
     num_total_iters=200,
@@ -254,7 +254,7 @@ if __name__ == "__main__":
         is_init=False,
         is_wandb=True,
         is_monitor=True,
-        save_interval=1,
+        save_interval=200,
         seed_for_shuffle=42,
         is_clip=1.0,
         num_total_iters=200,
@@ -312,7 +312,7 @@ if __name__ == "__main__":
         name="vit_b8_vanilla_throughput",
         num_total_iters=400,
         num_freq=10,
-        save_interval=1,
+        save_interval=400,
     )
 
     generate_vit_config(**cfg_vit_b8)
