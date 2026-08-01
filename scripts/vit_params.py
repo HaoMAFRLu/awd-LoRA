@@ -26,7 +26,7 @@ attn_qkv_params = {
         "drate": 0.01,
     },
     "rho_dict": {
-        "rho": 1e-8,
+        "rho": 5e-8,
         "mode": "fixed",
         "start_epoch": 2,
         "coeff_rho": 0.1,
@@ -58,7 +58,7 @@ attn_proj_params = {
         "drate": 0.01,
     },
     "rho_dict": {
-        "rho": 1e-8,
+        "rho": 5e-8,
         "mode": "fixed",
         "start_epoch": 2,
         "coeff_rho": 0.1,
@@ -90,7 +90,7 @@ mlp_fc1_params = {
         "drate": 0.01,
     },
     "rho_dict": {
-        "rho": 1e-8,
+        "rho": 5e-8,
         "mode": "fixed",
         "start_epoch": 2,
         "coeff_rho": 0.1,
@@ -122,7 +122,7 @@ mlp_fc2_params = {
         "drate": 0.01,
     },
     "rho_dict": {
-        "rho": 1e-8,
+        "rho": 5e-8,
         "mode": "fixed",
         "start_epoch": 2,
         "coeff_rho": 0.1,
