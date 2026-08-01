@@ -14,6 +14,9 @@ from scripts.vit_params import projection
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 TRAIN_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8.yaml"
 VANILLA_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8_vanilla.yaml"
+THROUGHPUT_CONFIG_PATH = (
+    REPOSITORY_ROOT / "configs" / "vit_b8_vanilla_throughput.yaml"
+)
 MODEL_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8_model.json"
 LOCAL_PARQUET_ROOT = (
     REPOSITORY_ROOT
@@ -40,6 +43,8 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             cls.train_config = yaml.safe_load(config_file)
         with VANILLA_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
             cls.vanilla_config = yaml.safe_load(config_file)
+        with THROUGHPUT_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
+            cls.throughput_config = yaml.safe_load(config_file)
         with MODEL_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
             cls.model_config = json.load(config_file)
 
@@ -169,7 +174,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(vanilla_config["runtime"], "cluster")
         self.assertEqual(vanilla_config["num_total_iters"], 120_000)
         self.assertEqual(vanilla_config["num_freq"], 20)
-        self.assertEqual(vanilla_config["batch_size"], 32)
+        self.assertEqual(vanilla_config["batch_size"], 64)
         self.assertEqual(vanilla_config["num_workers"], 2)
         self.assertEqual(data["location"], "cluster_snapshot")
         self.assertEqual(Path(data["root"]), CLUSTER_PARQUET_ROOT)
@@ -191,7 +196,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 num_total_iters=120_000,
                 num_freq=20,
                 save_interval=5_000,
-                batch_size=32,
+                batch_size=64,
                 lr=1e-4,
                 warmup_steps=2_000,
                 num_workers=2,
@@ -206,6 +211,16 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 generated_config = yaml.safe_load(config_file)
 
         self.assertEqual(generated_config, self.vanilla_config)
+
+    def test_throughput_config_only_shortens_the_run(self) -> None:
+        expected = dict(self.vanilla_config)
+        expected.update(
+            name="vit_b8_vanilla_throughput",
+            num_total_iters=400,
+            num_freq=10,
+            save_interval=1,
+        )
+        self.assertEqual(self.throughput_config, expected)
 
 
 if __name__ == "__main__":

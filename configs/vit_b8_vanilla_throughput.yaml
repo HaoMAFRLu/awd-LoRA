@@ -1,19 +1,19 @@
 seed: 42
-name: vit_b8_vanilla
+name: vit_b8_vanilla_throughput
 model_config: vit_b8_model.json
 training_mode: vanilla
 model_type: dino_vitb8
 task: dino_feature_distillation
 runtime: cluster
 precision: bfloat16
-num_total_iters: 120000
-num_freq: 20
+num_total_iters: 400
+num_freq: 10
 gradient: coupled
 is_asyn: false
 is_init: false
 is_wandb: true
 is_monitor: true
-save_interval: 5000
+save_interval: 1
 is_clip: !!float '1'
 seed_for_shuffle: 42
 batch_size: 64

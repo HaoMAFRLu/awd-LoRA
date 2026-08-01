@@ -1,0 +1,28 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = \
+    -u -m torch.distributed.run \
+    --nproc_per_node=4 \
+    --nnodes=1 \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint=127.0.0.1:29500 \
+    scripts/train_salad.py \
+    --cfg_version vit_b8_vanilla_throughput \
+    --folder salaad_vision_throughput
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/salaad_vision_throughput_$(Cluster)_$(Process).log
+error           = jobs/salaad_vision_throughput_$(Cluster)_$(Process).err
+output          = jobs/salaad_vision_throughput_$(Cluster)_$(Process).out
+
+request_cpus    = 12
+request_memory  = 64000
+request_gpus    = 4
+requirements = ( \
+    CUDACapability >= 9.0 && \
+    CUDACapability < 9.1 \
+)
+
+getenv          = True
+
+queue 1

@@ -301,7 +301,7 @@ if __name__ == "__main__":
         num_total_iters=120_000,
         num_freq=20,
         save_interval=5_000,
-        batch_size=32,
+        batch_size=64,
         warmup_steps=2_000,
         num_workers=2,
         runtime="cluster",
@@ -315,5 +315,14 @@ if __name__ == "__main__":
         data_split="train",
     )
 
+    cfg_vit_b8_vanilla_throughput = copy.deepcopy(cfg_vit_b8_vanilla)
+    cfg_vit_b8_vanilla_throughput.update(
+        name="vit_b8_vanilla_throughput",
+        num_total_iters=400,
+        num_freq=10,
+        save_interval=1,
+    )
+
     generate_vit_config(**cfg_vit_b8)
     generate_vit_config(**cfg_vit_b8_vanilla)
+    generate_vit_config(**cfg_vit_b8_vanilla_throughput)
