@@ -134,7 +134,7 @@ def generate_vit_config(
     ),
     data_split="validation",
     data_streaming=True,
-    data_shuffle=False,
+    data_shuffle=True,
     shuffle_buffer_size=10_000,
     distillation_initialization="random_init",
     distillation_loss="mse",
@@ -282,7 +282,7 @@ if __name__ == "__main__":
         ),
         data_split="validation",
         data_streaming=True,
-        data_shuffle=False,
+        data_shuffle=True,
         shuffle_buffer_size=10_000,
         distillation_initialization="random_init",
         distillation_loss="mse",
@@ -297,6 +297,22 @@ if __name__ == "__main__":
     cfg_vit_b8_vanilla.update(
         name="vit_b8_vanilla",
         training_mode="vanilla",
+        num_total_iters=120_000,
+        num_freq=20,
+        save_interval=5_000,
+        batch_size=32,
+        num_workers=0,
+        runtime="cluster",
+        data_location="cluster_snapshot",
+        data_root=(
+            "/lustre/fast/fast/hma2/data/imagenet2012/hf_cache/hub/"
+            "datasets--ILSVRC--imagenet-1k/snapshots/"
+            "49e2ee26f3810fb5a7536bbf732a7b07389a47b5"
+        ),
+        data_cache_dir=(
+            "/lustre/fast/fast/hma2/data/imagenet2012/hf_cache/datasets"
+        ),
+        data_split="train",
     )
 
     generate_vit_config(**cfg_vit_b8)

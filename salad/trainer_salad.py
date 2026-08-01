@@ -81,7 +81,7 @@ class SALADTrainer:
         if self.is_wandb and self.rank == 0:
             import wandb
             wandb.login(key=os.getenv("WANDB_API_KEY"), relogin=False)
-            self.run_wandb = wandb.init(project=f"SALAAD_VISION_{self.config['name']}",
+            self.run_wandb = wandb.init(project="SALAAD_VISION",
                                         entity="hao-ma-eth-z-rich", 
                                         config=self.config,
                                         name=folder_name)
@@ -573,15 +573,24 @@ class SALADTrainer:
         acc_num_images = 0
         last_save_index = 0
 
-        for batch in self.dataloader:
-            num_it += 1
-            # terminate training if reached max iterations
-            if num_it > self.num_total_iters:
-                logger.info(f"Reached max number of update steps (f{self.num_total_iters}). Stopping training.")
-                print(f"Rank {self.rank} stopping training.")
-                break
-            
+        data_epoch = 0
+        data_iterator = iter(self.dataloader)
+        while num_it < self.num_total_iters:
+            try:
+                batch = next(data_iterator)
+            except StopIteration:
+                data_epoch += 1
+                dataset = getattr(self.dataloader, "dataset", None)
+                set_epoch = getattr(dataset, "set_epoch", None)
+                if callable(set_epoch):
+                    set_epoch(data_epoch)
+                data_iterator = iter(self.dataloader)
+                try:
+                    batch = next(data_iterator)
+                except StopIteration as error:
+                    raise RuntimeError("dataloader yielded no batches") from error
 
+            num_it += 1
             images = self.prepare_batch(batch)
             # do one step update
             with self.timers['train']:

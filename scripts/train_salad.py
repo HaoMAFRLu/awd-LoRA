@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument('--beta_rate', type=float, default=None, help='Beta Rate')
     parser.add_argument('--dalpha', type=float, default=None, help='Delta Alpha')
     parser.add_argument('--dbeta', type=float, default=None, help='Delta Beta')
-    parser.add_argument('--cfg_version', type=str, default='vit_b8_vanilla', help='Config version in configs/')
+    parser.add_argument('--cfg_version', type=str, default='vit_b8', help='Config version in configs/')
     parser.add_argument('--folder', type=str, default='salaad_vision', help='Output folder under data/')
 
     return parser.parse_args()

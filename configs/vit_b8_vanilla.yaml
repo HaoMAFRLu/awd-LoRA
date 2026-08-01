@@ -4,29 +4,29 @@ model_config: vit_b8_model.json
 training_mode: vanilla
 model_type: dino_vitb8
 task: dino_feature_distillation
-runtime: local
+runtime: cluster
 precision: bfloat16
-num_total_iters: 200
-num_freq: 5
+num_total_iters: 120000
+num_freq: 20
 gradient: coupled
 is_asyn: false
 is_init: false
 is_wandb: true
 is_monitor: true
-save_interval: 1
+save_interval: 5000
 is_clip: !!float '1'
 seed_for_shuffle: 42
-batch_size: 1
+batch_size: 32
 num_workers: 0
 data:
   type: vision
   dataset: ILSVRC/imagenet-1k
-  location: local_smoke
-  root: /home/hao/Desktop/MPI/awd-LoRA/data/salaad_vision/smoke/imagenet_val64_parquet
-  cache_dir: /home/hao/Desktop/MPI/awd-LoRA/data/salaad_vision/hf_cache_smoke/datasets
-  split: validation
+  location: cluster_snapshot
+  root: /lustre/fast/fast/hma2/data/imagenet2012/hf_cache/hub/datasets--ILSVRC--imagenet-1k/snapshots/49e2ee26f3810fb5a7536bbf732a7b07389a47b5
+  cache_dir: /lustre/fast/fast/hma2/data/imagenet2012/hf_cache/datasets
+  split: train
   streaming: true
-  shuffle: false
+  shuffle: true
   shuffle_buffer_size: 10000
 distillation:
   initialization: random_init

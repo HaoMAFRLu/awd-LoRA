@@ -167,6 +167,10 @@ def print_epoch(epoch: int,
               f"Penalty: {losses['avg_loss_penalty']:.6f}")
     print(header)
 
+    if not layer_stats:
+        print("-" * 120)
+        return
+
     headers = ["name", "layer diff", "non-zero", "rank", 
                "mode", "alpha", "dalpha", "decay", 
                "mode", "beta", "dbeta", "decay", "rho"]
@@ -189,6 +193,7 @@ def print_epoch(epoch: int,
     ]
 
     print(tabulate(rows, headers=headers, tablefmt="grid"))
+    print("-" * 120)
 
 def count_parameters(model: nn.Module) -> int:
     """

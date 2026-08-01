@@ -78,6 +78,9 @@ class _StreamingImageNetDataset(IterableDataset):
                 "labels": -1 if label is None else int(label),
             }
 
+    def set_epoch(self, epoch: int) -> None:
+        self.dataset.set_epoch(epoch)
+
 
 def _build_dataloader(
     dataset: Any,

@@ -25,6 +25,14 @@ LOCAL_PARQUET_ROOT = (
 LOCAL_CACHE_DIR = (
     REPOSITORY_ROOT / "data" / "salaad_vision" / "hf_cache_smoke" / "datasets"
 )
+CLUSTER_PARQUET_ROOT = Path(
+    "/lustre/fast/fast/hma2/data/imagenet2012/hf_cache/hub/"
+    "datasets--ILSVRC--imagenet-1k/snapshots/"
+    "49e2ee26f3810fb5a7536bbf732a7b07389a47b5"
+)
+CLUSTER_CACHE_DIR = Path(
+    "/lustre/fast/fast/hma2/data/imagenet2012/hf_cache/datasets"
+)
 
 
 class VitB8TrainingConfigTest(unittest.TestCase):
@@ -99,7 +107,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(Path(data["cache_dir"]), LOCAL_CACHE_DIR)
         self.assertEqual(data["split"], "validation")
         self.assertTrue(data["streaming"])
-        self.assertFalse(data["shuffle"])
+        self.assertTrue(data["shuffle"])
 
     def test_generator_local_defaults_use_the_parquet_slice(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -113,7 +121,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(Path(data["cache_dir"]), LOCAL_CACHE_DIR)
         self.assertEqual(data["split"], "validation")
         self.assertTrue(data["streaming"])
-        self.assertFalse(data["shuffle"])
+        self.assertTrue(data["shuffle"])
 
     def test_selected_vit_target_layers_are_student_only(self) -> None:
         suffixes = ("attn.qkv", "attn.proj", "mlp.fc1", "mlp.fc2")
@@ -153,21 +161,28 @@ class VitB8TrainingConfigTest(unittest.TestCase):
 
         self.assertEqual(generated_config, self.train_config)
 
-    def test_vanilla_config_only_disables_salaad(self) -> None:
-        salad_config = dict(self.train_config)
-        vanilla_config = dict(self.vanilla_config)
+    def test_vanilla_cluster_training_contract(self) -> None:
+        vanilla_config = self.vanilla_config
+        data = vanilla_config["data"]
 
         self.assertEqual(vanilla_config["name"], "vit_b8_vanilla")
         self.assertEqual(vanilla_config["training_mode"], "vanilla")
         self.assertEqual(vanilla_config["layers"], [])
-
-        salad_config.pop("name")
-        salad_config.pop("training_mode")
-        salad_config.pop("layers")
-        vanilla_config.pop("name")
-        vanilla_config.pop("training_mode")
-        vanilla_config.pop("layers")
-        self.assertEqual(vanilla_config, salad_config)
+        self.assertEqual(vanilla_config["runtime"], "cluster")
+        self.assertEqual(vanilla_config["num_total_iters"], 120_000)
+        self.assertEqual(vanilla_config["num_freq"], 20)
+        self.assertEqual(vanilla_config["batch_size"], 32)
+        self.assertEqual(vanilla_config["num_workers"], 0)
+        self.assertEqual(data["location"], "cluster_snapshot")
+        self.assertEqual(Path(data["root"]), CLUSTER_PARQUET_ROOT)
+        self.assertEqual(Path(data["cache_dir"]), CLUSTER_CACHE_DIR)
+        self.assertEqual(data["split"], "train")
+        self.assertTrue(data["streaming"])
+        self.assertTrue(data["shuffle"])
+        self.assertEqual(
+            vanilla_config["distillation"],
+            self.train_config["distillation"],
+        )
 
     def test_generator_reproduces_committed_vanilla_config(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -175,6 +190,16 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             generate_vit_config(
                 name="vit_b8_vanilla",
                 training_mode="vanilla",
+                num_total_iters=120_000,
+                num_freq=20,
+                save_interval=5_000,
+                batch_size=32,
+                num_workers=0,
+                runtime="cluster",
+                data_location="cluster_snapshot",
+                data_root=str(CLUSTER_PARQUET_ROOT),
+                data_cache_dir=str(CLUSTER_CACHE_DIR),
+                data_split="train",
                 output_path=str(generated_path),
             )
             with generated_path.open("r", encoding="utf-8") as config_file:
