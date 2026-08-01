@@ -30,9 +30,7 @@ CLUSTER_PARQUET_ROOT = Path(
     "datasets--ILSVRC--imagenet-1k/snapshots/"
     "49e2ee26f3810fb5a7536bbf732a7b07389a47b5"
 )
-CLUSTER_CACHE_DIR = Path(
-    "/lustre/fast/fast/hma2/data/imagenet2012/hf_cache/datasets"
-)
+CLUSTER_CACHE_DIR = Path("/lustre/home/hma2/hf/datasets")
 
 
 class VitB8TrainingConfigTest(unittest.TestCase):

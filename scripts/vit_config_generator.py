@@ -309,9 +309,7 @@ if __name__ == "__main__":
             "datasets--ILSVRC--imagenet-1k/snapshots/"
             "49e2ee26f3810fb5a7536bbf732a7b07389a47b5"
         ),
-        data_cache_dir=(
-            "/lustre/fast/fast/hma2/data/imagenet2012/hf_cache/datasets"
-        ),
+        data_cache_dir="/lustre/home/hma2/hf/datasets",
         data_split="train",
     )
 
