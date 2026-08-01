@@ -293,7 +293,7 @@ if __name__ == "__main__":
         num_total_iters=120_000,
         num_freq=20,
         save_interval=5_000,
-        batch_size=64,
+        batch_size=128,
         warmup_steps=2_000,
         num_workers=2,
         runtime="cluster",
