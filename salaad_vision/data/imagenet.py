@@ -6,6 +6,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Iterator, Union
 
+from loguru import logger
 from PIL import Image
 from torch import Tensor
 from torch.utils.data import DataLoader, IterableDataset
@@ -168,6 +169,7 @@ def build_imagenet_dataloader(
             f"no {split!r} parquet shards found under {data_directory}"
         )
 
+    from datasets import Image as HuggingFaceImage
     from datasets import load_dataset
 
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -177,6 +179,15 @@ def build_imagenet_dataloader(
         split=split,
         streaming=True,
         cache_dir=str(cache_dir),
+    )
+    dataset = dataset.cast_column(
+        "image",
+        HuggingFaceImage(decode=False),
+    )
+    logger.info(
+        "[Rank {}] ImageNet loader uses encoded image bytes with explicit RGB "
+        "decoding; Hugging Face EXIF/XMP auto-decoding is disabled",
+        rank,
     )
     shuffle = data_config.get("shuffle", split == "train")
     if shuffle:

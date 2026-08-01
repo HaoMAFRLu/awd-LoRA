@@ -61,6 +61,29 @@ def _write_validation_snapshot(root: Path, labels: list[int]) -> None:
     )
 
 
+def _jpeg_with_invalid_xmp() -> bytes:
+    image_buffer = BytesIO()
+    Image.new("RGB", (256, 256), color=(20, 40, 60)).save(
+        image_buffer,
+        format="JPEG",
+    )
+    jpeg = image_buffer.getvalue()
+    xmp_header = b"http://ns.adobe.com/xap/1.0/\x00"
+    xmp_payload = (
+        b'<?xpacket begin=""?>'
+        b'<x:xmpmeta xmlns:x="adobe:ns:meta/"/>'
+        b'<?xpacket end="w"?>'
+        b"\xa8"
+    )
+    app1_payload = xmp_header + xmp_payload
+    app1 = (
+        b"\xff\xe1"
+        + (len(app1_payload) + 2).to_bytes(2, "big")
+        + app1_payload
+    )
+    return jpeg[:2] + app1 + jpeg[2:]
+
+
 class ImageNetDataLoaderTest(unittest.TestCase):
     def test_get_data_preserves_text_dataset_path(self) -> None:
         dataset = Mock()
@@ -203,6 +226,65 @@ class ImageNetDataLoaderTest(unittest.TestCase):
 
         self.assertEqual(tuple(batch["pixel_values"].shape), (1, 3, 224, 224))
         self.assertEqual(batch["labels"].tolist(), [17])
+
+    def test_invalid_xmp_does_not_block_rgb_decode(self) -> None:
+        image_bytes = _jpeg_with_invalid_xmp()
+        with Image.open(BytesIO(image_bytes)) as image:
+            with self.assertRaises(UnicodeDecodeError):
+                image.getexif()
+
+        image_type = pa.struct(
+            [
+                pa.field("bytes", pa.binary()),
+                pa.field("path", pa.string()),
+            ]
+        )
+        table = pa.table(
+            {
+                "image": pa.array(
+                    [
+                        {
+                            "bytes": image_bytes,
+                            "path": "invalid_xmp.JPEG",
+                        }
+                    ],
+                    type=image_type,
+                ),
+                "label": pa.array([887], type=pa.int64()),
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            data_directory = root / "data"
+            data_directory.mkdir()
+            pq.write_table(
+                table,
+                data_directory / "validation-00000-of-00001.parquet",
+            )
+            config = {
+                "batch_size": 1,
+                "num_workers": 0,
+                "data": {
+                    "dataset": "ILSVRC/imagenet-1k",
+                    "location": "cluster_snapshot",
+                    "root": temporary_root,
+                    "cache_dir": str(root / "cache"),
+                    "split": "validation",
+                    "streaming": True,
+                    "shuffle": False,
+                    "pin_memory": False,
+                },
+            }
+            loader = build_imagenet_dataloader(
+                config,
+                rank=0,
+                world_size=1,
+            )
+            batch = next(iter(loader))
+
+        self.assertEqual(tuple(batch["pixel_values"].shape), (1, 3, 224, 224))
+        self.assertEqual(batch["labels"].tolist(), [887])
 
     def test_cluster_snapshot_is_split_across_distributed_ranks(self) -> None:
         image_buffer = BytesIO()
