@@ -106,9 +106,9 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         data = self.train_config["data"]
         self.assertEqual(self.train_config["runtime"], "cluster")
         self.assertEqual(self.train_config["training_mode"], "salad")
-        self.assertEqual(self.train_config["num_total_iters"], 200)
-        self.assertEqual(self.train_config["num_freq"], 5)
-        self.assertEqual(self.train_config["save_interval"], 200)
+        self.assertEqual(self.train_config["num_total_iters"], 120_000)
+        self.assertEqual(self.train_config["num_freq"], 20)
+        self.assertEqual(self.train_config["save_interval"], 5_000)
         self.assertEqual(self.train_config["batch_size"], 128)
         self.assertEqual(self.train_config["num_workers"], 2)
         self.assertEqual(data["type"], "vision")
@@ -183,7 +183,12 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             generated_path = Path(temporary_directory) / "vit_b8.yaml"
             generate_vit_config(
+                lr=1e-4,
+                num_total_iters=120_000,
+                num_freq=20,
+                save_interval=5_000,
                 batch_size=128,
+                warmup_steps=2_000,
                 num_workers=2,
                 runtime="cluster",
                 data_location="cluster_snapshot",
@@ -197,6 +202,21 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 generated_config = yaml.safe_load(config_file)
 
         self.assertEqual(generated_config, self.train_config)
+
+    def test_salad_and_vanilla_share_non_layer_hyperparameters(self) -> None:
+        mode_specific_keys = {"name", "training_mode", "layers"}
+        salad_common = {
+            key: value
+            for key, value in self.train_config.items()
+            if key not in mode_specific_keys
+        }
+        vanilla_common = {
+            key: value
+            for key, value in self.vanilla_config.items()
+            if key not in mode_specific_keys
+        }
+
+        self.assertEqual(salad_common, vanilla_common)
 
     def test_vanilla_cluster_training_contract(self) -> None:
         vanilla_config = self.vanilla_config
