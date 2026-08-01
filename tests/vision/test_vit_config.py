@@ -148,6 +148,10 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         for entry in layers:
             self.assertNotIn("teacher", entry["name"])
             self.assertEqual(entry["params"]["rate_sparsity"], 0.05)
+            self.assertEqual(
+                entry["params"]["beta_dict"]["rate_decay"],
+                0.003,
+            )
             self.assertNotIn("block_size", entry["params"])
             self.assertNotIn("block_sparsity", entry["params"])
 

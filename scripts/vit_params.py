@@ -22,7 +22,7 @@ attn_qkv_params = {
     "beta_dict": {
         "init": 0.0,
         "mode": "adaptive",
-        "rate_decay": 0.0013,
+        "rate_decay": 0.003,
         "drate": 0.01,
     },
     "rho_dict": {
@@ -54,7 +54,7 @@ attn_proj_params = {
     "beta_dict": {
         "init": 0.0,
         "mode": "adaptive",
-        "rate_decay": 0.0013,
+        "rate_decay": 0.003,
         "drate": 0.01,
     },
     "rho_dict": {
@@ -86,7 +86,7 @@ mlp_fc1_params = {
     "beta_dict": {
         "init": 0.0,
         "mode": "adaptive",
-        "rate_decay": 0.0013,
+        "rate_decay": 0.003,
         "drate": 0.01,
     },
     "rho_dict": {
@@ -118,7 +118,7 @@ mlp_fc2_params = {
     "beta_dict": {
         "init": 0.0,
         "mode": "adaptive",
-        "rate_decay": 0.0013,
+        "rate_decay": 0.003,
         "drate": 0.01,
     },
     "rho_dict": {
