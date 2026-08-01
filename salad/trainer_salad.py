@@ -663,6 +663,16 @@ class SALADTrainer:
                     self.save_results(path_folder)
                 last_save_index = save_index
 
+        device = getattr(self, "device", None)
+        if getattr(device, "type", None) == "cuda":
+            peak_allocated_gib = torch.cuda.max_memory_allocated(device) / (1024 ** 3)
+            peak_reserved_gib = torch.cuda.max_memory_reserved(device) / (1024 ** 3)
+            logger.info(
+                f"[Rank {self.rank}] peak CUDA memory: "
+                f"allocated={peak_allocated_gib:.2f} GiB, "
+                f"reserved={peak_reserved_gib:.2f} GiB"
+            )
+
         dist.destroy_process_group()
         if self.is_wandb and self.rank == 0:
             self.run_wandb.finish()

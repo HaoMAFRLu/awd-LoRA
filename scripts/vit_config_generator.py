@@ -258,29 +258,21 @@ if __name__ == "__main__":
         seed_for_shuffle=42,
         is_clip=1.0,
         num_total_iters=200,
-        batch_size=1,
+        batch_size=128,
         warmup_steps=20,
-        num_workers=0,
+        num_workers=2,
         scheduler_type="cosine",
         min_lr_ratio=0.1,
         precision="bfloat16",
-        runtime="local",
-        data_location="local_smoke",
-        data_root=os.path.join(
-            ROOT,
-            "data",
-            "salaad_vision",
-            "smoke",
-            "imagenet_val64_parquet",
+        runtime="cluster",
+        data_location="cluster_snapshot",
+        data_root=(
+            "/lustre/fast/fast/hma2/data/imagenet2012/hf_cache/hub/"
+            "datasets--ILSVRC--imagenet-1k/snapshots/"
+            "49e2ee26f3810fb5a7536bbf732a7b07389a47b5"
         ),
-        data_cache_dir=os.path.join(
-            ROOT,
-            "data",
-            "salaad_vision",
-            "hf_cache_smoke",
-            "datasets",
-        ),
-        data_split="validation",
+        data_cache_dir="/lustre/home/hma2/hf/datasets",
+        data_split="train",
         data_streaming=True,
         data_shuffle=True,
         shuffle_buffer_size=10_000,
@@ -290,7 +282,7 @@ if __name__ == "__main__":
         patch_weight=1.0,
         include_attention=True,
         include_mlp=True,
-        vit_layers=1,  # block 0: qkv, proj, fc1, and fc2
+        vit_layers=-1,  # all 12 blocks: qkv, proj, fc1, and fc2
     )
 
     cfg_vit_b8_vanilla = copy.deepcopy(cfg_vit_b8)

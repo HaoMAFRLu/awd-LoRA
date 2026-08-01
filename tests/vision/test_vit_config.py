@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 import yaml
+from salad.trainer_salad import SALADTrainer
 from scripts.vit_config_generator import generate_vit_config
 from scripts.vit_params import projection
 
@@ -101,14 +102,19 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertNotIn("teacher_checkpoint_env", self.model_config)
         self.assertNotIn("teacher_checkpoint_sha256", self.model_config)
 
-    def test_local_parquet_data_is_selected(self) -> None:
+    def test_salad_cluster_data_is_selected(self) -> None:
         data = self.train_config["data"]
-        self.assertEqual(self.train_config["runtime"], "local")
+        self.assertEqual(self.train_config["runtime"], "cluster")
+        self.assertEqual(self.train_config["training_mode"], "salad")
+        self.assertEqual(self.train_config["num_total_iters"], 200)
+        self.assertEqual(self.train_config["num_freq"], 5)
+        self.assertEqual(self.train_config["batch_size"], 128)
+        self.assertEqual(self.train_config["num_workers"], 2)
         self.assertEqual(data["type"], "vision")
-        self.assertEqual(data["location"], "local_smoke")
-        self.assertEqual(Path(data["root"]), LOCAL_PARQUET_ROOT)
-        self.assertEqual(Path(data["cache_dir"]), LOCAL_CACHE_DIR)
-        self.assertEqual(data["split"], "validation")
+        self.assertEqual(data["location"], "cluster_snapshot")
+        self.assertEqual(Path(data["root"]), CLUSTER_PARQUET_ROOT)
+        self.assertEqual(Path(data["cache_dir"]), CLUSTER_CACHE_DIR)
+        self.assertEqual(data["split"], "train")
         self.assertTrue(data["streaming"])
         self.assertTrue(data["shuffle"])
 
@@ -130,7 +136,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         suffixes = ("attn.qkv", "attn.proj", "mlp.fc1", "mlp.fc2")
         expected = [
             f"backbone.blocks.{block}.{suffix}"
-            for block in range(1)
+            for block in range(12)
             for suffix in suffixes
         ]
         layers = self.train_config["layers"]
@@ -155,10 +161,37 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             self.assertNotIn("block_size", layer_params)
             self.assertNotIn("block_sparsity", layer_params)
 
+    def test_all_target_layers_are_evenly_owned_by_four_ranks(self) -> None:
+        expected_names = {entry["name"] for entry in self.train_config["layers"]}
+        owned_names = set()
+
+        for rank in range(4):
+            assigned, owner_map = SALADTrainer.assign_layers(
+                self.train_config["layers"],
+                rank,
+                4,
+            )
+            self.assertEqual(len(assigned), 12)
+            self.assertTrue(owned_names.isdisjoint(assigned))
+            self.assertTrue(all(owner_map[name] == rank for name in assigned))
+            owned_names.update(assigned)
+
+        self.assertEqual(owned_names, expected_names)
+
     def test_generator_reproduces_committed_config(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             generated_path = Path(temporary_directory) / "vit_b8.yaml"
-            generate_vit_config(output_path=str(generated_path))
+            generate_vit_config(
+                batch_size=128,
+                num_workers=2,
+                runtime="cluster",
+                data_location="cluster_snapshot",
+                data_root=str(CLUSTER_PARQUET_ROOT),
+                data_cache_dir=str(CLUSTER_CACHE_DIR),
+                data_split="train",
+                vit_layers=-1,
+                output_path=str(generated_path),
+            )
             with generated_path.open("r", encoding="utf-8") as config_file:
                 generated_config = yaml.safe_load(config_file)
 
