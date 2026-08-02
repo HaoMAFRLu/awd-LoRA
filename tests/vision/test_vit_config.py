@@ -152,7 +152,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 entry["params"]["beta_dict"]["rate_decay"],
                 0.003,
             )
-            self.assertEqual(entry["params"]["rho_dict"]["rho"], 1e-5)
+            self.assertEqual(entry["params"]["rho_dict"]["rho"], 5e-6)
             self.assertNotIn("block_size", entry["params"])
             self.assertNotIn("block_sparsity", entry["params"])
 
