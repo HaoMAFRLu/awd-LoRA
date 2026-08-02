@@ -24,5 +24,6 @@ requirements = ( \
 )
 
 getenv          = True
+environment     = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
 
 queue 1
