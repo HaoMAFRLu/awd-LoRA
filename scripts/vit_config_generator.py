@@ -264,7 +264,7 @@ if __name__ == "__main__":
         seed_for_shuffle=42,
         is_clip=1.0,
         num_total_iters=120_000,
-        batch_size=112,
+        batch_size=96,
         warmup_steps=2_000,
         scheduler_total_steps=120_000,
         num_workers=2,

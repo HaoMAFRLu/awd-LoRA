@@ -16,7 +16,7 @@ is_monitor: true
 save_interval: 5000
 is_clip: !!float '1'
 seed_for_shuffle: 42
-batch_size: 112
+batch_size: 96
 num_workers: 2
 data:
   type: vision
