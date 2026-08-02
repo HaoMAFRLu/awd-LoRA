@@ -14,7 +14,7 @@ from torch import nn
 
 from salad.simple_timer import SimpleTimer
 from salad.trainer_salad import SALADTrainer
-from salad.utils import print_epoch
+from salad.utils import print_epoch, print_wandb
 from salaad_vision.models.dino import DinoFeatures
 
 
@@ -43,6 +43,8 @@ class VanillaDistillationTest(unittest.TestCase):
                 num_images=5,
                 losses={
                     "avg_loss": 1.0,
+                    "avg_cls_loss": 0.4,
+                    "avg_patch_loss": 0.6,
                     "avg_diff": 0.0,
                     "avg_loss_penalty": 0.0,
                 },
@@ -52,9 +54,35 @@ class VanillaDistillationTest(unittest.TestCase):
         logged_text = output.getvalue()
         self.assertIn("Epoch 1/40", logged_text)
         self.assertIn("Loss: 1.000000", logged_text)
+        self.assertIn("CLS: 0.400000", logged_text)
+        self.assertIn("Patch: 0.600000", logged_text)
         self.assertNotIn("non-zero", logged_text)
         self.assertNotIn("rho", logged_text)
         self.assertTrue(logged_text.rstrip().endswith("-" * 120))
+
+    def test_wandb_logs_cls_and_patch_losses(self) -> None:
+        with patch("salad.utils.wandb.log") as wandb_log:
+            print_wandb(
+                Mock(),
+                epoch=1,
+                total_epochs=10,
+                num_freq=20,
+                lr=1e-4,
+                num_images=512,
+                losses={
+                    "avg_loss": 1.0,
+                    "avg_cls_loss": 0.4,
+                    "avg_patch_loss": 0.6,
+                    "avg_diff": 0.0,
+                    "avg_loss_penalty": 0.0,
+                },
+                layer_stats=[],
+            )
+
+        payload = wandb_log.call_args.args[0]
+        self.assertEqual(payload["train/loss"], 1.0)
+        self.assertEqual(payload["train/cls_loss"], 0.4)
+        self.assertEqual(payload["train/patch_loss"], 0.6)
 
     def test_vanilla_step_updates_student_without_admm_state(self) -> None:
         teacher = _TinyFeatureModel(scale=2.0)
@@ -79,14 +107,20 @@ class VanillaDistillationTest(unittest.TestCase):
         trainer.training_mode = "vanilla"
         trainer.is_clip = 0.0
         trainer.get_global_loss = lambda loss: loss.item()
+        trainer.get_global_losses = lambda *losses: tuple(
+            loss.item() for loss in losses
+        )
 
         images = torch.ones(2, 3, 2, 2)
         student_scale_before = student.scale.detach().clone()
         teacher_scale_before = teacher.scale.detach().clone()
 
-        loss, penalty, layer_diff = trainer.single_step_train(images)
+        loss, cls_loss, patch_loss, penalty, layer_diff = (
+            trainer.single_step_train(images)
+        )
 
         self.assertGreater(loss, 0.0)
+        self.assertAlmostEqual(loss, cls_loss + patch_loss)
         self.assertEqual(penalty, 0.0)
         self.assertEqual(layer_diff, 0.0)
         self.assertFalse(torch.equal(student.scale.detach(), student_scale_before))
@@ -122,6 +156,8 @@ class VanillaDistillationTest(unittest.TestCase):
         trainer.timers = {"train": SimpleTimer("train", sync_cuda=False)}
         trainer.layer_info = {
             "avg_loss": [],
+            "avg_cls_loss": [],
+            "avg_patch_loss": [],
             "avg_loss_penalty": [],
             "avg_diff": [],
             "num_images": [],
@@ -132,7 +168,8 @@ class VanillaDistillationTest(unittest.TestCase):
 
         def single_step(images, gradient):
             seen_batches.append(int(images.item()))
-            return float(images.item()), 0.0, 0.0
+            value = float(images.item())
+            return value, value, 0.0, 0.0, 0.0
 
         trainer.single_step_train = single_step
 
@@ -165,12 +202,20 @@ class VanillaDistillationTest(unittest.TestCase):
         }
         trainer.layer_info = {
             "avg_loss": [],
+            "avg_cls_loss": [],
+            "avg_patch_loss": [],
             "avg_loss_penalty": [],
             "avg_diff": [],
             "num_images": [],
         }
         trainer.prepare_batch = lambda batch: batch["pixel_values"]
-        trainer.single_step_train = lambda images, gradient: (0.0, 0.0, 0.0)
+        trainer.single_step_train = lambda images, gradient: (
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        )
 
         saved_at = []
         trainer.save_results = lambda path: saved_at.append(

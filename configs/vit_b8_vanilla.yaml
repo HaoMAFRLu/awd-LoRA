@@ -6,7 +6,7 @@ model_type: dino_vitb8
 task: dino_feature_distillation
 runtime: cluster
 precision: bfloat16
-num_total_iters: 120000
+num_total_iters: 20000
 num_freq: 20
 gradient: coupled
 is_asyn: false
@@ -38,6 +38,7 @@ scheduler:
   params:
     warmup_steps: 2000
     min_lr_ratio: 0.1
+    total_steps: 120000
 optimizer:
   name: AdamW
   params:

@@ -93,6 +93,20 @@ class SALADTrainer:
                                         name=folder_name)
 
         self.device = torch.device(f'cuda:{self.rank % torch.cuda.device_count()}')
+        precision = config.get('precision', 'bfloat16')
+        if precision == 'bfloat16':
+            self.compute_dtype = torch.bfloat16
+        elif precision == 'float32':
+            self.compute_dtype = torch.float32
+        else:
+            raise ValueError(
+                "precision must be 'bfloat16' or 'float32', "
+                f"got {precision!r}"
+            )
+        self.use_bfloat16_autocast = (
+            config.get('model_type') == 'dino_vitb8'
+            and self.compute_dtype == torch.bfloat16
+        )
         if self.rank == 0:
             print_setting(config)
 
@@ -109,10 +123,20 @@ class SALADTrainer:
                 for parameter in self.teacher_model.parameters()
             ):
                 raise ValueError("teacher_model must be frozen in eval mode")
-            self.teacher_model.to(self.device, dtype=torch.bfloat16)
+            self.teacher_model.to(self.device, dtype=self.compute_dtype)
 
-        # Wrap the student model in DDP.
-        self.model.cuda()
+        # DINO uses FP32 master parameters and optimizer state while autocast
+        # keeps the forward pass on BF16 Tensor Cores.
+        student_dtype = (
+            torch.float32
+            if self.use_bfloat16_autocast
+            else self.compute_dtype
+        )
+        self.model.to(self.device, dtype=student_dtype)
+        logger.info(
+            f"[Rank {self.rank}] student master dtype={student_dtype}, "
+            f"forward dtype={self.compute_dtype}"
+        )
         if self.training_mode == 'salad':
             names_model_layers = get_linear_layers_name(self.model)
             self.cfg_layers = self.get_cfg_layers(self.config, names_model_layers)
@@ -132,15 +156,19 @@ class SALADTrainer:
                 with torch.no_grad():
                     W.copy_(_W.to(W.dtype))
 
-        self.ddp_model = DDP(self.model.to(torch.bfloat16), 
+        self.ddp_model = DDP(self.model,
                              device_ids=[torch.cuda.current_device()])
 
         self.dataloader = data
 
         self.optimizer = get_optimizer(*self.get_name_and_params(config['optimizer']), self.ddp_model)
+        scheduler_steps = config['scheduler']['params'].get(
+            'total_steps',
+            self.num_total_iters,
+        )
         self.lr_scheduler = get_scheduler(self.optimizer,
                                         scheduler_type=config['scheduler']['name'],
-                                        num_training_steps=self.num_total_iters,
+                                        num_training_steps=scheduler_steps,
                                         warmup_steps=config['scheduler']['params'].get('warmup_steps', 0),
                                         min_lr_ratio=config['scheduler']['params'].get('min_lr_ratio', 0.0))
         if self.training_mode == 'salad':  # only do the admm for the salad training
@@ -199,6 +227,8 @@ class SALADTrainer:
             'total_elements': []
         } for entry in self.cfg_layers}
         self.layer_info['avg_loss'] = []
+        self.layer_info['avg_cls_loss'] = []
+        self.layer_info['avg_patch_loss'] = []
         self.layer_info['avg_loss_penalty'] = []
         self.layer_info['avg_diff'] = []
         self.layer_info['num_images'] = []
@@ -294,9 +324,14 @@ class SALADTrainer:
 
         self.optimizer.zero_grad(set_to_none=True)
 
-        with torch.no_grad():
-            teacher_features = self.teacher_model(images)
-        student_features = self.ddp_model(images)
+        with torch.autocast(
+            device_type=images.device.type,
+            dtype=torch.bfloat16,
+            enabled=getattr(self, 'use_bfloat16_autocast', False),
+        ):
+            with torch.no_grad():
+                teacher_features = self.teacher_model(images)
+            student_features = self.ddp_model(images)
         distillation_loss = dino_feature_mse(
             student_features,
             teacher_features,
@@ -344,10 +379,22 @@ class SALADTrainer:
             self.lr_scheduler.step()
 
             # broadcast the neural network loss
-            global_avg_loss = self.get_global_loss(loss.detach())
+            global_avg_loss, global_avg_cls_loss, global_avg_patch_loss = (
+                self.get_global_losses(
+                    loss.detach(),
+                    distillation_loss.cls.detach(),
+                    distillation_loss.patches.detach(),
+                )
+            )
             # broadcast the penalty loss
             global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
-            return global_avg_loss, global_avg_loss_penalty, global_avg_diff
+            return (
+                global_avg_loss,
+                global_avg_cls_loss,
+                global_avg_patch_loss,
+                global_avg_loss_penalty,
+                global_avg_diff,
+            )
         elif self.training_mode == 'vanilla':
             loss.backward()
 
@@ -360,8 +407,20 @@ class SALADTrainer:
             self.lr_scheduler.step()
 
             # broadcast the neural network loss
-            global_avg_loss = self.get_global_loss(loss.detach())
-            return global_avg_loss, 0.0, 0.0
+            global_avg_loss, global_avg_cls_loss, global_avg_patch_loss = (
+                self.get_global_losses(
+                    loss.detach(),
+                    distillation_loss.cls.detach(),
+                    distillation_loss.patches.detach(),
+                )
+            )
+            return (
+                global_avg_loss,
+                global_avg_cls_loss,
+                global_avg_patch_loss,
+                0.0,
+                0.0,
+            )
 
     def prepare_batch(self, batch):
         return batch["pixel_values"].to(
@@ -422,6 +481,14 @@ class SALADTrainer:
             dist.all_reduce(log_loss, op=dist.ReduceOp.SUM)
             log_loss = log_loss / self.world_size
         return log_loss.item()
+
+    def get_global_losses(self, *log_losses):
+        """Average several scalar losses across ranks with one collective."""
+        values = torch.stack(log_losses)
+        with torch.no_grad():
+            dist.all_reduce(values, op=dist.ReduceOp.SUM)
+            values /= self.world_size
+        return tuple(values.tolist())
 
     @torch.no_grad()
     def broadcast_params(self, ddp_model):
@@ -527,6 +594,8 @@ class SALADTrainer:
                    total_epochs: int,
                    num_freq: int,
                    loss: float,
+                   cls_loss: float,
+                   patch_loss: float,
                    loss_penalty: float,
                    loss_diff: float,
                    acc_num_images: int,
@@ -540,6 +609,8 @@ class SALADTrainer:
             layer_info: Dictionary containing layer statistics
         """
         losses = {'avg_loss': loss,
+                  'avg_cls_loss': cls_loss,
+                  'avg_patch_loss': patch_loss,
                   'avg_loss_penalty': loss_penalty,
                   'avg_diff': loss_diff}
         
@@ -575,7 +646,11 @@ class SALADTrainer:
         num_it = 0
         num_epochs = self.num_total_iters // self.num_freq
         epoch = 0
-        ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
+        ep_loss = 0.0
+        ep_cls_loss = 0.0
+        ep_patch_loss = 0.0
+        ep_penalty = 0.0
+        ep_diff = 0.0
         acc_num_images = 0
 
         data_epoch = 0
@@ -599,19 +674,45 @@ class SALADTrainer:
             images = self.prepare_batch(batch)
             # do one step update
             with self.timers['train']:
-                avg_loss, avg_loss_penalty, avg_diff = self.single_step_train(
-                    images,
-                    gradient=self.gradient,
+                (
+                    avg_loss,
+                    avg_cls_loss,
+                    avg_patch_loss,
+                    avg_loss_penalty,
+                    avg_diff,
+                ) = self.single_step_train(images, gradient=self.gradient)
+
+            if (
+                num_it == 1
+                and getattr(self, 'use_bfloat16_autocast', False)
+            ):
+                optimizer_state_dtypes = {
+                    state[name].dtype
+                    for state in self.optimizer.state.values()
+                    for name in ('exp_avg', 'exp_avg_sq')
+                    if name in state
+                }
+                if optimizer_state_dtypes != {torch.float32}:
+                    raise RuntimeError(
+                        "DINO mixed precision requires FP32 Adam state, "
+                        f"got {optimizer_state_dtypes}"
+                    )
+                logger.info(
+                    f"[Rank {self.rank}] Adam state dtype=torch.float32"
                 )
 
             # calculate the constants
             num_images = images.shape[0] * self.world_size
             self.layer_info['avg_loss'].append(avg_loss)
+            self.layer_info['avg_cls_loss'].append(avg_cls_loss)
+            self.layer_info['avg_patch_loss'].append(avg_patch_loss)
             self.layer_info['avg_loss_penalty'].append(avg_loss_penalty)
             self.layer_info['avg_diff'].append(avg_diff)
             self.layer_info['num_images'].append(num_images)
             
             ep_loss += avg_loss
+            ep_cls_loss += avg_cls_loss
+            ep_patch_loss += avg_patch_loss
             ep_penalty += avg_loss_penalty
             ep_diff += avg_diff
             acc_num_images += num_images
@@ -640,6 +741,8 @@ class SALADTrainer:
                     self.solvers_reset()
                 # average losses
                 ep_loss /= self.num_freq
+                ep_cls_loss /= self.num_freq
+                ep_patch_loss /= self.num_freq
                 ep_penalty /= self.num_freq
                 ep_diff /= self.num_freq    
                 
@@ -648,6 +751,8 @@ class SALADTrainer:
                                     num_epochs,
                                     self.num_freq,
                                     ep_loss,
+                                    ep_cls_loss,
+                                    ep_patch_loss,
                                     ep_penalty,
                                     ep_diff, 
                                     acc_num_images,
@@ -659,7 +764,11 @@ class SALADTrainer:
                         for key in self.timers:
                             self.timers[key].reset()
 
-                ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
+                ep_loss = 0.0
+                ep_cls_loss = 0.0
+                ep_patch_loss = 0.0
+                ep_penalty = 0.0
+                ep_diff = 0.0
 
             # Save every configured number of optimizer iterations. The final
             # iteration is also saved when the run length is not divisible by

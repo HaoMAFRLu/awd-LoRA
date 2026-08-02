@@ -111,6 +111,10 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(self.train_config["save_interval"], 5_000)
         self.assertEqual(self.train_config["batch_size"], 128)
         self.assertEqual(self.train_config["num_workers"], 2)
+        self.assertEqual(
+            self.train_config["scheduler"]["params"]["total_steps"],
+            120_000,
+        )
         self.assertEqual(data["type"], "vision")
         self.assertEqual(data["location"], "cluster_snapshot")
         self.assertEqual(Path(data["root"]), CLUSTER_PARQUET_ROOT)
@@ -209,7 +213,12 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(generated_config, self.train_config)
 
     def test_salad_and_vanilla_share_non_layer_hyperparameters(self) -> None:
-        mode_specific_keys = {"name", "training_mode", "layers"}
+        mode_specific_keys = {
+            "name",
+            "training_mode",
+            "num_total_iters",
+            "layers",
+        }
         salad_common = {
             key: value
             for key, value in self.train_config.items()
@@ -231,11 +240,15 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(vanilla_config["training_mode"], "vanilla")
         self.assertEqual(vanilla_config["layers"], [])
         self.assertEqual(vanilla_config["runtime"], "cluster")
-        self.assertEqual(vanilla_config["num_total_iters"], 120_000)
+        self.assertEqual(vanilla_config["num_total_iters"], 20_000)
         self.assertEqual(vanilla_config["num_freq"], 20)
         self.assertEqual(vanilla_config["save_interval"], 5_000)
         self.assertEqual(vanilla_config["batch_size"], 128)
         self.assertEqual(vanilla_config["num_workers"], 2)
+        self.assertEqual(
+            vanilla_config["scheduler"]["params"]["total_steps"],
+            120_000,
+        )
         self.assertEqual(data["location"], "cluster_snapshot")
         self.assertEqual(Path(data["root"]), CLUSTER_PARQUET_ROOT)
         self.assertEqual(Path(data["cache_dir"]), CLUSTER_CACHE_DIR)
@@ -253,12 +266,13 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             generate_vit_config(
                 name="vit_b8_vanilla",
                 training_mode="vanilla",
-                num_total_iters=120_000,
+                num_total_iters=20_000,
                 num_freq=20,
                 save_interval=5_000,
                 batch_size=128,
                 lr=1e-4,
                 warmup_steps=2_000,
+                scheduler_total_steps=120_000,
                 num_workers=2,
                 runtime="cluster",
                 data_location="cluster_snapshot",

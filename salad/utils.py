@@ -90,7 +90,8 @@ def print_wandb(
 
     Logged (per run epoch):
       Global series:
-        - train/loss, train/layer_diff, train/penalty, train/lr, train/images, epoch
+        - train/loss, train/cls_loss, train/patch_loss, train/layer_diff,
+          train/penalty, train/lr, train/images, epoch
       Per-layer series (for each layer name):
         - layer/<name>/layer_diff
         - layer/<name>/non_zero_ratio
@@ -107,6 +108,8 @@ def print_wandb(
     payload = {
         # global scalars (optional; remove if you truly only want per-layer series)
         "train/loss": float(losses.get("avg_loss", float("nan"))),
+        "train/cls_loss": float(losses.get("avg_cls_loss", float("nan"))),
+        "train/patch_loss": float(losses.get("avg_patch_loss", float("nan"))),
         "train/layer_diff": float(losses.get("avg_diff", float("nan"))),
         "train/penalty": float(losses.get("avg_loss_penalty", float("nan"))),
         "train/lr": float(lr),
@@ -163,6 +166,8 @@ def print_epoch(epoch: int,
               f"Lr: {lr:.6f} | "
               f"Images: {num_images:,} | "
               f"Loss: {losses['avg_loss']:.6f} | "
+              f"CLS: {losses['avg_cls_loss']:.6f} | "
+              f"Patch: {losses['avg_patch_loss']:.6f} | "
               f"Layer diff: {losses['avg_diff']:.6f} | "
               f"Penalty: {losses['avg_loss_penalty']:.6f}")
     print(header)

@@ -34,8 +34,13 @@ def dino_feature_mse(
             f"{tuple(student.patches.shape)} != {tuple(teacher.patches.shape)}"
         )
 
-    cls_loss = F.mse_loss(student.cls, teacher.cls)
-    patch_loss = F.mse_loss(student.patches, teacher.patches)
+    # Accumulate the regression loss in FP32 even when the forward pass uses
+    # BF16 autocast. The cast remains differentiable for Student features.
+    cls_loss = F.mse_loss(student.cls.float(), teacher.cls.float())
+    patch_loss = F.mse_loss(
+        student.patches.float(),
+        teacher.patches.float(),
+    )
     return DinoDistillationLoss(
         total=cls_loss + patch_loss,
         cls=cls_loss,

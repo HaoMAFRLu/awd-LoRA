@@ -13,6 +13,7 @@ from salad.utils import freeze_model, read_cfg
 from salaad_vision.distillation.teacher_student import dino_feature_mse
 from salaad_vision.models.dino import (
     DINO_VITB8_CHECKPOINT_SHA256,
+    DinoFeatures,
     DinoViTBase8,
 )
 
@@ -93,6 +94,35 @@ class DinoTeacherStudentContractTest(unittest.TestCase):
         self.assertLessEqual(loss.patches.item(), 1e-12)
         self.assertFalse(teacher_features.cls.requires_grad)
         self.assertFalse(teacher_features.patches.requires_grad)
+
+    def test_bfloat16_features_use_float32_mse(self) -> None:
+        student_cls = torch.ones(
+            2,
+            4,
+            dtype=torch.bfloat16,
+            requires_grad=True,
+        )
+        student_patches = torch.ones(
+            2,
+            3,
+            4,
+            dtype=torch.bfloat16,
+            requires_grad=True,
+        )
+        student = DinoFeatures(student_cls, student_patches)
+        teacher = DinoFeatures(
+            torch.zeros_like(student_cls),
+            torch.zeros_like(student_patches),
+        )
+
+        loss = dino_feature_mse(student, teacher)
+
+        self.assertEqual(loss.total.dtype, torch.float32)
+        self.assertEqual(loss.cls.dtype, torch.float32)
+        self.assertEqual(loss.patches.dtype, torch.float32)
+        loss.total.backward()
+        self.assertIsNotNone(student_cls.grad)
+        self.assertIsNotNone(student_patches.grad)
 
     def test_perturbed_student_receives_gradient(self) -> None:
         self.student.train()

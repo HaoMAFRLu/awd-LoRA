@@ -112,6 +112,7 @@ def generate_vit_config(
     num_total_iters=200,
     batch_size=1,
     warmup_steps=20,
+    scheduler_total_steps=None,
     num_workers=0,
     scheduler_type="cosine",
     min_lr_ratio=0.1,
@@ -209,6 +210,11 @@ def generate_vit_config(
             "params": {
                 "warmup_steps": warmup_steps,
                 "min_lr_ratio": min_lr_ratio,
+                "total_steps": (
+                    num_total_iters
+                    if scheduler_total_steps is None
+                    else scheduler_total_steps
+                ),
             },
         },
         "optimizer": {
@@ -260,6 +266,7 @@ if __name__ == "__main__":
         num_total_iters=120_000,
         batch_size=128,
         warmup_steps=2_000,
+        scheduler_total_steps=120_000,
         num_workers=2,
         scheduler_type="cosine",
         min_lr_ratio=0.1,
@@ -289,6 +296,7 @@ if __name__ == "__main__":
     cfg_vit_b8_vanilla.update(
         name="vit_b8_vanilla",
         training_mode="vanilla",
+        num_total_iters=20_000,
     )
 
     cfg_vit_b8_vanilla_throughput = copy.deepcopy(cfg_vit_b8_vanilla)
