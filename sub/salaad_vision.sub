@@ -6,7 +6,7 @@ arguments       = \
     --rdzv_backend=c10d \
     --rdzv_endpoint=127.0.0.1:29500 \
     scripts/train_salad.py \
-    --cfg_version vit_b8 \
+    --cfg_version vit_b8_vanilla \
     --folder salaad_vision
 
 initialdir      = /lustre/home/hma2/projects/awd-LoRA

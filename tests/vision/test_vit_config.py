@@ -240,7 +240,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         self.assertEqual(vanilla_config["training_mode"], "vanilla")
         self.assertEqual(vanilla_config["layers"], [])
         self.assertEqual(vanilla_config["runtime"], "cluster")
-        self.assertEqual(vanilla_config["num_total_iters"], 20_000)
+        self.assertEqual(vanilla_config["num_total_iters"], 120_000)
         self.assertEqual(vanilla_config["num_freq"], 20)
         self.assertEqual(vanilla_config["save_interval"], 5_000)
         self.assertEqual(vanilla_config["batch_size"], 64)
@@ -266,7 +266,7 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             generate_vit_config(
                 name="vit_b8_vanilla",
                 training_mode="vanilla",
-                num_total_iters=20_000,
+                num_total_iters=120_000,
                 num_freq=20,
                 save_interval=5_000,
                 batch_size=64,

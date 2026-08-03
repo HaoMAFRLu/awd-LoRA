@@ -296,7 +296,7 @@ if __name__ == "__main__":
     cfg_vit_b8_vanilla.update(
         name="vit_b8_vanilla",
         training_mode="vanilla",
-        num_total_iters=20_000,
+        num_total_iters=120_000,
     )
 
     cfg_vit_b8_vanilla_throughput = copy.deepcopy(cfg_vit_b8_vanilla)
