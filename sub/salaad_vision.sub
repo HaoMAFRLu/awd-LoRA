@@ -20,7 +20,11 @@ request_memory  = 64000
 request_gpus    = 4
 requirements = ( \
     CUDACapability >= 9.0 && \
-    CUDACapability < 9.1 \
+    CUDACapability < 9.1 && \
+    !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
+    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) && \
+    !regexp("GPU-0e5a23fb", TARGET.DetectedGPUs) \
 )
 
 getenv          = True
