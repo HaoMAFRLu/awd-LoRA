@@ -7,13 +7,14 @@ arguments       = \
     --rdzv_endpoint=127.0.0.1:29500 \
     scripts/train_salad.py \
     --cfg_version vit_b8 \
-    --folder salaad_vision
+    --folder salaad_vision_salaad_smoke \
+    --num_total_iters 100
 
 initialdir      = /lustre/home/hma2/projects/awd-LoRA
 
-log             = jobs/salaad_vision_$(Cluster)_$(Process).log
-error           = jobs/salaad_vision_$(Cluster)_$(Process).err
-output          = jobs/salaad_vision_$(Cluster)_$(Process).out
+log             = jobs/salaad_vision_salaad_smoke_$(Cluster)_$(Process).log
+error           = jobs/salaad_vision_salaad_smoke_$(Cluster)_$(Process).err
+output          = jobs/salaad_vision_salaad_smoke_$(Cluster)_$(Process).out
 
 request_cpus    = 12
 request_memory  = 64000

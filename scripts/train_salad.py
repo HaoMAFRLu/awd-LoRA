@@ -44,6 +44,12 @@ def parse_args():
     parser.add_argument('--dbeta', type=float, default=None, help='Delta Beta')
     parser.add_argument('--cfg_version', type=str, default='vit_b8', help='Config version in configs/')
     parser.add_argument('--folder', type=str, default='salaad_vision', help='Output folder under data/')
+    parser.add_argument(
+        '--num_total_iters',
+        type=int,
+        default=None,
+        help='Temporarily override num_total_iters from the config',
+    )
 
     return parser.parse_args()
 
@@ -51,6 +57,7 @@ def main(cfg_version: str,
          path_cfg: str,
          path_cfg_model: str,
          folder: str,
+         num_total_iters: int,
          rho: float,
          alpha_rate: float,
          beta_rate: float,
@@ -72,6 +79,10 @@ def main(cfg_version: str,
 
     # load the config
     cfg = read_cfg(path_cfg)
+    if num_total_iters is not None:
+        if num_total_iters <= 0:
+            raise ValueError("num_total_iters must be a positive integer")
+        cfg['num_total_iters'] = num_total_iters
     if cfg.get("model_config"):
         path_cfg_model = os.path.join(root, 'configs', cfg["model_config"])
     
@@ -179,5 +190,6 @@ if __name__ == "__main__":
     exclude_layers = None
 
     main(cfg_version, path_cfg, path_cfg_model, folder,
+         args.num_total_iters,
          args.rho, args.alpha_rate, args.beta_rate, args.dalpha, args.dbeta,
          exclude_layers=exclude_layers)
