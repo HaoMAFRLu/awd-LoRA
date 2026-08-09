@@ -159,19 +159,25 @@ def build_imagenet_dataloader(
         raise FileNotFoundError(
             f"no {split!r} parquet shards found under {data_directory}"
         )
-    rank_shards = shards[rank::world_size]
-    if not rank_shards:
-        raise ValueError(
-            f"rank {rank} received no {split!r} shards: "
-            f"{len(shards)} shards cannot cover world_size={world_size}"
+    split_by_example = len(shards) % world_size != 0
+    rank_shards = shards if split_by_example else shards[rank::world_size]
+    if split_by_example:
+        logger.info(
+            "[Rank {}] ImageNet {} has {} shards for {} ranks; "
+            "samples will be divided across ranks",
+            rank,
+            split,
+            len(shards),
+            world_size,
         )
-    logger.info(
-        "[Rank {}] assigned {} of {} ImageNet {} shards",
-        rank,
-        len(rank_shards),
-        len(shards),
-        split,
-    )
+    else:
+        logger.info(
+            "[Rank {}] assigned {} of {} ImageNet {} shards",
+            rank,
+            len(rank_shards),
+            len(shards),
+            split,
+        )
 
     from datasets import Image as HuggingFaceImage
     from datasets import load_dataset
@@ -201,6 +207,14 @@ def build_imagenet_dataloader(
         dataset = dataset.shuffle(
             seed=config.get("seed_for_shuffle", config.get("seed", 0)),
             buffer_size=shuffle_buffer_size,
+        )
+    if split_by_example:
+        from datasets.distributed import split_dataset_by_node
+
+        dataset = split_dataset_by_node(
+            dataset,
+            rank=rank,
+            world_size=world_size,
         )
 
     return _build_dataloader(

@@ -175,6 +175,40 @@ class ImageNetDataLoaderTest(unittest.TestCase):
         self.assertTrue(labels_by_rank[0].isdisjoint(labels_by_rank[1]))
         self.assertEqual(labels_by_rank[0] | labels_by_rank[1], set(range(4)))
 
+    def test_single_shard_is_split_across_distributed_ranks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            _write_validation_snapshot(root, list(range(6)))
+            config = {
+                "batch_size": 1,
+                "num_workers": 0,
+                "data": {
+                    "type": "vision",
+                    "dataset": "ILSVRC/imagenet-1k",
+                    "location": "local_smoke",
+                    "root": temporary_root,
+                    "cache_dir": str(root / "cache"),
+                    "split": "validation",
+                    "streaming": True,
+                    "shuffle": False,
+                },
+            }
+
+            labels_by_rank = []
+            for rank in range(2):
+                loader = build_imagenet_dataloader(
+                    config,
+                    rank=rank,
+                    world_size=2,
+                )
+                labels_by_rank.append(
+                    {int(batch["labels"].item()) for batch in loader}
+                )
+
+        self.assertTrue(labels_by_rank[0].isdisjoint(labels_by_rank[1]))
+        self.assertEqual(labels_by_rank[0] | labels_by_rank[1], set(range(6)))
+        self.assertEqual([len(labels) for labels in labels_by_rank], [3, 3])
+
     def test_data_root_is_required(self) -> None:
         config = {
             "data": {

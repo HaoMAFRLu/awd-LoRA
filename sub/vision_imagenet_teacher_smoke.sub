@@ -1,0 +1,33 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = \
+    -u -m torch.distributed.run \
+    --nproc_per_node=4 \
+    --nnodes=1 \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint=127.0.0.1:29500 \
+    scripts/train_vision.py \
+    --config configs/vision_imagenet_teacher_cluster_smoke.yaml
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/vision_imagenet_teacher_smoke_$(Cluster)_$(Process).log
+error           = jobs/vision_imagenet_teacher_smoke_$(Cluster)_$(Process).err
+output          = jobs/vision_imagenet_teacher_smoke_$(Cluster)_$(Process).out
+
+request_cpus    = 12
+request_memory  = 64000
+request_gpus    = 4
+
+requirements = ( \
+    CUDACapability >= 9.0 && \
+    CUDACapability < 9.1 && \
+    !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
+    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) && \
+    !regexp("GPU-0e5a23fb", TARGET.DetectedGPUs) \
+)
+
+getenv          = True
+environment     = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+
+queue 1
