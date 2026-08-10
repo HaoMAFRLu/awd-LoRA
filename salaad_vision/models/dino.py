@@ -50,11 +50,13 @@ class DinoViTBase8(nn.Module):
         checkpoint_path: Optional[PathLikeValue] = None,
         *,
         expected_sha256: Optional[str] = None,
+        attention_backend: str = "explicit",
     ) -> None:
         super().__init__()
         self.backbone = vit_base(
             patch_size=DINO_VITB8_PATCH_SIZE,
             num_classes=0,
+            attention_backend=attention_backend,
         )
         if checkpoint_path is not None:
             self.load_checkpoint(

@@ -14,6 +14,7 @@ from salaad_vision.models.dino import (
     DINO_VITB8_NUM_PATCHES,
     DinoViTBase8,
 )
+from salaad_vision.vendor.dino.vision_transformer import Attention
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHECKPOINT = (
@@ -53,6 +54,37 @@ class DinoViTBase8ContractTest(unittest.TestCase):
             self.model(torch.zeros(1, 3, 112, 112))
         with self.assertRaisesRegex(TypeError, "floating-point"):
             self.model(torch.zeros(1, 3, 224, 224, dtype=torch.uint8))
+
+    def test_sdpa_matches_explicit_attention_and_preserves_map_output(self) -> None:
+        torch.manual_seed(7)
+        explicit = Attention(
+            dim=32,
+            num_heads=4,
+            qkv_bias=True,
+            attention_backend="explicit",
+        ).eval()
+        sdpa = Attention(
+            dim=32,
+            num_heads=4,
+            qkv_bias=True,
+            attention_backend="sdpa",
+        ).eval()
+        sdpa.load_state_dict(explicit.state_dict(), strict=True)
+        tokens = torch.randn(2, 11, 32)
+
+        explicit_output, explicit_attention = explicit(tokens)
+        sdpa_output, materialized_attention = sdpa(tokens)
+        _, sdpa_attention = sdpa(tokens, return_attention=True)
+
+        self.assertIsNone(materialized_attention)
+        self.assertTrue(
+            torch.allclose(sdpa_output, explicit_output, atol=1e-6, rtol=1e-5)
+        )
+        self.assertTrue(torch.equal(sdpa_attention, explicit_attention))
+
+    def test_invalid_attention_backend_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "attention_backend"):
+            Attention(dim=32, num_heads=4, attention_backend="unknown")
 
     def test_official_checkpoint_on_local_imagenet_sample(self) -> None:
         checkpoint = DEFAULT_CHECKPOINT

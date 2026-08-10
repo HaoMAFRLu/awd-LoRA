@@ -62,6 +62,7 @@ def print_run_summary(config: Mapping[str, Any], runtime: Runtime) -> None:
     rows = [
         ("Task", f"{task['name']} ({task.get('head', 'default')})"),
         ("Model", f"{model['name']} [{model['variant']}]"),
+        ("Attention", str(model.get("attention_backend", "explicit"))),
         ("Data", f"{data['name']} ({data['train']['split']})"),
         ("Device", str(runtime.device)),
         ("World size", str(runtime.world_size)),

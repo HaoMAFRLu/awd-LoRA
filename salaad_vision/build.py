@@ -62,7 +62,13 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
     if not checkpoint.is_file():
         raise FileNotFoundError(f"model checkpoint does not exist: {checkpoint}")
 
-    model = DinoViTBase8()
+    attention_backend = model_config.get("attention_backend", "explicit")
+    if attention_backend not in {"explicit", "sdpa"}:
+        raise ValueError(
+            "model.attention_backend must be 'explicit' or 'sdpa', "
+            f"got {attention_backend!r}"
+        )
+    model = DinoViTBase8(attention_backend=attention_backend)
     checkpoint_kind = model_config.get("checkpoint_kind")
     if checkpoint_kind == "teacher_backbone":
         expected_sha256 = model_config.get(
