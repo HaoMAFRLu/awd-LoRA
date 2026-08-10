@@ -15,7 +15,7 @@ error           = jobs/vision_imagenet_teacher_h10080_b1024_bf16_sdpa_smoke_$(Cl
 output          = jobs/vision_imagenet_teacher_h10080_b1024_bf16_sdpa_smoke_$(Cluster)_$(Process).out
 
 request_cpus    = 12
-request_memory  = 96000
+request_memory  = 95000
 request_gpus    = 4
 
 requirements = ( \
