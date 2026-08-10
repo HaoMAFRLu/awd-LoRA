@@ -29,12 +29,13 @@ data:
   validation:
     split: validation
     shuffle: false
+    num_workers: 2
     drop_last: false
 
 training:
   epochs: 1
   batch_size: 1024
-  num_workers: 2
+  num_workers: 4
   precision: bfloat16
   max_steps_per_epoch: 50
 
