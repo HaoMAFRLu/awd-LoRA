@@ -29,6 +29,7 @@ data:
   validation:
     split: validation
     shuffle: false
+    num_workers: 2
     drop_last: false
 
 training:
