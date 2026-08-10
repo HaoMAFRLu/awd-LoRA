@@ -1,0 +1,31 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = \
+    -u -m torch.distributed.run \
+    --nproc_per_node=4 \
+    --nnodes=1 \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint=127.0.0.1:29500 \
+    scripts/train_vision.py \
+    --config configs/vision_imagenet_teacher_a10040_cluster.yaml
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/vision_imagenet_teacher_a10040_$(Cluster)_$(Process).log
+error           = jobs/vision_imagenet_teacher_a10040_$(Cluster)_$(Process).err
+output          = jobs/vision_imagenet_teacher_a10040_$(Cluster)_$(Process).out
+
+request_cpus    = 12
+request_memory  = 64000
+request_gpus    = 4
+
+requirements = ( \
+    CUDACapability >= 8.0 && \
+    CUDACapability < 8.1 && \
+    CUDAGlobalMemoryMb >= 40000 && \
+    CUDAGlobalMemoryMb < 80000 \
+)
+
+getenv          = True
+environment     = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+
+queue 1
