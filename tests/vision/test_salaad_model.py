@@ -53,6 +53,17 @@ class _Model(nn.Module):
                 if isinstance(module, nn.Linear):
                     module.weight.fill_(7.0)
 
+    def load_checkpoint(
+        self,
+        checkpoint: Path,
+        *,
+        expected_sha256: str | None = None,
+    ) -> None:
+        if expected_sha256 is not None:
+            raise AssertionError("the synthetic derived checkpoint has no hash")
+        state = torch.load(checkpoint, map_location="cpu", weights_only=True)
+        self.backbone.load_state_dict(state, strict=True)
+
 
 def _layers(variant: str) -> list[str]:
     suffixes = (
@@ -167,32 +178,22 @@ class SalaadModelTest(unittest.TestCase):
                     name,
                 )
 
-    def test_builder_applies_qkv_s50_alpha_and_preserves_v(self) -> None:
+    def test_qkv_s50_alpha_preserves_v_and_other_x(self) -> None:
         source = _Model()
         qkv_names = _layers("salaad_qkv_s50")
         with tempfile.TemporaryDirectory() as temporary_root:
             root = Path(temporary_root)
-            checkpoint = root / "model.pth"
-            torch.save(source.state_dict(), checkpoint)
             _write_matrices(root, source, qkv_names)
-            config = {
-                "model": {
-                    "name": "dino_vitb8",
-                    "variant": "salaad_qkv_s50",
-                    "checkpoint": str(checkpoint),
-                    "checkpoint_kind": "student_model",
-                    "matrix_dir": str(root),
-                    "sparse_keep_fraction": 0.5,
-                    "selected_energy_fraction": 0.5,
-                    "reference_rank": 1,
-                    "alpha": 1.5,
-                    "freeze": True,
-                }
-            }
-
-            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
-                enhanced = build_model(config)
-
+            enhanced = _Model()
+            enhanced.load_state_dict(source.state_dict())
+            apply_salaad_qkv_s50(
+                enhanced,
+                root,
+                sparse_keep_fraction=0.5,
+                selected_energy_fraction=0.5,
+                reference_rank=1,
+                alpha=1.5,
+            )
             baseline = _Model()
             baseline.load_state_dict(source.state_dict())
             apply_salaad_qkv_s50(
@@ -220,8 +221,33 @@ class SalaadModelTest(unittest.TestCase):
                 torch.full((2, 2), 7.0),
             )
         )
+
+    def test_builder_loads_a_prebuilt_derived_backbone(self) -> None:
+        source = _Model()
+        with tempfile.TemporaryDirectory() as temporary_root:
+            checkpoint = Path(temporary_root) / "backbone.pth"
+            torch.save(source.backbone.state_dict(), checkpoint)
+            config = {
+                "model": {
+                    "name": "dino_vitb8",
+                    "variant": "derived",
+                    "checkpoint": str(checkpoint),
+                    "checkpoint_kind": "derived_backbone",
+                    "freeze": True,
+                }
+            }
+
+            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
+                restored = build_model(config)
+
         self.assertTrue(
-            all(not parameter.requires_grad for parameter in enhanced.parameters())
+            all(
+                torch.equal(restored.state_dict()[name], value)
+                for name, value in source.state_dict().items()
+            )
+        )
+        self.assertTrue(
+            all(not parameter.requires_grad for parameter in restored.parameters())
         )
 
     def test_missing_target_layer_is_rejected(self) -> None:

@@ -9,11 +9,7 @@ import torch
 from torch import Tensor
 
 from salaad_vision.data import build_imagenet_dataloader
-from salaad_vision.models import (
-    DinoViTBase8,
-    apply_salaad,
-    apply_salaad_qkv_s50,
-)
+from salaad_vision.models import DinoViTBase8, apply_salaad
 from salaad_vision.models.dino import DINO_VITB8_CHECKPOINT_SHA256
 from salaad_vision.tasks import ClassificationTask
 
@@ -56,7 +52,6 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
         "derived",
         "salaad_all",
         "salaad_qkv",
-        "salaad_qkv_s50",
     }
     if variant not in valid_variants:
         raise ValueError(
@@ -87,14 +82,17 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
     elif checkpoint_kind == "student_model":
         model.load_state_dict(_state(checkpoint), strict=True)
     elif checkpoint_kind == "derived_backbone":
-        model.backbone.load_state_dict(_state(checkpoint), strict=True)
+        model.load_checkpoint(
+            checkpoint,
+            expected_sha256=model_config.get("sha256"),
+        )
     else:
         raise ValueError(
             "model.checkpoint_kind must be 'teacher_backbone', "
             f"'student_model', or 'derived_backbone', got {checkpoint_kind!r}"
         )
 
-    if variant in {"salaad_all", "salaad_qkv", "salaad_qkv_s50"}:
+    if variant in {"salaad_all", "salaad_qkv"}:
         if checkpoint_kind != "student_model":
             raise ValueError(f"{variant} requires checkpoint_kind='student_model'")
         matrix_dir = _path(model_config.get("matrix_dir"), "model.matrix_dir")
@@ -102,19 +100,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
             raise ValueError(
                 f"{variant} checkpoint and matrix files must be in the same directory"
             )
-        if variant == "salaad_qkv_s50":
-            apply_salaad_qkv_s50(
-                model,
-                matrix_dir,
-                sparse_keep_fraction=model_config.get("sparse_keep_fraction"),
-                selected_energy_fraction=model_config.get(
-                    "selected_energy_fraction"
-                ),
-                reference_rank=model_config.get("reference_rank"),
-                alpha=model_config.get("alpha"),
-            )
-        else:
-            apply_salaad(model, matrix_dir, variant)
+        apply_salaad(model, matrix_dir, variant)
     elif "matrix_dir" in model_config:
         raise ValueError(f"model.matrix_dir is not used by variant={variant!r}")
 

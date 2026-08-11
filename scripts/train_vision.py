@@ -59,9 +59,13 @@ def print_run_summary(config: Mapping[str, Any], runtime: Runtime) -> None:
     else:
         wandb_status = "disabled"
 
+    model_summary = f"{model['name']} [{model['variant']}]"
+    if model.get("label"):
+        model_summary += f" ({model['label']})"
+
     rows = [
         ("Task", f"{task['name']} ({task.get('head', 'default')})"),
-        ("Model", f"{model['name']} [{model['variant']}]"),
+        ("Model", model_summary),
         ("Attention", str(model.get("attention_backend", "explicit"))),
         ("Data", f"{data['name']} ({data['train']['split']})"),
         ("Device", str(runtime.device)),

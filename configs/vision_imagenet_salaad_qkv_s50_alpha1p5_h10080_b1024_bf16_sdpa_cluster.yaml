@@ -7,10 +7,13 @@ task:
 
 model:
   name: dino_vitb8
-  variant: salaad_qkv_s50
-  checkpoint: data/salaad_vision/vit_b8_qkv/20260804_111549/model.pth
-  checkpoint_kind: student_model
-  matrix_dir: data/salaad_vision/vit_b8_qkv/20260804_111549
+  variant: derived
+  label: salaad_qkv_s50_alpha1p5
+  checkpoint: data/salaad_vision/pretrained/salaad_qkv_s50_alpha1p5_backbone.pth
+  checkpoint_kind: derived_backbone
+  sha256: ce5f0c53a25a2bf6d5102aeaabba623295e567c90cff2114f3b44753eff2d92d
+  source_checkpoint: data/salaad_vision/vit_b8_qkv/20260804_111549/model.pth
+  source_matrix_dir: data/salaad_vision/vit_b8_qkv/20260804_111549
   sparse_keep_fraction: 0.5
   selected_energy_fraction: 0.5
   reference_rank: 150
