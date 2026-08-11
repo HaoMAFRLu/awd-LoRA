@@ -2,7 +2,7 @@
 
 from .dino import DinoFeatures, DinoViTBase8
 from .linear_probe import DINO_LINEAR_INPUT_DIM, DinoLinearHead
-from .salaad import apply_salaad
+from .salaad import apply_salaad, apply_salaad_qkv_s50
 
 __all__ = [
     "DINO_LINEAR_INPUT_DIM",
@@ -10,4 +10,5 @@ __all__ = [
     "DinoLinearHead",
     "DinoViTBase8",
     "apply_salaad",
+    "apply_salaad_qkv_s50",
 ]

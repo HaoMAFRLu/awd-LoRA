@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import math
 import pickle
 import re
 from pathlib import Path
@@ -94,6 +95,123 @@ def _expected(model: nn.Module, variant: str) -> Set[str]:
     raise ValueError(f"unsupported SALAAD variant: {variant!r}")
 
 
+def _fraction(value: float, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{name} must be a number")
+    value = float(value)
+    if not 0.0 < value <= 1.0:
+        raise ValueError(f"{name} must be in (0, 1]")
+    return value
+
+
+def _top_magnitude_fraction(sparse: Tensor, fraction: float) -> Tensor:
+    flat = sparse.flatten()
+    nonzero_indices = torch.nonzero(flat, as_tuple=False).flatten()
+    total_nonzero = int(nonzero_indices.numel())
+    if total_nonzero == 0:
+        return torch.zeros_like(sparse)
+    if fraction == 1.0:
+        return sparse.clone()
+
+    retained = min(total_nonzero, max(1, round(total_nonzero * fraction)))
+    magnitudes = flat[nonzero_indices].abs()
+    selected_local = torch.topk(
+        magnitudes,
+        retained,
+        largest=True,
+        sorted=False,
+    ).indices
+    selected_indices = nonzero_indices[selected_local]
+    retained_flat = torch.zeros_like(flat)
+    retained_flat[selected_indices] = flat[selected_indices]
+    return retained_flat.reshape_as(sparse)
+
+
+def _split_low_output_similarity(
+    sparse: Tensor,
+    cross_low_rank: Tensor,
+    *,
+    energy_fraction: float,
+    reference_rank: int,
+) -> tuple[Tensor, Tensor]:
+    if int(torch.count_nonzero(sparse)) == 0 or float(sparse.norm()) == 0.0:
+        zero = torch.zeros_like(sparse)
+        return zero.clone(), zero
+
+    sparse_u, singular_values, sparse_vh = torch.linalg.svd(
+        sparse.double(),
+        full_matrices=False,
+    )
+    cross_u = torch.linalg.svd(
+        cross_low_rank.double(),
+        full_matrices=False,
+    ).U
+    effective_rank = min(reference_rank, cross_u.shape[1])
+    similarities = (
+        cross_u[:, :effective_rank].T @ sparse_u
+    ).square().sum(dim=0)
+    energies = singular_values.square()
+    energies /= energies.sum()
+    order = torch.argsort(similarities)
+    cumulative_energy = energies[order].cumsum(dim=0)
+    selected_count = int(
+        torch.searchsorted(cumulative_energy, energy_fraction).item()
+    ) + 1
+    selected_mask = torch.zeros_like(similarities, dtype=torch.bool)
+    selected_mask[order[:selected_count]] = True
+    selected = (
+        (
+            sparse_u[:, selected_mask]
+            * singular_values[selected_mask].unsqueeze(0)
+        )
+        @ sparse_vh[selected_mask]
+    ).to(dtype=sparse.dtype)
+    fixed = sparse - selected
+    return fixed, selected
+
+
+def _s50_alpha_weight(
+    low_rank: Tensor,
+    sparse: Tensor,
+    *,
+    sparse_keep_fraction: float,
+    selected_energy_fraction: float,
+    reference_rank: int,
+    alpha: float,
+) -> Tensor:
+    if low_rank.shape[0] % 3 != 0:
+        raise ValueError(
+            "qkv output dimension must be divisible by three, "
+            f"got {low_rank.shape[0]}"
+        )
+    low_q, low_k, low_v = low_rank.float().chunk(3, dim=0)
+    sparse_q, sparse_k, sparse_v = sparse.float().chunk(3, dim=0)
+    sparse_q50 = _top_magnitude_fraction(sparse_q, sparse_keep_fraction)
+    sparse_k50 = _top_magnitude_fraction(sparse_k, sparse_keep_fraction)
+    fixed_q, selected_q = _split_low_output_similarity(
+        sparse_q50,
+        low_k,
+        energy_fraction=selected_energy_fraction,
+        reference_rank=reference_rank,
+    )
+    fixed_k, selected_k = _split_low_output_similarity(
+        sparse_k50,
+        low_q,
+        energy_fraction=selected_energy_fraction,
+        reference_rank=reference_rank,
+    )
+    enhanced_q = fixed_q + alpha * selected_q
+    enhanced_k = fixed_k + alpha * selected_k
+    return torch.cat(
+        (
+            low_q + enhanced_q,
+            low_k + enhanced_k,
+            low_v + sparse_v,
+        ),
+        dim=0,
+    )
+
+
 @torch.no_grad()
 def apply_salaad(model: nn.Module, matrix_dir: Path, variant: str) -> Set[str]:
     """Replace the variant's target weights by the saved full L+S matrices."""
@@ -146,5 +264,95 @@ def apply_salaad(model: nn.Module, matrix_dir: Path, variant: str) -> Set[str]:
     if missing:
         raise ValueError(
             f"{variant} decomposition is incomplete; missing={sorted(missing)}"
+        )
+    return seen
+
+
+@torch.no_grad()
+def apply_salaad_qkv_s50(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    sparse_keep_fraction: float,
+    selected_energy_fraction: float,
+    reference_rank: int,
+    alpha: float,
+) -> Set[str]:
+    """Restore qkv with the all-layer S50 output/output intervention."""
+    sparse_keep_fraction = _fraction(
+        sparse_keep_fraction,
+        "sparse_keep_fraction",
+    )
+    selected_energy_fraction = _fraction(
+        selected_energy_fraction,
+        "selected_energy_fraction",
+    )
+    if isinstance(reference_rank, bool) or not isinstance(reference_rank, int):
+        raise TypeError("reference_rank must be an integer")
+    if reference_rank <= 0:
+        raise ValueError("reference_rank must be positive")
+    if isinstance(alpha, bool) or not isinstance(alpha, (int, float)):
+        raise TypeError("alpha must be a number")
+    alpha = float(alpha)
+    if not math.isfinite(alpha):
+        raise ValueError("alpha must be finite")
+
+    expected = _expected(model, "salaad_qkv")
+    seen: Set[str] = set()
+    for matrix_file in _files(matrix_dir):
+        low_rank, sparse = _load(matrix_file)
+        for layer_name in sorted(low_rank):
+            if layer_name in seen:
+                raise ValueError(f"duplicate SALAAD layer: {layer_name}")
+            if layer_name not in expected:
+                raise ValueError(
+                    "salaad_qkv_s50 contains an unexpected decomposed layer: "
+                    f"{layer_name}"
+                )
+
+            layer = model.get_submodule(layer_name)
+            low_rank_weight = low_rank[layer_name]
+            sparse_weight = sparse[layer_name]
+            if not isinstance(low_rank_weight, Tensor) or not isinstance(
+                sparse_weight,
+                Tensor,
+            ):
+                raise TypeError(f"SALAAD L and S must be tensors for {layer_name}")
+            if (
+                low_rank_weight.shape != layer.weight.shape
+                or sparse_weight.shape != layer.weight.shape
+            ):
+                raise ValueError(
+                    f"SALAAD shape mismatch for {layer_name}: "
+                    f"X={tuple(layer.weight.shape)}, "
+                    f"L={tuple(low_rank_weight.shape)}, "
+                    f"S={tuple(sparse_weight.shape)}"
+                )
+            if not torch.isfinite(low_rank_weight).all() or not torch.isfinite(
+                sparse_weight
+            ).all():
+                raise ValueError(f"SALAAD contains non-finite values for {layer_name}")
+
+            replacement = _s50_alpha_weight(
+                low_rank_weight,
+                sparse_weight,
+                sparse_keep_fraction=sparse_keep_fraction,
+                selected_energy_fraction=selected_energy_fraction,
+                reference_rank=reference_rank,
+                alpha=alpha,
+            )
+            layer.weight.copy_(
+                replacement.to(
+                    device=layer.weight.device,
+                    dtype=layer.weight.dtype,
+                )
+            )
+            seen.add(layer_name)
+
+    missing = expected - seen
+    if missing:
+        raise ValueError(
+            "salaad_qkv_s50 decomposition is incomplete; "
+            f"missing={sorted(missing)}"
         )
     return seen

@@ -12,7 +12,7 @@ import torch
 from torch import nn
 
 from salaad_vision.build import build_model
-from salaad_vision.models import apply_salaad
+from salaad_vision.models import apply_salaad, apply_salaad_qkv_s50
 
 _SUFFIXES = ("attn.qkv", "attn.proj", "mlp.fc1", "mlp.fc2")
 
@@ -20,7 +20,7 @@ _SUFFIXES = ("attn.qkv", "attn.proj", "mlp.fc1", "mlp.fc2")
 class _Attention(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.qkv = nn.Linear(2, 2, bias=False)
+        self.qkv = nn.Linear(2, 6, bias=False)
         self.proj = nn.Linear(2, 2, bias=False)
 
 
@@ -55,7 +55,11 @@ class _Model(nn.Module):
 
 
 def _layers(variant: str) -> list[str]:
-    suffixes = ("attn.qkv",) if variant == "salaad_qkv" else _SUFFIXES
+    suffixes = (
+        ("attn.qkv",)
+        if variant in {"salaad_qkv", "salaad_qkv_s50"}
+        else _SUFFIXES
+    )
     return [
         f"backbone.blocks.{block}.{suffix}"
         for block in range(12)
@@ -104,7 +108,7 @@ class SalaadModelTest(unittest.TestCase):
         self.assertTrue(
             torch.equal(
                 model.backbone.blocks[0].attn.qkv.weight,
-                torch.full((2, 2), 3.0),
+                torch.full((6, 2), 3.0),
             )
         )
         self.assertTrue(
@@ -132,7 +136,7 @@ class SalaadModelTest(unittest.TestCase):
             self.assertTrue(
                 torch.equal(
                     model.get_submodule(name).weight,
-                    torch.full((2, 2), 3.0),
+                    torch.full_like(model.get_submodule(name).weight, 3.0),
                 ),
                 name,
             )
@@ -155,10 +159,70 @@ class SalaadModelTest(unittest.TestCase):
                 self.assertTrue(
                     torch.equal(
                         model.get_submodule(name).weight,
-                        torch.full((2, 2), expected),
+                        torch.full_like(
+                            model.get_submodule(name).weight,
+                            expected,
+                        ),
                     ),
                     name,
                 )
+
+    def test_builder_applies_qkv_s50_alpha_and_preserves_v(self) -> None:
+        source = _Model()
+        qkv_names = _layers("salaad_qkv_s50")
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            checkpoint = root / "model.pth"
+            torch.save(source.state_dict(), checkpoint)
+            _write_matrices(root, source, qkv_names)
+            config = {
+                "model": {
+                    "name": "dino_vitb8",
+                    "variant": "salaad_qkv_s50",
+                    "checkpoint": str(checkpoint),
+                    "checkpoint_kind": "student_model",
+                    "matrix_dir": str(root),
+                    "sparse_keep_fraction": 0.5,
+                    "selected_energy_fraction": 0.5,
+                    "reference_rank": 1,
+                    "alpha": 1.5,
+                    "freeze": True,
+                }
+            }
+
+            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
+                enhanced = build_model(config)
+
+            baseline = _Model()
+            baseline.load_state_dict(source.state_dict())
+            apply_salaad_qkv_s50(
+                baseline,
+                root,
+                sparse_keep_fraction=0.5,
+                selected_energy_fraction=0.5,
+                reference_rank=1,
+                alpha=1.0,
+            )
+
+        enhanced_q, enhanced_k, enhanced_v = (
+            enhanced.backbone.blocks[0].attn.qkv.weight.chunk(3, dim=0)
+        )
+        baseline_q, baseline_k, baseline_v = (
+            baseline.backbone.blocks[0].attn.qkv.weight.chunk(3, dim=0)
+        )
+        self.assertFalse(torch.equal(enhanced_q, baseline_q))
+        self.assertFalse(torch.equal(enhanced_k, baseline_k))
+        self.assertTrue(torch.equal(enhanced_v, baseline_v))
+        self.assertTrue(torch.equal(enhanced_v, torch.full((2, 2), 3.0)))
+        self.assertTrue(
+            torch.equal(
+                enhanced.backbone.blocks[0].attn.proj.weight,
+                torch.full((2, 2), 7.0),
+            )
+        )
+        self.assertTrue(
+            all(not parameter.requires_grad for parameter in enhanced.parameters())
+        )
 
     def test_missing_target_layer_is_rejected(self) -> None:
         model = _Model()
