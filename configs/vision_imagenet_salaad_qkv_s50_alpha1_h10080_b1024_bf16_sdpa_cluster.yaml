@@ -1,0 +1,73 @@
+seed: 42
+
+task:
+  name: classification
+  head: linear
+  num_classes: 1000
+
+model:
+  name: dino_vitb8
+  variant: derived
+  label: salaad_qkv_s50_alpha1
+  checkpoint: data/salaad_vision/pretrained/salaad_qkv_s50_alpha1_backbone.pth
+  checkpoint_kind: derived_backbone
+  sha256: 48b912afc5a91892997ef07fb6da9f5aa811b820cb11720678ed3ca76aa91afa
+  source_checkpoint: data/salaad_vision/vit_b8_qkv/20260804_111549/model.pth
+  source_matrix_dir: data/salaad_vision/vit_b8_qkv/20260804_111549
+  sparse_keep_fraction: 0.5
+  selected_energy_fraction: 0.5
+  reference_rank: 150
+  alpha: 1.0
+  attention_backend: sdpa
+  freeze: true
+
+data:
+  name: imagenet
+  dataset: ILSVRC/imagenet-1k
+  location: cluster_snapshot
+  root: /lustre/fast/fast/hma2/data/imagenet2012/hf_cache/hub/datasets--ILSVRC--imagenet-1k/snapshots/49e2ee26f3810fb5a7536bbf732a7b07389a47b5
+  cache_dir: /lustre/home/hma2/hf/datasets
+  streaming: true
+  pin_memory: true
+  train:
+    split: train
+    shuffle: true
+    shuffle_buffer_size: 10000
+    drop_last: true
+  validation:
+    split: validation
+    shuffle: false
+    num_workers: 2
+    drop_last: false
+
+training:
+  epochs: 50
+  batch_size: 1024
+  num_workers: 4
+  precision: bfloat16
+
+optimizer:
+  name: sgd
+  lr: 0.016
+  momentum: 0.9
+  weight_decay: 0.0
+
+scheduler:
+  name: cosine
+  min_lr: 0.0
+
+wandb:
+  enabled: true
+  project: SALAAD_VISION_DOWNSTREAM
+  entity: hao-ma-eth-z-rich
+  group: imagenet_linear_probe_salaad_qkv_s50_alpha1
+  job_type: linear_probe
+
+runtime:
+  device: cuda
+  distributed: true
+  backend: nccl
+
+output:
+  save: true
+  dir: data/salaad_vision/downstream/salaad_qkv_s50_alpha1_imagenet_linear_probe
