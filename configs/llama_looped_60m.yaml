@@ -5,7 +5,6 @@ training_mode: loop
 output_folder: looped_transformer
 wandb_project: LOOPED_TRANSFORMER
 
-# Same text pipeline as the existing Llama SALAAD runs, made explicit here.
 tokenizer_name: t5-base
 data:
   type: text
@@ -14,15 +13,17 @@ data:
   split: train
   streaming: true
 
-num_total_iters: 4
-num_freq: 2
+num_total_iters: 11000
+num_freq: 10
 is_wandb: true
 is_monitor: true
-save_interval: 20
+save_interval: 1000
 is_clip: 1.0
 max_length: 256
 seed_for_shuffle: 42
-batch_size: 2
+
+# Global batch size: 128 samples per GPU with four DDP ranks.
+batch_size: 512
 num_workers: 0
 
 # Training samples one shared depth per optimizer step. The probabilities have
