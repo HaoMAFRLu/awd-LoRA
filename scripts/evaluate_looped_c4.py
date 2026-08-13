@@ -1,4 +1,4 @@
-"""Evaluate vanilla and variable-depth looped Llama checkpoints on fixed C4 batches."""
+"""Evaluate vanilla and variable-depth Llama execution paths on fixed C4 batches."""
 
 import argparse
 import csv
@@ -86,6 +86,90 @@ def _build_model(
     model.to(device=device, dtype=precision)
     model.eval()
     return model
+
+
+def _configure_vanilla_middle_loop(model: torch.nn.Module) -> None:
+    """Loop all vanilla decoder blocks except its first and last blocks.
+
+    This changes only the forward execution order. The model parameters and
+    checkpoint values remain untouched.
+    """
+    decoder = model.model
+    num_layers = len(decoder.layers)
+    if num_layers != 8:
+        raise ValueError(
+            "vanilla middle-loop evaluation requires exactly 8 physical layers; "
+            f"got {num_layers}"
+        )
+
+    decoder.entry_layers = (0,)
+    decoder.loop_layers = tuple(range(1, num_layers - 1))
+    decoder.exit_layers = (num_layers - 1,)
+
+
+def _run_vanilla_middle_loop_evaluation(
+    config: Dict[str, Any],
+    batches: List[Dict[str, torch.Tensor]],
+    pad_token_id: int,
+    device: torch.device,
+    precision: torch.dtype,
+    rank: int,
+) -> List[Dict[str, Any]]:
+    checkpoint_config = config["checkpoints"]["vanilla"]
+    if rank == 0:
+        print("\nLoading vanilla checkpoint and looping its middle six layers...")
+    model = _build_model(
+        checkpoint_config["model_config"],
+        checkpoint_config["checkpoint"],
+        device,
+        precision,
+    )
+    _configure_vanilla_middle_loop(model)
+
+    loop_values = [int(value) for value in config["loop_values"]]
+    if loop_values != [2, 4, 6, 8, 10]:
+        raise ValueError("vanilla middle-loop values must be exactly [2, 4, 6, 8, 10]")
+
+    # The trained looped model uses a three-block recurrent region. One pass
+    # through vanilla's six-block middle region therefore represents two of
+    # those reported loop units.
+    loop_units_per_middle_pass = int(config.get("loop_units_per_middle_pass", 2))
+    if loop_units_per_middle_pass != 2:
+        raise ValueError("loop_units_per_middle_pass must be 2")
+
+    results: List[Dict[str, Any]] = []
+    for num_loops in loop_values:
+        if num_loops % loop_units_per_middle_pass != 0:
+            raise ValueError(
+                f"num_loop={num_loops} is not divisible by "
+                f"loop_units_per_middle_pass={loop_units_per_middle_pass}"
+            )
+        middle_passes = num_loops // loop_units_per_middle_pass
+        model.model.set_num_loops(middle_passes)
+
+        if num_loops == 2 and model.model.layer_order != tuple(range(8)):
+            raise RuntimeError(
+                "num_loop=2 must reproduce the original vanilla execution order; "
+                f"got {model.model.layer_order}"
+            )
+
+        metrics = _evaluate_condition(model, batches, pad_token_id, device)
+        result = {
+            "condition": f"vanilla_loop_{num_loops}",
+            "num_loops": num_loops,
+            "middle_passes": middle_passes,
+            "logical_depth": len(model.model.layer_order),
+            **metrics,
+        }
+        results.append(result)
+        if rank == 0:
+            print(
+                f"num_loop={num_loops:>2d}, middle_passes={middle_passes}, "
+                f"depth={result['logical_depth']:>2d}: "
+                f"loss={result['loss']:.6f}, ppl={result['perplexity']:.4f}"
+            )
+
+    return results
 
 
 def _cache_eval_batches(
@@ -233,21 +317,22 @@ def _write_results(
 
 def _print_results(results: List[Dict[str, Any]]) -> None:
     print("\nEvaluation results")
-    print("=" * 105)
+    print("=" * 125)
     print(
-        f"{'condition':<12} {'loops':>5} {'depth':>6} {'loss':>10} "
+        f"{'condition':<18} {'loops':>5} {'passes':>7} {'depth':>6} {'loss':>10} "
         f"{'ppl':>10} {'tokens':>12} {'seconds':>10} {'tokens/s':>12}"
     )
-    print("-" * 105)
+    print("-" * 125)
     for result in results:
         loops = "-" if result["num_loops"] is None else str(result["num_loops"])
+        passes = str(result.get("middle_passes", "-"))
         print(
-            f"{result['condition']:<12} {loops:>5} "
+            f"{result['condition']:<18} {loops:>5} {passes:>7} "
             f"{result['logical_depth']:>6d} {result['loss']:>10.6f} "
             f"{result['perplexity']:>10.4f} {result['tokens']:>12d} "
             f"{result['seconds']:>10.2f} {result['tokens_per_second']:>12.0f}"
         )
-    print("=" * 105)
+    print("=" * 125)
 
 
 def main() -> None:
@@ -315,58 +400,71 @@ def main() -> None:
         run.define_metric("condition_index")
         run.define_metric("eval/*", step_metric="condition_index")
 
-    results: List[Dict[str, Any]] = []
-    checkpoint_config = config["checkpoints"]
-
-    if rank == 0:
-        print("\nLoading vanilla checkpoint...")
-    vanilla = _build_model(
-        checkpoint_config["vanilla"]["model_config"],
-        checkpoint_config["vanilla"]["checkpoint"],
-        device,
-        precision,
-    )
-    vanilla_metrics = _evaluate_condition(vanilla, batches, pad_token_id, device)
-    results.append({
-        "condition": "vanilla",
-        "num_loops": None,
-        "logical_depth": len(vanilla.model.layer_order),
-        **vanilla_metrics,
-    })
-    del vanilla
-    torch.cuda.empty_cache()
-
-    if rank == 0:
-        print(
-            f"vanilla: loss={vanilla_metrics['loss']:.6f}, "
-            f"ppl={vanilla_metrics['perplexity']:.4f}"
+    evaluation_mode = config.get("evaluation_mode", "vanilla_and_looped")
+    if evaluation_mode == "vanilla_middle_loop":
+        results = _run_vanilla_middle_loop_evaluation(
+            config,
+            batches,
+            pad_token_id,
+            device,
+            precision,
+            rank,
         )
-        print("\nLoading looped checkpoint...")
-    looped = _build_model(
-        checkpoint_config["looped"]["model_config"],
-        checkpoint_config["looped"]["checkpoint"],
-        device,
-        precision,
-    )
-    loop_values = [int(value) for value in config["loop_values"]]
-    if loop_values != list(range(1, 11)):
-        raise ValueError("loop_values must be exactly [1, 2, ..., 10]")
+    elif evaluation_mode == "vanilla_and_looped":
+        results = []
+        checkpoint_config = config["checkpoints"]
 
-    for num_loops in loop_values:
-        looped.model.set_num_loops(num_loops)
-        loop_metrics = _evaluate_condition(looped, batches, pad_token_id, device)
-        result = {
-            "condition": f"loop_{num_loops}",
-            "num_loops": num_loops,
-            "logical_depth": len(looped.model.layer_order),
-            **loop_metrics,
-        }
-        results.append(result)
+        if rank == 0:
+            print("\nLoading vanilla checkpoint...")
+        vanilla = _build_model(
+            checkpoint_config["vanilla"]["model_config"],
+            checkpoint_config["vanilla"]["checkpoint"],
+            device,
+            precision,
+        )
+        vanilla_metrics = _evaluate_condition(vanilla, batches, pad_token_id, device)
+        results.append({
+            "condition": "vanilla",
+            "num_loops": None,
+            "logical_depth": len(vanilla.model.layer_order),
+            **vanilla_metrics,
+        })
+        del vanilla
+        torch.cuda.empty_cache()
+
         if rank == 0:
             print(
-                f"loop={num_loops:>2d}, depth={result['logical_depth']:>2d}: "
-                f"loss={result['loss']:.6f}, ppl={result['perplexity']:.4f}"
+                f"vanilla: loss={vanilla_metrics['loss']:.6f}, "
+                f"ppl={vanilla_metrics['perplexity']:.4f}"
             )
+            print("\nLoading looped checkpoint...")
+        looped = _build_model(
+            checkpoint_config["looped"]["model_config"],
+            checkpoint_config["looped"]["checkpoint"],
+            device,
+            precision,
+        )
+        loop_values = [int(value) for value in config["loop_values"]]
+        if loop_values != list(range(1, 11)):
+            raise ValueError("loop_values must be exactly [1, 2, ..., 10]")
+
+        for num_loops in loop_values:
+            looped.model.set_num_loops(num_loops)
+            loop_metrics = _evaluate_condition(looped, batches, pad_token_id, device)
+            result = {
+                "condition": f"loop_{num_loops}",
+                "num_loops": num_loops,
+                "logical_depth": len(looped.model.layer_order),
+                **loop_metrics,
+            }
+            results.append(result)
+            if rank == 0:
+                print(
+                    f"loop={num_loops:>2d}, depth={result['logical_depth']:>2d}: "
+                    f"loss={result['loss']:.6f}, ppl={result['perplexity']:.4f}"
+                )
+    else:
+        raise ValueError(f"unsupported evaluation_mode: {evaluation_mode!r}")
 
     if rank == 0:
         vanilla_loss = results[0]["loss"]
@@ -381,6 +479,7 @@ def main() -> None:
                     "eval/num_loops": (
                         -1 if result["num_loops"] is None else result["num_loops"]
                     ),
+                    "eval/middle_passes": result.get("middle_passes", -1),
                     "eval/logical_depth": result["logical_depth"],
                     "eval/tokens": result["tokens"],
                     "eval/seconds": result["seconds"],

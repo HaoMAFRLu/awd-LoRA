@@ -1,0 +1,36 @@
+evaluation_mode: vanilla_middle_loop
+
+seed: 43
+seed_for_shuffle: 43
+
+tokenizer_name: t5-base
+max_length: 256
+precision: bfloat16
+
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: validation
+  streaming: true
+
+# Reuse the same C4 validation population as the preceding evaluation.
+batch_size: 512
+num_eval_batches: 250
+num_workers: 0
+
+checkpoints:
+  vanilla:
+    model_config: configs/llama_60m_model.json
+    checkpoint: data/looped_transformer/llama_vanilla_60m/20260813_184120/model.pth
+
+# The vanilla middle region has six blocks, twice the three-block recurrent
+# region of the trained looped model. Thus one middle pass is reported as
+# num_loop=2, two middle passes as num_loop=4, and so on.
+loop_units_per_middle_pass: 2
+loop_values: [2, 4, 6, 8, 10]
+
+output_directory: data/looped_transformer/evaluation/vanilla_middle6_c4_seed43
+is_wandb: true
+wandb_project: LOOPED_TRANSFORMER
+wandb_group: vanilla_middle6_c4_seed43_evaluation
