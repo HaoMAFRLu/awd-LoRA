@@ -37,6 +37,9 @@
 # ignore wandb
 /wandb
 
+# ignore local and cluster job logs
+/jobs
+
 # ignore adaptive wavelets
 /adaptive-wavelets
 
