@@ -1,0 +1,45 @@
+seed: 42
+name: llama_vanilla_60m
+model_config: llama_60m_model.json
+training_mode: vanilla
+output_folder: looped_transformer
+wandb_project: LOOPED_TRANSFORMER
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 10
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+# Global batch size: 128 samples per GPU with four DDP ranks.
+batch_size: 512
+num_workers: 0
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas:
+      - 0.9
+      - 0.95
+    eps: 1.0e-08
+    weight_decay: 0.0
+
+layers: []
