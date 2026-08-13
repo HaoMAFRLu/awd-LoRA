@@ -1,0 +1,70 @@
+seed: 42
+name: llama_looped_60m_e10
+model_config: llama_looped_60m_model.json
+training_mode: loop
+output_folder: looped_transformer
+wandb_project: LOOPED_TRANSFORMER
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 10
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+# Keep the effective batch and token budget identical to the E2 and E4 runs.
+# A forced-loop-15 smoke test validates this batch before formal submission.
+batch_size: 512
+num_workers: 0
+
+# Relative weights are w_i = 4 + 3*i for i=1,...,15. LoopSampler
+# normalizes them internally. Their exact expectation is 4200 / 420 = 10.
+loop:
+  # Fallback evaluation depth; training samples a new distributed depth at
+  # every optimizer iteration.
+  num_loops: 10
+  sampling:
+    values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    probabilities: [7, 10, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46, 49]
+    expected_value: 10.0
+    seed: 42
+
+soft_tie:
+  source_block: layers.0
+  target_block: layers.3
+  rho: 0.1
+  epsilon: 1.0e-12
+  # Only matrices are aligned; the two RMSNorm vectors remain independent.
+  parameter_names:
+    - self_attn.q_proj.weight
+    - self_attn.k_proj.weight
+    - self_attn.v_proj.weight
+    - self_attn.o_proj.weight
+    - mlp.gate_proj.weight
+    - mlp.up_proj.weight
+    - mlp.down_proj.weight
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas:
+      - 0.9
+      - 0.95
+    eps: 1.0e-08
+    weight_decay: 0.0
