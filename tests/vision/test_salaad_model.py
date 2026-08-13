@@ -12,7 +12,13 @@ import torch
 from torch import nn
 
 from salaad_vision.build import build_model
-from salaad_vision.models import apply_salaad, apply_salaad_qkv_s50
+from salaad_vision.models import (
+    SplitQKAttention,
+    apply_salaad,
+    apply_salaad_qkv_s50,
+    split_qk_attention,
+)
+from salaad_vision.vendor.dino.vision_transformer import Attention
 
 _SUFFIXES = ("attn.qkv", "attn.proj", "mlp.fc1", "mlp.fc2")
 
@@ -94,6 +100,133 @@ def _write_matrices(root: Path, model: nn.Module, names: list[str]) -> None:
 
 
 class SalaadModelTest(unittest.TestCase):
+    def test_split_attention_exactly_expands_qk_logits(self) -> None:
+        torch.manual_seed(17)
+        attention = Attention(
+            dim=12,
+            num_heads=3,
+            qkv_bias=True,
+            attention_backend="explicit",
+        ).eval()
+        sparse = torch.randn_like(attention.qkv.weight) * 0.01
+        low_rank = attention.qkv.weight.detach() - sparse
+        tokens = torch.randn(2, 7, 12)
+        expected_output, expected_attention = attention(
+            tokens,
+            return_attention=True,
+        )
+        original_keys = set(attention.state_dict())
+
+        split = SplitQKAttention(attention, low_rank, sparse).eval()
+        output, actual_attention, components = split(
+            tokens,
+            return_attention=True,
+            return_logit_components=True,
+        )
+        _, implicit_attention = split(tokens)
+
+        self.assertEqual(tuple(components), ("LL", "SL", "LS", "SS"))
+        self.assertEqual(split.logit_scales, {name: 1.0 for name in components})
+        self.assertEqual(set(split.state_dict()), original_keys)
+        self.assertIsNotNone(implicit_attention)
+        self.assertTrue(
+            torch.allclose(actual_attention, expected_attention, atol=1e-6, rtol=1e-5)
+        )
+        self.assertTrue(
+            torch.allclose(output, expected_output, atol=1e-6, rtol=1e-5)
+        )
+
+        qkv = attention.qkv(tokens).reshape(2, 7, 3, 3, 4).permute(2, 0, 3, 1, 4)
+        direct_logits = (qkv[0] @ qkv[1].transpose(-2, -1)) * attention.scale
+        expanded_logits = sum(components.values())
+        self.assertTrue(
+            torch.allclose(expanded_logits, direct_logits, atol=1e-6, rtol=1e-5)
+        )
+
+    def test_split_attention_scales_paths_independently(self) -> None:
+        torch.manual_seed(23)
+        attention = Attention(dim=8, num_heads=2, qkv_bias=True).eval()
+        sparse = torch.randn_like(attention.qkv.weight) * 0.01
+        low_rank = attention.qkv.weight.detach() - sparse
+        split = SplitQKAttention(attention, low_rank, sparse).eval()
+        tokens = torch.randn(1, 5, 8)
+        split.set_logit_scales(SL=0.0, LS=2.0, SS=-1.0)
+
+        _, actual_attention, components = split(
+            tokens,
+            return_attention=True,
+            return_logit_components=True,
+        )
+        expected_logits = components["LL"] + 2.0 * components["LS"] - components["SS"]
+        self.assertTrue(
+            torch.allclose(actual_attention, expected_logits.softmax(dim=-1))
+        )
+
+        split.reset_logit_scales()
+        replaced_components = dict(components)
+        q_low, q_sparse, k_low, _ = split.project_qk(tokens)
+        projected_zero_sparse = split.project_operand(
+            tokens,
+            torch.zeros_like(split.q_sparse_weight),
+        )
+        replaced_components["SL"] = split.build_logit_component(
+            projected_zero_sparse,
+            k_low,
+        )
+        _, replaced_attention = split.forward_from_logit_components(
+            tokens,
+            replaced_components,
+            return_attention=True,
+        )
+        expected_replaced_logits = (
+            components["LL"] + components["LS"] + components["SS"]
+        )
+        self.assertTrue(
+            torch.allclose(
+                replaced_attention,
+                expected_replaced_logits.softmax(dim=-1),
+            )
+        )
+
+        split.reset_logit_scales()
+        self.assertEqual(
+            split.logit_scales,
+            {"LL": 1.0, "SL": 1.0, "LS": 1.0, "SS": 1.0},
+        )
+
+    def test_split_helper_changes_only_requested_one_based_layer(self) -> None:
+        model = _Model()
+        for block in model.backbone.blocks:
+            block.attn = Attention(dim=2, num_heads=1, qkv_bias=False)
+        untouched_weight = model.backbone.blocks[5].attn.qkv.weight.detach().clone()
+        names = _layers("salaad_qkv")
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            _write_matrices(root, model, names)
+            split = split_qk_attention(model, root, layer=7, restore=True)
+
+        self.assertIs(model.backbone.blocks[6].attn, split)
+        self.assertIsInstance(model.backbone.blocks[6].attn, SplitQKAttention)
+        self.assertTrue(
+            torch.equal(
+                model.backbone.blocks[6].attn.qkv.weight,
+                torch.full_like(model.backbone.blocks[6].attn.qkv.weight, 3.0),
+            )
+        )
+        self.assertTrue(
+            all(
+                not isinstance(block.attn, SplitQKAttention)
+                for index, block in enumerate(model.backbone.blocks)
+                if index != 6
+            )
+        )
+        self.assertTrue(
+            torch.equal(
+                model.backbone.blocks[5].attn.qkv.weight,
+                untouched_weight,
+            )
+        )
+
     def test_builder_applies_config_selected_qkv_variant(self) -> None:
         source = _Model()
         qkv_names = _layers("salaad_qkv")
