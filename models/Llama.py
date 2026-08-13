@@ -441,10 +441,80 @@ class LlamaModel(LlamaPreTrainedModel):
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList([LlamaDecoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.entry_layers, self.loop_layers, self.exit_layers = self._get_loop_regions(config)
+        self.num_loops = self._get_num_loops(config)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
+
+    def _get_loop_regions(self, config: LlamaConfig) -> Tuple[Tuple[int, ...], Tuple[int, ...], Tuple[int, ...]]:
+        """Validate and return entry, loop, and exit physical blocks.
+
+        A normal model executes every physical block once.  A looped model has
+        three explicitly configured regions: entry blocks, loop blocks, and
+        exit blocks. ``num_loops`` is the total number of passes through the
+        loop region, not the number of additional passes.
+        """
+        loop_config = getattr(config, "loop", None)
+        if not loop_config:
+            return tuple(range(len(self.layers))), (), ()
+        if not isinstance(loop_config, dict):
+            raise TypeError("model config 'loop' must be a dictionary")
+
+        entry_layers = loop_config.get("entry_layers", [])
+        loop_layers = loop_config.get("loop_layers", [])
+        exit_layers = loop_config.get("exit_layers", [])
+        regions = {
+            "entry_layers": entry_layers,
+            "loop_layers": loop_layers,
+            "exit_layers": exit_layers,
+        }
+        for name, indices in regions.items():
+            if not isinstance(indices, list) or not all(
+                isinstance(index, int) and not isinstance(index, bool) for index in indices
+            ):
+                raise TypeError(f"loop.{name} must be a list of integer layer indices")
+        if not loop_layers:
+            raise ValueError("loop.loop_layers must contain at least one layer")
+
+        if getattr(config, "use_cache", False):
+            raise ValueError(
+                "looped Llama currently supports training with use_cache=False only"
+            )
+
+        physical_order = entry_layers + loop_layers + exit_layers
+        expected_order = list(range(len(self.layers)))
+        if physical_order != expected_order:
+            raise ValueError(
+                "entry_layers + loop_layers + exit_layers must list every physical "
+                f"decoder layer exactly once in order; got {physical_order}, "
+                f"expected {expected_order}"
+            )
+
+        return tuple(entry_layers), tuple(loop_layers), tuple(exit_layers)
+
+    @staticmethod
+    def _get_num_loops(config: LlamaConfig) -> int:
+        loop_config = getattr(config, "loop", None)
+        num_loops = loop_config.get("num_loops", 1) if loop_config else 1
+        if not isinstance(num_loops, int) or isinstance(num_loops, bool) or num_loops < 1:
+            raise ValueError(f"loop.num_loops must be a positive integer, got {num_loops!r}")
+        return num_loops
+
+    @property
+    def layer_order(self) -> Tuple[int, ...]:
+        if not self.loop_layers:
+            return self.entry_layers
+        return self.entry_layers + self.loop_layers * self.num_loops + self.exit_layers
+
+    def set_num_loops(self, num_loops: int) -> None:
+        """Set the recurrent depth used by subsequent forward passes."""
+        if not self.loop_layers:
+            raise ValueError("cannot set num_loops on a non-looped model")
+        if not isinstance(num_loops, int) or isinstance(num_loops, bool) or num_loops < 1:
+            raise ValueError(f"num_loops must be a positive integer, got {num_loops!r}")
+        self.num_loops = num_loops
 
     def get_input_embeddings(self):
         return self.embed_tokens
@@ -548,11 +618,18 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = () if use_cache else None
 
-        for idx, decoder_layer in enumerate(self.layers):
+        if past_key_values is not None and len(past_key_values) != len(self.layer_order):
+            raise ValueError(
+                "past_key_values must contain one entry per logical layer execution; "
+                f"got {len(past_key_values)}, expected {len(self.layer_order)}"
+            )
+
+        for execution_idx, layer_idx in enumerate(self.layer_order):
+            decoder_layer = self.layers[layer_idx]
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
-            past_key_value = past_key_values[idx] if past_key_values is not None else None
+            past_key_value = past_key_values[execution_idx] if past_key_values is not None else None
 
             if self.gradient_checkpointing and self.training:
 

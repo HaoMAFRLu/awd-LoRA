@@ -39,8 +39,8 @@ def parse_args():
     parser.add_argument('--beta_rate', type=float, default=None, help='Beta Rate')
     parser.add_argument('--dalpha', type=float, default=None, help='Delta Alpha')
     parser.add_argument('--dbeta', type=float, default=None, help='Delta Beta')
-    parser.add_argument('--cfg_version', type=str, default='llama_350m', help='Config version in configs/')
-    parser.add_argument('--folder', type=str, default='review_wall_clock', help='Output folder under data/')
+    parser.add_argument('--cfg_version', type=str, default='llama_looped_60m', help='Config version in configs/')
+    parser.add_argument('--folder', type=str, default=None, help='Override the output folder under data/')
 
     return parser.parse_args()
 
@@ -70,12 +70,13 @@ def main(cfg_version: str,
     # load the config
     with open(path_cfg) as f:
         cfg = yaml.safe_load(f)
+    folder = folder or cfg.get('output_folder', 'review_wall_clock')
     if cfg.get("model_config"):
         path_cfg_model = os.path.join(root, 'configs', cfg["model_config"])
     
-    target_layers = [entry['name'] for entry in cfg['layers']]
-
     if rho is not None and alpha_rate is not None and beta_rate is not None:
+        if cfg.get('training_mode', 'salad') != 'salad':
+            raise ValueError("SALAD command-line overrides require training_mode='salad'")
         for layer in cfg['layers']:
             if 'embed' in layer['name'] or 'lm_head' in layer['name']:
                 layer['params']['alpha_dict']['rate_decay'] = alpha_rate
@@ -89,7 +90,7 @@ def main(cfg_version: str,
                 layer['params']['alpha_dict']['drate'] = dalpha
                 layer['params']['beta_dict']['drate'] = dbeta
 
-    if exclude_layers is not None:
+    if exclude_layers is not None and cfg.get('training_mode', 'salad') == 'salad':
         cfg['layers'] = [
             layer for layer in cfg['layers']
             if not any(ex in layer['name'] for ex in exclude_layers)
@@ -121,8 +122,7 @@ def main(cfg_version: str,
     dist.broadcast_object_list(path_folder_list, src=0)
     path_folder = path_folder_list[0]
 
-    # get the data loader
-    model = get_model(path_cfg_model)
+    model = get_model(path_cfg_model, cfg)
 
     # time.sleep(2.0 * rank)  # 3s per rank is a good starting point
     data = get_data(cfg)

@@ -8,6 +8,13 @@ import datasets.distributed
 from loguru import logger
 
 from salad.salad_solver import SALAD
+from salad.loop import (
+    DEFAULT_TIED_PARAMETER_NAMES,
+    LoopSampler,
+    block_distance,
+    block_parameter_errors,
+    get_block_reference_norms,
+)
 from salad.utils import *
 from salad.register import *
 from salad.simple_timer import SimpleTimer
@@ -51,8 +58,15 @@ class SALADTrainer():
         self.is_wandb = config.get('is_wandb', False)
         self.is_monitor = config.get('is_monitor', False)
         self.save_interval = config.get('save_interval', 50)
+        if not isinstance(self.save_interval, int) or self.save_interval <= 0:
+            raise ValueError("save_interval must be a positive integer")
 
-        self.training_mode = config.get('training_mode', 'salad')  # or 'vanilla'
+        self.training_mode = config.get('training_mode', 'salad')
+        if self.training_mode not in {'salad', 'vanilla', 'loop'}:
+            raise ValueError(
+                "training_mode must be one of 'salad', 'vanilla', or 'loop'; "
+                f"got {self.training_mode!r}"
+            )
         # self.rank, self.world_size = self._init_distributed()
 
         if self.rank == 0:
@@ -78,10 +92,12 @@ class SALADTrainer():
         if self.is_wandb and self.rank == 0:
             import wandb
             wandb.login(key=os.getenv("WANDB_API_KEY"), relogin=False)
-            self.run_wandb = wandb.init(project="SALAD_"+self.config['name'], 
-                                        entity="hao-ma-eth-z-rich", 
+            self.run_wandb = wandb.init(project=self.config.get("wandb_project", "SALAD_"+self.config['name']),
+                                        entity=self.config.get("wandb_entity", "hao-ma-eth-z-rich"),
                                         config=self.config,
                                         name=folder_name)
+            self.run_wandb.define_metric("iteration")
+            self.run_wandb.define_metric("*", step_metric="iteration")
             
 
         # torch.cuda.set_device(self.rank % torch.cuda.device_count())
@@ -89,8 +105,13 @@ class SALADTrainer():
         if self.rank == 0:
             print_setting(config)
 
-        # self.batch_size = config.get('batch_size', 32)
-        self.batch_size = int(config.get('batch_size', 32)/self.world_size) + 1
+        global_batch_size = config.get('batch_size', 32)
+        if global_batch_size % self.world_size != 0:
+            raise ValueError(
+                f"batch_size ({global_batch_size}) must be divisible by world_size "
+                f"({self.world_size})"
+            )
+        self.batch_size = global_batch_size // self.world_size
 
         # print device info
         dev_idx = torch.cuda.current_device()
@@ -104,6 +125,9 @@ class SALADTrainer():
         # get specified layers in the config
         if self.training_mode == 'salad':
             self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
+        elif self.training_mode == 'loop':
+            self.cfg_layers = []
+            self._configure_loop_penalty()
         else:
             self.cfg_layers = [{'name': 'layers.0.self_attn.q_proj'}]  # dummy for vanilla training
 
@@ -122,6 +146,14 @@ class SALADTrainer():
 
         self.ddp_model = DDP(self.model.to(torch.bfloat16), 
                              device_ids=[torch.cuda.current_device()])
+        if self.training_mode == 'loop':
+            # Capture the fixed denominator after DDP has synchronized rank 0's
+            # initialization to every worker.
+            self.soft_tie_reference_norms = get_block_reference_norms(
+                self.ddp_model,
+                self.soft_tie_source_block,
+                self.soft_tie_parameter_names,
+            )
 
         data = datasets.distributed.split_dataset_by_node(data, rank=self.rank, world_size=self.world_size)
 
@@ -203,6 +235,121 @@ class SALADTrainer():
         self.layer_info['avg_loss_penalty'] = []
         self.layer_info['avg_diff'] = []
         self.layer_info['num_tokens'] = []
+        if self.training_mode == 'loop':
+            self.layer_info['num_loops'] = []
+            self.layer_info['parameter_errors'] = {
+                name: [] for name in self.soft_tie_parameter_names
+            }
+
+    def _configure_loop_penalty(self) -> None:
+        loop_config = getattr(self.model.config, "loop", None)
+        if not isinstance(loop_config, dict):
+            raise ValueError("training_mode='loop' requires a 'loop' section in the model config")
+
+        soft_tie = self.config.get("soft_tie")
+        if not isinstance(soft_tie, dict):
+            raise ValueError("training_mode='loop' requires a 'soft_tie' section")
+
+        self.soft_tie_rho = float(soft_tie.get("rho", 0.0))
+        if self.soft_tie_rho < 0:
+            raise ValueError(f"soft_tie.rho must be non-negative, got {self.soft_tie_rho}")
+
+        self.soft_tie_source_block = soft_tie.get("source_block", "layers.0")
+        self.soft_tie_target_block = soft_tie.get("target_block", "layers.3")
+        self.soft_tie_parameter_names = tuple(
+            soft_tie.get("parameter_names", DEFAULT_TIED_PARAMETER_NAMES)
+        )
+        self.soft_tie_epsilon = float(soft_tie.get("epsilon", 1e-12))
+        if not isinstance(self.soft_tie_source_block, str) or not isinstance(
+            self.soft_tie_target_block, str
+        ):
+            raise TypeError("soft_tie source_block and target_block must be strings")
+        if self.soft_tie_source_block == self.soft_tie_target_block:
+            raise ValueError("soft_tie source_block and target_block must be different")
+
+        training_loop_config = self.config.get("loop")
+        if not isinstance(training_loop_config, dict):
+            raise ValueError("training_mode='loop' requires a 'loop' section")
+        sampling = training_loop_config.get("sampling")
+        if not isinstance(sampling, dict):
+            raise ValueError("loop training requires loop.sampling")
+        self.loop_sampler = LoopSampler(
+            values=sampling.get("values", []),
+            probabilities=sampling.get("probabilities", []),
+            seed=int(sampling.get("seed", self.config.get("seed", 42))),
+            expected_value=sampling.get("expected_value"),
+        )
+        self.current_num_loops = int(loop_config.get("num_loops", 1))
+        self.loop_counts = {value: 0 for value in self.loop_sampler.values}
+
+        # Validate all names and shapes before DDP and the optimizer are built.
+        block_distance(
+            self.model,
+            self.soft_tie_source_block,
+            self.soft_tie_target_block,
+            self.soft_tie_parameter_names,
+            self.soft_tie_epsilon,
+        )
+
+    def get_loop_penalty(self):
+        """Return the penalty, block distance, and per-matrix errors."""
+        errors = block_parameter_errors(
+            self.ddp_model,
+            self.soft_tie_source_block,
+            self.soft_tie_target_block,
+            self.soft_tie_parameter_names,
+            self.soft_tie_epsilon,
+            self.soft_tie_reference_norms,
+        )
+        distance = torch.stack(tuple(errors.values())).mean()
+        return 0.5 * self.soft_tie_rho * distance, distance, errors
+
+    @torch.no_grad()
+    def log_loop_parameter_errors(
+        self,
+        iteration: int,
+        errors: dict,
+        distance: torch.Tensor,
+    ) -> None:
+        """Log the pre-update T1/TN-1 errors used by the current loss."""
+        if self.rank != 0:
+            return
+
+        for name, error in errors.items():
+            self.layer_info['parameter_errors'][name].append(float(error.item()))
+        if not self.is_wandb:
+            return
+        payload = {
+            f"loop/parameter_error/{name.removesuffix('.weight')}": float(error.item())
+            for name, error in errors.items()
+        }
+        payload.update({
+            "loop/pre_update_block_distance": float(distance.item()),
+            "loop/num_loops": self.current_num_loops,
+        })
+        payload["iteration"] = iteration
+        # Keep the row open when the periodic summary is written at this same
+        # iteration, so W&B stores one history row rather than duplicate x-axis
+        # points.
+        self.run_wandb.log(payload, commit=iteration % self.num_freq != 0)
+
+    def sample_num_loops(self) -> int:
+        """Draw one depth on rank 0 and use it on every DDP rank."""
+        if self.rank == 0:
+            sampled = self.loop_sampler.sample()
+        else:
+            sampled = 0
+
+        if dist.is_available() and dist.is_initialized():
+            sampled_tensor = torch.tensor(sampled, device=self.device, dtype=torch.int64)
+            dist.broadcast(sampled_tensor, src=0)
+            sampled = int(sampled_tensor.item())
+
+        model = self.ddp_model.module if hasattr(self.ddp_model, "module") else self.ddp_model
+        model.model.set_num_loops(sampled)
+        self.current_num_loops = sampled
+        self.loop_counts[sampled] += 1
+        return sampled
     @staticmethod    
     def canon(name: str) -> str:
         if name.startswith('module.'): name = name[7:]
@@ -306,7 +453,7 @@ class SALADTrainer():
                 gradient_per_layer[solver.layer_name] = Z
         return gradient_per_layer
 
-    def single_step_train(self, batch, labels, gradient: str='coupled'):
+    def single_step_train(self, batch, labels, gradient: str='coupled', iteration: int=None):
         if self.training_mode == 'salad':
             # reset the gradient
             self.optimizer.zero_grad(set_to_none=True)
@@ -374,6 +521,33 @@ class SALADTrainer():
             # broadcast the neural network loss
             global_avg_loss = self.get_global_loss(loss.detach())
             return global_avg_loss, 0.0, 0.0
+        elif self.training_mode == 'loop':
+            self.optimizer.zero_grad(set_to_none=True)
+            self.sample_num_loops()
+
+            task_loss = self.ddp_model(**batch, labels=labels).loss
+            loss_penalty, normalized_distance, parameter_errors = self.get_loop_penalty()
+            (task_loss + loss_penalty).backward()
+
+            if self.is_clip > 0:
+                torch.nn.utils.clip_grad_norm_(
+                    self.ddp_model.parameters(), max_norm=self.is_clip
+                )
+
+            self.optimizer.step()
+            self.lr_scheduler.step()
+            if iteration is None:
+                raise ValueError("loop training requires the current iteration")
+            self.log_loop_parameter_errors(
+                iteration,
+                parameter_errors,
+                normalized_distance,
+            )
+
+            global_avg_loss = self.get_global_loss(task_loss.detach())
+            global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
+            global_avg_distance = self.get_global_loss(normalized_distance.detach())
+            return global_avg_loss, global_avg_loss_penalty, global_avg_distance
 
     def prepare_batch_and_labels(self, batch):
         batch = {k: v.to(self.device) for k, v in batch.items()}
@@ -478,8 +652,9 @@ class SALADTrainer():
             global loss value
         """
         with torch.no_grad():
-            dist.all_reduce(log_loss, op=dist.ReduceOp.SUM)
-            log_loss = log_loss / self.world_size
+            if dist.is_available() and dist.is_initialized():
+                dist.all_reduce(log_loss, op=dist.ReduceOp.SUM)
+                log_loss = log_loss / self.world_size
         return log_loss.item()
 
     def _resolve_name(self, name, param_dict):
@@ -735,9 +910,22 @@ class SALADTrainer():
             total_epochs: Total number of epochs
             layer_info: Dictionary containing layer statistics
         """
+        loop_total = sum(self.loop_counts.values()) if self.training_mode == 'loop' else 0
+        loop_ratios = (
+            {value: count / loop_total for value, count in self.loop_counts.items()}
+            if loop_total else {}
+        )
+        mean_num_loops = (
+            sum(value * count for value, count in self.loop_counts.items()) / loop_total
+            if loop_total else 1.0
+        )
         losses = {'avg_loss': loss,
                   'avg_loss_penalty': loss_penalty,
-                  'avg_diff': loss_diff}
+                  'avg_diff': loss_diff,
+                  'training_mode': self.training_mode,
+                  'num_loops': self.current_num_loops if self.training_mode == 'loop' else 1,
+                  'mean_num_loops': mean_num_loops,
+                  'loop_ratios': loop_ratios}
         
         layer_stats = [{'name': entry['name'],
                         'loss': layer_info[entry['name']]['loss'][-1],
@@ -816,7 +1004,12 @@ class SALADTrainer():
             batch, labels = self.prepare_batch_and_labels(batch)
             # do one step update
             with self.timers['train']:
-                avg_loss, avg_loss_penalty, avg_diff = self.single_step_train(batch, labels, gradient=self.gradient)
+                avg_loss, avg_loss_penalty, avg_diff = self.single_step_train(
+                    batch,
+                    labels,
+                    gradient=self.gradient,
+                    iteration=num_it,
+                )
 
             # calculate the constants
             num_tokens = (batch['input_ids'].numel() - torch.sum(batch['input_ids'] == self.pad_idx).item()) * self.world_size
@@ -824,7 +1017,9 @@ class SALADTrainer():
             self.layer_info['avg_loss_penalty'].append(avg_loss_penalty)
             self.layer_info['avg_diff'].append(avg_diff)
             self.layer_info['num_tokens'].append(num_tokens)
-            
+            if self.training_mode == 'loop':
+                self.layer_info['num_loops'].append(self.current_num_loops)
+
             ep_loss += avg_loss
             ep_penalty += avg_loss_penalty
             ep_diff += avg_diff
@@ -861,7 +1056,7 @@ class SALADTrainer():
                         self.sync_layer_info()
 
                     self.solvers_reset()
-                else:
+                elif self.training_mode == 'vanilla':
                     self.generate_empty_layer_info()
 
                 # self.run_ADMM_solvers()
@@ -872,13 +1067,6 @@ class SALADTrainer():
                 ep_penalty /= self.num_freq
                 ep_diff /= self.num_freq    
                 
-                # print and save 
-                with self.timers['save']:
-                    if path_folder is not None and epoch % self.save_interval == 0:
-                        # self.update_ADMM_single_step(target='weight')
-                        # self.sync_weights()
-                        self.save_results(path_folder)
-
                 if self.rank == 0:
                     self.print_info(epoch, 
                                     num_epochs,
@@ -907,6 +1095,16 @@ class SALADTrainer():
 
                     # self.sync_single_weight(target='S')
                     # self.sync_single_weight(target='Y')
+
+            # save_interval is measured in optimizer iterations. Save after
+            # every update belonging to this iteration has completed.
+            should_save = (
+                num_it % self.save_interval == 0
+                or num_it == self.num_total_iters
+            )
+            if path_folder is not None and should_save:
+                with self.timers['save']:
+                    self.save_results(path_folder)
 
         dist.destroy_process_group()
         if self.is_wandb and self.rank == 0:

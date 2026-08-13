@@ -17,7 +17,7 @@ from models.qwen3_vl import build_qwen3_vl_from_config
 from dataloaders.Llama_dataloader import PreprocessedIterableDataset
 from dataloaders.Qwen3VL_dataloader import Qwen3VLIterableDataset
 
-def get_model(cfg: dict):
+def get_model(cfg: str, training_config: Optional[dict] = None):
     """
     Get the model based on the configuration.
     """
@@ -31,6 +31,20 @@ def get_model(cfg: dict):
     model_cfg = AutoConfig.from_pretrained(cfg)
     if model_cfg.model_type != "llama":
         raise ValueError(f"Unsupported model_type={model_cfg.model_type!r}")
+
+    if training_config and training_config.get("training_mode") == "loop":
+        loop_override = training_config.get("loop", {})
+        if not isinstance(loop_override, dict):
+            raise TypeError("training config 'loop' must be a dictionary")
+        model_loop = dict(getattr(model_cfg, "loop", {}) or {})
+        # Sampling is a training policy, not part of the inference model
+        # architecture. Persist only architectural/default-depth overrides.
+        model_loop.update({
+            key: value for key, value in loop_override.items()
+            if key != "sampling"
+        })
+        model_cfg.loop = model_loop
+
     return LlamaForCausalLM(model_cfg)
 
 def get_tokenizer(max_length: int = 1024, config: Optional[dict] = None):
@@ -40,7 +54,8 @@ def get_tokenizer(max_length: int = 1024, config: Optional[dict] = None):
     config = config or {}
     if config.get("model_type") == "qwen3_vl" or config.get("data", {}).get("type") == "vlm":
         return get_processor(max_length=max_length, config=config)
-    return AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
+    tokenizer_name = config.get("tokenizer_name", "t5-base")
+    return AutoTokenizer.from_pretrained(tokenizer_name, model_max_length=max_length)
 
 def get_processor(max_length: int = 1024, config: Optional[dict] = None):
     config = config or {}

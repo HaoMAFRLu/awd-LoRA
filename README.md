@@ -72,8 +72,9 @@ configs live in `configs/*_model.json`.
 
 Important fields:
 
-- `training_mode`: `salad` for low-rank/sparse training or `vanilla` for normal
-  training.
+- `training_mode`: `salad` for low-rank/sparse training, `vanilla` for normal
+  training, or `loop` for recurrent middle-block training with a soft block
+  alignment penalty.
 - `num_total_iters`: total optimizer updates.
 - `num_freq`: how often to run SALAD/ADMM updates.
 - `batch_size`, `max_length`, `num_workers`: data-loading and tokenization
@@ -84,6 +85,14 @@ Important fields:
 - `rate_sparsity`: target sparse density for a layer.
 - `rho_dict`, `alpha_dict`, `beta_dict`: ADMM penalty and adaptive threshold
   settings.
+
+The looped LLaMA example is defined by
+`configs/llama_looped_60m.yaml` and `configs/llama_looped_60m_model.json`. It
+uses five physical blocks with the path `T1 -> (T2 -> T3 -> T4) x num_loops ->
+T5`. During training, `num_loops` is sampled once per optimizer step from the
+distribution in `loop.sampling`; rank 0 broadcasts the sample to every DDP
+rank. The model's `loop.num_loops` remains the default evaluation depth, and
+`soft_tie` controls the normalized parameter penalty between T1 and T4.
 
 To regenerate configs, edit `scripts/config_generator.py` and run:
 

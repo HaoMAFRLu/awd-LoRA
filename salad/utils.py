@@ -87,7 +87,7 @@ def print_wandb(
     Each metric becomes a series like: layer/<name>/<metric>.
     Then you can create charts in the W&B UI by selecting these series.
 
-    Logged (per run epoch):
+    Logged at each periodic training summary:
       Global series:
         - train/loss, train/layer_diff, train/penalty, train/lr, train/tokens_M, epoch
       Per-layer series (for each layer name):
@@ -104,14 +104,30 @@ def print_wandb(
     """
     # Build one flat payload per epoch (faster & consistent than many small logs)
     payload = {
+        "iteration": epoch * num_freq,
         # global scalars (optional; remove if you truly only want per-layer series)
         "train/loss": float(losses.get("avg_loss", float("nan"))),
+        "train/task_loss": float(losses.get("avg_loss", float("nan"))),
+        "train/total_loss": float(
+            losses.get("avg_loss", float("nan"))
+            + losses.get("avg_loss_penalty", 0.0)
+        ),
         "train/layer_diff": float(losses.get("avg_diff", float("nan"))),
         "train/penalty": float(losses.get("avg_loss_penalty", float("nan"))),
         "train/lr": float(lr),
         "train/tokens_M": float(num_tokens) / 1e6,
         # DO NOT add "epoch": step already carries this
     }
+
+    if losses.get("training_mode") == "loop":
+        payload.update({
+            "loop/block_distance": float(losses.get("avg_diff", float("nan"))),
+            "loop/soft_penalty": float(losses.get("avg_loss_penalty", float("nan"))),
+            "loop/num_loops": int(losses["num_loops"]),
+            "loop/mean_num_loops": float(losses["mean_num_loops"]),
+        })
+        for num_loops, ratio in losses.get("loop_ratios", {}).items():
+            payload[f"loop/depth_{num_loops}_ratio"] = float(ratio)
 
     for s in layer_stats:
         name = s.get("name")
@@ -146,8 +162,10 @@ def print_wandb(
             f"{prefix}/rho": rho,                           
         })
 
-    # Single log call per epoch
-    wandb.log(payload, step=epoch)
+    # W&B uses the explicit iteration metric as the x-axis. This also allows
+    # loop-specific per-iteration logs and periodic summaries to share an
+    # iteration without conflicting global step values.
+    run.log(payload)
 
 def print_epoch(epoch: int, 
                 total_epochs: int, 
@@ -161,9 +179,15 @@ def print_epoch(epoch: int,
               f"It {epoch * num_freq}/{total_epochs * num_freq} | "
               f"Lr: {lr:.6f} | "
               f"Tokens: {num_tokens / 1000000:.3f}M | "
-              f"Loss: {losses['avg_loss']:.6f} | "
-              f"Layer diff: {losses['avg_diff']:.6f} | "
+              f"Task loss: {losses['avg_loss']:.6f} | "
+              f"Total loss: {losses['avg_loss'] + losses['avg_loss_penalty']:.6f} | "
+              f"Block/layer distance: {losses['avg_diff']:.6f} | "
               f"Penalty: {losses['avg_loss_penalty']:.6f}")
+    if losses.get("training_mode") == "loop":
+        header += (
+            f" | Loops: {losses['num_loops']}"
+            f" | Mean loops: {losses['mean_num_loops']:.3f}"
+        )
     print(header)
 
     headers = ["name", "layer diff", "non-zero", "rank", 
@@ -187,7 +211,8 @@ def print_epoch(epoch: int,
         for s in layer_stats
     ]
 
-    print(tabulate(rows, headers=headers, tablefmt="grid"))
+    if rows:
+        print(tabulate(rows, headers=headers, tablefmt="grid"))
 
 def count_parameters(model: nn.Module) -> int:
     """
