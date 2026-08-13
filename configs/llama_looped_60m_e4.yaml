@@ -1,0 +1,69 @@
+seed: 42
+name: llama_looped_60m_e4
+model_config: llama_looped_60m_model.json
+training_mode: loop
+output_folder: looped_transformer
+wandb_project: LOOPED_TRANSFORMER
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 10
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+# Global batch size: 128 samples per GPU with four DDP ranks.
+batch_size: 512
+num_workers: 0
+
+# Training samples one shared depth per optimizer step. The probabilities have
+# E[num_loops] = 1*0.05 + 2*0.10 + 3*0.15 + 4*0.20 + 5*0.50 = 4.0.
+loop:
+  # This is only the fallback evaluation depth; training replaces it with a
+  # new distributed sample at every optimizer iteration.
+  num_loops: 2
+  sampling:
+    values: [1, 2, 3, 4, 5]
+    probabilities: [0.05, 0.10, 0.15, 0.20, 0.50]
+    expected_value: 4.0
+    seed: 42
+
+soft_tie:
+  source_block: layers.0
+  target_block: layers.3
+  rho: 0.1
+  epsilon: 1.0e-12
+  # Only matrices are aligned; the two RMSNorm vectors remain independent.
+  parameter_names:
+    - self_attn.q_proj.weight
+    - self_attn.k_proj.weight
+    - self_attn.v_proj.weight
+    - self_attn.o_proj.weight
+    - mlp.gate_proj.weight
+    - mlp.up_proj.weight
+    - mlp.down_proj.weight
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas:
+      - 0.9
+      - 0.95
+    eps: 1.0e-08
+    weight_decay: 0.0
