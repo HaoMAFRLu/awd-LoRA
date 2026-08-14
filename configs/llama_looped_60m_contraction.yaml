@@ -30,17 +30,19 @@ num_workers: 0
 # K loops produce K states, K-1 distances, and K-2 contraction comparisons.
 # The sampled loop depth is shared by all DDP ranks for each iteration.
 loop:
-  num_loops: 4
+  num_loops: 7
   sampling:
-    values: [3, 4, 5, 6]
-    probabilities: [0.4, 0.3, 0.2, 0.1]
-    expected_value: 4.0
+    # Relative weights are normalized internally. Their exact expectation is
+    # 1498 / 214 = 7, while loop=12 remains part of the training support.
+    values: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    probabilities: [10, 15, 25, 35, 45, 35, 25, 15, 5, 4]
+    expected_value: 7.0
     seed: 42
   contraction:
     enabled: true
     start_loop: 1
-    gamma: 0.95
-    weight: 0.1
+    gamma: 0.8
+    weight: 0.25
     # Anchor D(z1, z2) only when it exceeds the observed initial scale.
     fixed_point_weight: 0.01
     fixed_point_epsilon: 0.5
