@@ -251,8 +251,6 @@ class SALADTrainer():
             raise ValueError("training_mode='loop' requires a 'soft_tie' section")
 
         self.soft_tie_rho = float(soft_tie.get("rho", 0.0))
-        if self.soft_tie_rho < 0:
-            raise ValueError(f"soft_tie.rho must be non-negative, got {self.soft_tie_rho}")
 
         self.soft_tie_source_block = soft_tie.get("source_block", "layers.0")
         self.soft_tie_target_block = soft_tie.get("target_block", "layers.3")
