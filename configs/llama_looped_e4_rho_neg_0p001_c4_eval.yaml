@@ -1,0 +1,30 @@
+seed: 43
+seed_for_shuffle: 43
+
+tokenizer_name: t5-base
+max_length: 256
+precision: bfloat16
+
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: validation
+  streaming: true
+
+# Match all existing rho loop-depth evaluations exactly.
+batch_size: 512
+num_eval_batches: 250
+num_workers: 0
+
+checkpoints:
+  vanilla:
+    model_config: configs/llama_60m_model.json
+    checkpoint: data/looped_transformer/llama_vanilla_60m/20260813_184120/model.pth
+  looped:
+    model_config: configs/llama_looped_60m_model.json
+    checkpoint: data/looped_transformer/llama_looped_60m_e4_rho_neg_0p001/20260814_091517/model.pth
+
+loop_values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+output_directory: data/looped_transformer/evaluation/c4_seed43_e4_rho_neg_0p001
