@@ -111,6 +111,7 @@ def print_wandb(
         "train/total_loss": float(
             losses.get("avg_loss", float("nan"))
             + losses.get("avg_loss_penalty", 0.0)
+            + losses.get("avg_stability_loss", 0.0)
         ),
         "train/layer_diff": float(losses.get("avg_diff", float("nan"))),
         "train/penalty": float(losses.get("avg_loss_penalty", float("nan"))),
@@ -128,6 +129,24 @@ def print_wandb(
         })
         for num_loops, ratio in losses.get("loop_ratios", {}).items():
             payload[f"loop/depth_{num_loops}_ratio"] = float(ratio)
+        if losses.get("stability_enabled", False):
+            payload.update({
+                "loop/periodic_long_task_loss": float(
+                    losses.get("avg_long_loss", float("nan"))
+                ),
+                "loop/periodic_weighted_stability_loss": float(
+                    losses.get("avg_stability_loss", 0.0)
+                ),
+                "loop/periodic_stability_branch_rate": float(
+                    losses.get("stability_branch_rate", 0.0)
+                ),
+                "loop/periodic_stability_violation_rate": float(
+                    losses.get("stability_violation_rate", float("nan"))
+                ),
+                "loop/stability_weight": float(
+                    losses.get("stability_weight", 0.0)
+                ),
+            })
 
     for s in layer_stats:
         name = s.get("name")
@@ -175,12 +194,17 @@ def print_epoch(epoch: int,
                 losses: dict, 
                 layer_stats: list):
 
+    total_loss = (
+        losses['avg_loss']
+        + losses['avg_loss_penalty']
+        + losses.get('avg_stability_loss', 0.0)
+    )
     header = (f"Epoch {epoch}/{total_epochs} | "
               f"It {epoch * num_freq}/{total_epochs * num_freq} | "
               f"Lr: {lr:.6f} | "
               f"Tokens: {num_tokens / 1000000:.3f}M | "
               f"Task loss: {losses['avg_loss']:.6f} | "
-              f"Total loss: {losses['avg_loss'] + losses['avg_loss_penalty']:.6f} | "
+              f"Total loss: {total_loss:.6f} | "
               f"Block/layer distance: {losses['avg_diff']:.6f} | "
               f"Penalty: {losses['avg_loss_penalty']:.6f}")
     if losses.get("training_mode") == "loop":
@@ -188,6 +212,13 @@ def print_epoch(epoch: int,
             f" | Loops: {losses['num_loops']}"
             f" | Mean loops: {losses['mean_num_loops']:.3f}"
         )
+        if losses.get("stability_enabled", False):
+            header += (
+                f" | Long loss: {losses['avg_long_loss']:.6f}"
+                f" | Stability: {losses['avg_stability_loss']:.6f}"
+                f" | Long branch rate: {losses['stability_branch_rate']:.2f}"
+                f" | Violation rate: {losses['stability_violation_rate']:.2f}"
+            )
     print(header)
 
     headers = ["name", "layer diff", "non-zero", "rank", 

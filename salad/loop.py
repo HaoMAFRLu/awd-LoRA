@@ -70,6 +70,49 @@ class LoopSampler:
         return self.values[index]
 
 
+class LoopStabilitySampler:
+    """Choose whether to run a long branch and how many loops to add."""
+
+    def __init__(
+        self,
+        probability: float,
+        deltas: Sequence[int],
+        seed: int,
+    ) -> None:
+        self.probability = float(probability)
+        if not math.isfinite(self.probability) or not 0.0 <= self.probability <= 1.0:
+            raise ValueError("loop stability probability must be between 0 and 1")
+        if not deltas or len(set(deltas)) != len(deltas) or not all(
+            isinstance(delta, int) and not isinstance(delta, bool) and delta > 0
+            for delta in deltas
+        ):
+            raise ValueError("loop stability deltas must be unique positive integers")
+
+        self.deltas = tuple(deltas)
+        self.generator = torch.Generator(device="cpu")
+        self.generator.manual_seed(seed)
+
+    def sample(self) -> Optional[int]:
+        if torch.rand((), generator=self.generator).item() >= self.probability:
+            return None
+        index = torch.randint(
+            len(self.deltas),
+            size=(),
+            generator=self.generator,
+        ).item()
+        return self.deltas[index]
+
+
+def monotonic_stability_loss(
+    short_loss: torch.Tensor,
+    long_loss: torch.Tensor,
+) -> torch.Tensor:
+    """Penalize a long execution only when it is worse than the short one."""
+    if short_loss.numel() != 1 or long_loss.numel() != 1:
+        raise ValueError("short_loss and long_loss must both be scalar tensors")
+    return torch.relu(long_loss - short_loss.detach())
+
+
 def _unwrap_model(model: nn.Module) -> nn.Module:
     return model.module if hasattr(model, "module") else model
 

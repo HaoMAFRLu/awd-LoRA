@@ -7,9 +7,11 @@ from models.Llama import LlamaForCausalLM
 from salad.loop import (
     DEFAULT_TIED_PARAMETER_NAMES,
     LoopSampler,
+    LoopStabilitySampler,
     block_distance,
     block_parameter_errors,
     get_block_reference_norms,
+    monotonic_stability_loss,
 )
 
 
@@ -51,6 +53,37 @@ class LoopedLlamaTest(unittest.TestCase):
                 model.model.layer_order,
                 (0,) + (1, 2, 3) * num_loops + (4,),
             )
+
+    def test_stability_sampler_returns_configured_positive_deltas(self):
+        sampler = LoopStabilitySampler(
+            probability=1.0,
+            deltas=[1, 2, 4],
+            seed=42,
+        )
+        self.assertTrue(all(sampler.sample() in {1, 2, 4} for _ in range(100)))
+
+        disabled_sampler = LoopStabilitySampler(
+            probability=0.0,
+            deltas=[1],
+            seed=42,
+        )
+        self.assertIsNone(disabled_sampler.sample())
+
+    def test_monotonic_loss_only_updates_a_worse_long_path(self):
+        short_loss = torch.tensor(1.0, requires_grad=True)
+        long_loss = torch.tensor(1.5, requires_grad=True)
+        stability_loss = monotonic_stability_loss(short_loss, long_loss)
+        stability_loss.backward()
+
+        self.assertEqual(stability_loss.item(), 0.5)
+        self.assertIsNone(short_loss.grad)
+        self.assertEqual(long_loss.grad.item(), 1.0)
+
+        better_long_loss = torch.tensor(0.5, requires_grad=True)
+        zero_loss = monotonic_stability_loss(short_loss, better_long_loss)
+        zero_loss.backward()
+        self.assertEqual(zero_loss.item(), 0.0)
+        self.assertEqual(better_long_loss.grad.item(), 0.0)
 
     def test_middle_blocks_are_reused(self):
         model = _tiny_looped_model(num_loops=2)

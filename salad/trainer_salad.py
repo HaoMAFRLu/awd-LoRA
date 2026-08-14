@@ -2,6 +2,7 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
+import math
 import os
 import datasets
 import datasets.distributed
@@ -11,9 +12,11 @@ from salad.salad_solver import SALAD
 from salad.loop import (
     DEFAULT_TIED_PARAMETER_NAMES,
     LoopSampler,
+    LoopStabilitySampler,
     block_distance,
     block_parameter_errors,
     get_block_reference_norms,
+    monotonic_stability_loss,
 )
 from salad.utils import *
 from salad.register import *
@@ -237,6 +240,13 @@ class SALADTrainer():
         self.layer_info['num_tokens'] = []
         if self.training_mode == 'loop':
             self.layer_info['num_loops'] = []
+            self.layer_info['long_num_loops'] = []
+            self.layer_info['stability_active'] = []
+            self.layer_info['long_task_loss'] = []
+            self.layer_info['long_loss_delta'] = []
+            self.layer_info['stability_loss'] = []
+            self.layer_info['weighted_stability_loss'] = []
+            self.layer_info['stability_violation'] = []
             self.layer_info['parameter_errors'] = {
                 name: [] for name in self.soft_tie_parameter_names
             }
@@ -277,8 +287,37 @@ class SALADTrainer():
             seed=int(sampling.get("seed", self.config.get("seed", 42))),
             expected_value=sampling.get("expected_value"),
         )
-        self.current_num_loops = int(loop_config.get("num_loops", 1))
+        self.current_num_loops = int(
+            training_loop_config.get("num_loops", loop_config.get("num_loops", 1))
+        )
         self.loop_counts = {value: 0 for value in self.loop_sampler.values}
+
+        stability = training_loop_config.get("stability", {})
+        if not isinstance(stability, dict):
+            raise ValueError("loop.stability must be a mapping")
+        self.stability_enabled = stability.get("enabled", False)
+        if not isinstance(self.stability_enabled, bool):
+            raise TypeError("loop.stability.enabled must be a boolean")
+        self.stability_weight = float(stability.get("weight", 0.1))
+        if not math.isfinite(self.stability_weight) or self.stability_weight < 0.0:
+            raise ValueError("loop.stability.weight must be finite and non-negative")
+        if self.stability_enabled and self.stability_weight == 0.0:
+            raise ValueError("enabled loop stability requires a positive weight")
+
+        self.stability_sampler = None
+        if self.stability_enabled:
+            self.stability_sampler = LoopStabilitySampler(
+                probability=stability.get("probability", 0.25),
+                deltas=stability.get("deltas", [1, 2, 4]),
+                seed=int(stability.get("seed", self.config.get("seed", 42))),
+            )
+        self.current_stability_active = False
+        self.current_long_num_loops = 0
+        self.current_long_task_loss = float("nan")
+        self.current_long_loss_delta = float("nan")
+        self.current_stability_loss = 0.0
+        self.current_weighted_stability_loss = 0.0
+        self.current_stability_violation = False
 
         # Validate all names and shapes before DDP and the optimizer are built.
         block_distance(
@@ -324,7 +363,22 @@ class SALADTrainer():
         payload.update({
             "loop/pre_update_block_distance": float(distance.item()),
             "loop/num_loops": self.current_num_loops,
+            "loop/stability_enabled": int(self.stability_enabled),
+            "loop/stability_active": int(self.current_stability_active),
         })
+        if self.current_stability_active:
+            payload.update({
+                "loop/long_num_loops": self.current_long_num_loops,
+                "loop/long_task_loss": self.current_long_task_loss,
+                "loop/long_loss_delta": self.current_long_loss_delta,
+                "loop/stability_loss": self.current_stability_loss,
+                "loop/weighted_stability_loss": (
+                    self.current_weighted_stability_loss
+                ),
+                "loop/stability_violation": int(
+                    self.current_stability_violation
+                ),
+            })
         payload["iteration"] = iteration
         # Keep the row open when the periodic summary is written at this same
         # iteration, so W&B stores one history row rather than duplicate x-axis
@@ -343,11 +397,36 @@ class SALADTrainer():
             dist.broadcast(sampled_tensor, src=0)
             sampled = int(sampled_tensor.item())
 
-        model = self.ddp_model.module if hasattr(self.ddp_model, "module") else self.ddp_model
-        model.model.set_num_loops(sampled)
+        self._set_num_loops(sampled)
         self.current_num_loops = sampled
         self.loop_counts[sampled] += 1
         return sampled
+
+    def _set_num_loops(self, num_loops: int) -> None:
+        model = self.ddp_model.module if hasattr(self.ddp_model, "module") else self.ddp_model
+        model.model.set_num_loops(num_loops)
+
+    def sample_stability_delta(self):
+        """Draw one optional long-path extension and share it across DDP ranks."""
+        if self.stability_sampler is None:
+            return None
+
+        if self.rank == 0:
+            sampled = self.stability_sampler.sample()
+            encoded_delta = 0 if sampled is None else sampled
+        else:
+            encoded_delta = 0
+
+        if dist.is_available() and dist.is_initialized():
+            delta_tensor = torch.tensor(
+                encoded_delta,
+                device=self.device,
+                dtype=torch.int64,
+            )
+            dist.broadcast(delta_tensor, src=0)
+            encoded_delta = int(delta_tensor.item())
+
+        return None if encoded_delta == 0 else encoded_delta
     @staticmethod    
     def canon(name: str) -> str:
         if name.startswith('module.'): name = name[7:]
@@ -520,12 +599,60 @@ class SALADTrainer():
             global_avg_loss = self.get_global_loss(loss.detach())
             return global_avg_loss, 0.0, 0.0
         elif self.training_mode == 'loop':
+            if iteration is None:
+                raise ValueError("loop training requires the current iteration")
             self.optimizer.zero_grad(set_to_none=True)
-            self.sample_num_loops()
+            base_num_loops = self.sample_num_loops()
+            stability_delta = self.sample_stability_delta()
+            self.current_stability_active = stability_delta is not None
+            self.current_long_num_loops = 0
+            self.current_long_task_loss = float("nan")
+            self.current_long_loss_delta = float("nan")
+            self.current_stability_loss = 0.0
+            self.current_weighted_stability_loss = 0.0
+            self.current_stability_violation = False
 
-            task_loss = self.ddp_model(**batch, labels=labels).loss
-            loss_penalty, normalized_distance, parameter_errors = self.get_loop_penalty()
-            (task_loss + loss_penalty).backward()
+            if stability_delta is None:
+                task_loss = self.ddp_model(**batch, labels=labels).loss
+                task_loss_for_logging = task_loss.detach()
+                loss_penalty, normalized_distance, parameter_errors = (
+                    self.get_loop_penalty()
+                )
+                (task_loss + loss_penalty).backward()
+                del task_loss
+                long_task_loss_for_logging = None
+                stability_loss_for_logging = task_loss_for_logging.new_zeros(())
+            else:
+                # Do not synchronize the short backward yet. The long backward
+                # synchronizes the accumulated short and long gradients once.
+                with self.ddp_model.no_sync():
+                    task_loss = self.ddp_model(**batch, labels=labels).loss
+                    task_loss_for_logging = task_loss.detach()
+                    loss_penalty, normalized_distance, parameter_errors = (
+                        self.get_loop_penalty()
+                    )
+                    (task_loss + loss_penalty).backward()
+                del task_loss
+
+                long_num_loops = base_num_loops + stability_delta
+                self._set_num_loops(long_num_loops)
+                try:
+                    long_task_loss = self.ddp_model(**batch, labels=labels).loss
+                    stability_loss = monotonic_stability_loss(
+                        task_loss_for_logging,
+                        long_task_loss,
+                    )
+                    weighted_stability_loss = (
+                        self.stability_weight * stability_loss
+                    )
+                    weighted_stability_loss.backward()
+                    long_task_loss_for_logging = long_task_loss.detach()
+                    stability_loss_for_logging = stability_loss.detach()
+                    del long_task_loss, stability_loss, weighted_stability_loss
+                finally:
+                    # Checkpoints and per-iteration logs describe the sampled
+                    # base execution, not the temporary long branch.
+                    self._set_num_loops(base_num_loops)
 
             if self.is_clip > 0:
                 torch.nn.utils.clip_grad_norm_(
@@ -534,17 +661,33 @@ class SALADTrainer():
 
             self.optimizer.step()
             self.lr_scheduler.step()
-            if iteration is None:
-                raise ValueError("loop training requires the current iteration")
+
+            global_avg_loss = self.get_global_loss(task_loss_for_logging)
+            global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
+            global_avg_distance = self.get_global_loss(
+                normalized_distance.detach().clone()
+            )
+            if long_task_loss_for_logging is not None:
+                self.current_long_num_loops = base_num_loops + stability_delta
+                self.current_long_task_loss = self.get_global_loss(
+                    long_task_loss_for_logging
+                )
+                self.current_long_loss_delta = (
+                    self.current_long_task_loss - global_avg_loss
+                )
+                self.current_stability_loss = self.get_global_loss(
+                    stability_loss_for_logging
+                )
+                self.current_weighted_stability_loss = (
+                    self.stability_weight * self.current_stability_loss
+                )
+                self.current_stability_violation = self.current_stability_loss > 0.0
+
             self.log_loop_parameter_errors(
                 iteration,
                 parameter_errors,
                 normalized_distance,
             )
-
-            global_avg_loss = self.get_global_loss(task_loss.detach())
-            global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
-            global_avg_distance = self.get_global_loss(normalized_distance.detach())
             return global_avg_loss, global_avg_loss_penalty, global_avg_distance
 
     def prepare_batch_and_labels(self, batch):
@@ -900,7 +1043,8 @@ class SALADTrainer():
                    loss_diff: float,
                    acc_num_tokens: int,
                    layer_info: dict,
-                   lr: float):
+                   lr: float,
+                   loop_metrics: dict=None):
         """
         Print training information for the current epoch.
         Args:
@@ -924,6 +1068,8 @@ class SALADTrainer():
                   'num_loops': self.current_num_loops if self.training_mode == 'loop' else 1,
                   'mean_num_loops': mean_num_loops,
                   'loop_ratios': loop_ratios}
+        if self.training_mode == 'loop' and loop_metrics is not None:
+            losses.update(loop_metrics)
         
         layer_stats = [{'name': entry['name'],
                         'loss': layer_info[entry['name']]['loss'][-1],
@@ -987,6 +1133,10 @@ class SALADTrainer():
         num_epochs = self.num_total_iters // self.num_freq
         epoch = 0
         ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
+        ep_stability_loss = 0.0
+        ep_long_loss = 0.0
+        ep_stability_steps = 0
+        ep_stability_violations = 0
         num_tokens = 0
         acc_num_tokens = 0
 
@@ -1017,6 +1167,34 @@ class SALADTrainer():
             self.layer_info['num_tokens'].append(num_tokens)
             if self.training_mode == 'loop':
                 self.layer_info['num_loops'].append(self.current_num_loops)
+                self.layer_info['long_num_loops'].append(
+                    self.current_long_num_loops
+                )
+                self.layer_info['stability_active'].append(
+                    self.current_stability_active
+                )
+                self.layer_info['long_task_loss'].append(
+                    self.current_long_task_loss
+                )
+                self.layer_info['long_loss_delta'].append(
+                    self.current_long_loss_delta
+                )
+                self.layer_info['stability_loss'].append(
+                    self.current_stability_loss
+                )
+                self.layer_info['weighted_stability_loss'].append(
+                    self.current_weighted_stability_loss
+                )
+                self.layer_info['stability_violation'].append(
+                    self.current_stability_violation
+                )
+                ep_stability_loss += self.current_weighted_stability_loss
+                if self.current_stability_active:
+                    ep_long_loss += self.current_long_task_loss
+                    ep_stability_steps += 1
+                    ep_stability_violations += int(
+                        self.current_stability_violation
+                    )
 
             ep_loss += avg_loss
             ep_penalty += avg_loss_penalty
@@ -1063,7 +1241,26 @@ class SALADTrainer():
                 # average losses
                 ep_loss /= self.num_freq
                 ep_penalty /= self.num_freq
-                ep_diff /= self.num_freq    
+                ep_diff /= self.num_freq
+                loop_metrics = None
+                if self.training_mode == 'loop':
+                    loop_metrics = {
+                        'stability_enabled': self.stability_enabled,
+                        'avg_stability_loss': ep_stability_loss / self.num_freq,
+                        'avg_long_loss': (
+                            ep_long_loss / ep_stability_steps
+                            if ep_stability_steps else float('nan')
+                        ),
+                        'stability_branch_rate': (
+                            ep_stability_steps / self.num_freq
+                        ),
+                        'stability_violation_rate': (
+                            ep_stability_violations / ep_stability_steps
+                            if ep_stability_steps else float('nan')
+                        ),
+                        'long_num_loops': self.current_long_num_loops,
+                        'stability_weight': self.stability_weight,
+                    }
                 
                 if self.rank == 0:
                     self.print_info(epoch, 
@@ -1074,7 +1271,8 @@ class SALADTrainer():
                                     ep_diff, 
                                     acc_num_tokens, 
                                     self.layer_info, 
-                                    self.lr_scheduler.get_last_lr()[0])
+                                    self.lr_scheduler.get_last_lr()[0],
+                                    loop_metrics=loop_metrics)
                         
                     if self.is_monitor:
                         print(f'Train: {self.timers["train"].total:.3f}s | Avg Train: {self.timers["train"].avg():.3f}s | S: {self.timers["S"].total:.3f}s | L: {self.timers["L"].total:.3f}s | Y: {self.timers["Y"].total:.3f}s | Sync: {self.timers["sync"].total:.3f}s | Save: {self.timers["save"].total:.3f}s')
@@ -1082,6 +1280,10 @@ class SALADTrainer():
                             self.timers[key].reset()
 
                 ep_loss, ep_penalty, ep_diff = 0.0, 0.0, 0.0
+                ep_stability_loss = 0.0
+                ep_long_loss = 0.0
+                ep_stability_steps = 0
+                ep_stability_violations = 0
             
             else:
                 if self.is_asyn:

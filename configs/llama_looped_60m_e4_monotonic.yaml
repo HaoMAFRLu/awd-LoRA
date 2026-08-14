@@ -1,0 +1,71 @@
+seed: 42
+name: llama_looped_60m_e4_monotonic
+model_config: llama_looped_60m_model.json
+training_mode: loop
+output_folder: looped_transformer
+wandb_project: LOOPED_TRANSFORMER
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 10
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+batch_size: 512
+num_workers: 0
+
+# Preserve the E4 task-depth distribution. On selected iterations, the same
+# batch is also evaluated at base_num_loops + delta for the monotonic loss.
+loop:
+  num_loops: 4
+  sampling:
+    values: [1, 2, 3, 4, 5]
+    probabilities: [0.05, 0.10, 0.15, 0.20, 0.50]
+    expected_value: 4.0
+    seed: 42
+  stability:
+    enabled: true
+    probability: 0.25
+    deltas: [5, 7, 9]
+    weight: 0.1
+    seed: 42
+
+soft_tie:
+  source_block: layers.0
+  target_block: layers.3
+  rho: 0.1
+  epsilon: 1.0e-12
+  parameter_names:
+    - self_attn.q_proj.weight
+    - self_attn.k_proj.weight
+    - self_attn.v_proj.weight
+    - self_attn.o_proj.weight
+    - mlp.gate_proj.weight
+    - mlp.up_proj.weight
+    - mlp.down_proj.weight
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas:
+      - 0.9
+      - 0.95
+    eps: 1.0e-08
+    weight_decay: 0.0
