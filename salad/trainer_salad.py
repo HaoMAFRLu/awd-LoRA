@@ -373,6 +373,9 @@ class SALADTrainer():
         self.fixed_point_weight = float(
             contraction.get("fixed_point_weight", 0.1)
         )
+        self.fixed_point_epsilon = float(
+            contraction.get("fixed_point_epsilon", 0.0)
+        )
         self.contraction_ratio_epsilon = float(
             contraction.get("ratio_epsilon", 1e-12)
         )
@@ -392,9 +395,10 @@ class SALADTrainer():
                 if self.loop_sampler is not None
                 else self.current_num_loops
             )
-            if minimum_num_loops < self.contraction_start_loop + 1:
+            if minimum_num_loops < self.contraction_start_loop + 2:
                 raise ValueError(
-                    "every sampled loop depth must allow at least one contraction inequality"
+                    "every sampled loop depth must provide enough Tn-1 outputs "
+                    "for at least one contraction inequality"
                 )
             if not math.isfinite(self.contraction_gamma) or not (
                 0.0 < self.contraction_gamma < 1.0
@@ -413,6 +417,12 @@ class SALADTrainer():
             ):
                 raise ValueError(
                     "loop.contraction.fixed_point_weight must be finite and non-negative"
+                )
+            if not math.isfinite(self.fixed_point_epsilon) or (
+                self.fixed_point_epsilon < 0.0
+            ):
+                raise ValueError(
+                    "loop.contraction.fixed_point_epsilon must be finite and non-negative"
                 )
             if not math.isfinite(self.contraction_ratio_epsilon) or (
                 self.contraction_ratio_epsilon <= 0.0
@@ -524,6 +534,7 @@ class SALADTrainer():
                     "loop/weighted_fixed_point_loss": (
                         self.current_weighted_fixed_point_loss
                     ),
+                    "loop/fixed_point_epsilon": self.fixed_point_epsilon,
                 })
             payload.update({
                 f"loop/hidden_distance/d_{loop_index}": distance
@@ -782,7 +793,6 @@ class SALADTrainer():
                     **batch,
                     labels=labels,
                     output_loop_states=True,
-                    probe_next_loop=self.fixed_point_enabled,
                     return_dict=True,
                 )
                 if outputs.loop_states is None:
@@ -794,7 +804,10 @@ class SALADTrainer():
                     self.contraction_start_loop,
                     self.contraction_gamma,
                     self.contraction_ratio_epsilon,
-                    self.fixed_point_enabled,
+                    (
+                        self.fixed_point_epsilon
+                        if self.fixed_point_enabled else None
+                    ),
                 )
                 task_loss = outputs.loss
                 task_loss_for_logging = task_loss.detach()
@@ -1582,6 +1595,7 @@ class SALADTrainer():
                         'contraction_weight': self.contraction_weight,
                         'fixed_point_enabled': self.fixed_point_enabled,
                         'fixed_point_weight': self.fixed_point_weight,
+                        'fixed_point_epsilon': self.fixed_point_epsilon,
                     }
                 
                 if self.rank == 0:

@@ -124,18 +124,33 @@ class LoopedLlamaTest(unittest.TestCase):
 
         with torch.no_grad():
             ordinary = model(input_ids=input_ids, return_dict=True)
-            probed = model(
+
+        tn_minus_one_outputs = []
+
+        def capture_tn_minus_one(_module, _inputs, outputs):
+            tn_minus_one_outputs.append(outputs[0].detach().clone())
+
+        handle = model.model.layers[3].register_forward_hook(
+            capture_tn_minus_one
+        )
+        with torch.no_grad():
+            captured = model(
                 input_ids=input_ids,
                 output_loop_states=True,
-                probe_next_loop=True,
                 return_dict=True,
             )
+        handle.remove()
 
-        # h[0], h[1], h[2], h[3], and the auxiliary h[4] probe.
-        self.assertEqual(len(probed.loop_states), 5)
-        self.assertTrue(torch.allclose(ordinary.logits, probed.logits))
+        self.assertEqual(len(captured.loop_states), 3)
+        self.assertEqual(len(tn_minus_one_outputs), 3)
+        for loop_state, layer_output in zip(
+            captured.loop_states,
+            tn_minus_one_outputs,
+        ):
+            self.assertTrue(torch.allclose(loop_state, layer_output))
+        self.assertTrue(torch.allclose(ordinary.logits, captured.logits))
 
-    def test_random_contraction_depths_do_not_add_a_probe(self):
+    def test_random_contraction_depths_capture_only_sampled_loops(self):
         model = _tiny_looped_model()
         input_ids = torch.randint(0, model.config.vocab_size, (2, 8))
         attention_mask = torch.ones_like(input_ids)
@@ -146,7 +161,6 @@ class LoopedLlamaTest(unittest.TestCase):
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 output_loop_states=True,
-                probe_next_loop=False,
                 return_dict=True,
             )
             result = contraction_losses(
@@ -156,10 +170,14 @@ class LoopedLlamaTest(unittest.TestCase):
                 gamma=0.9,
             )
 
-            self.assertEqual(len(output.loop_states), num_loops + 1)
+            self.assertEqual(len(output.loop_states), num_loops)
             self.assertEqual(
                 tuple(result["distances"].shape),
-                (input_ids.shape[0], num_loops),
+                (input_ids.shape[0], num_loops - 1),
+            )
+            self.assertEqual(
+                tuple(result["ratios"].shape),
+                (input_ids.shape[0], num_loops - 2),
             )
             self.assertEqual(result["fixed_point"].item(), 0.0)
 
@@ -176,7 +194,7 @@ class LoopedLlamaTest(unittest.TestCase):
 
     def test_contraction_loss_uses_adjacent_loop_distances(self):
         # Distances are d1=2, d2=1, d3=0.4. With gamma=0.5, both
-        # contraction inequalities hold and the terminal residual is 0.4.
+        # contraction inequalities hold. The d1 hinge above 0.5 is 1.5.
         states = tuple(
             torch.tensor([[[value]]], requires_grad=True)
             for value in (0.0, 2.0, 3.0, 3.4)
@@ -186,17 +204,19 @@ class LoopedLlamaTest(unittest.TestCase):
             attention_mask=torch.ones(1, 1),
             start_loop=1,
             gamma=0.5,
-            has_fixed_point_probe=True,
+            fixed_point_epsilon=0.5,
         )
 
         self.assertAlmostEqual(result["contraction"].item(), 0.0, places=6)
-        self.assertAlmostEqual(result["fixed_point"].item(), 0.16, places=6)
+        self.assertAlmostEqual(result["fixed_point"].item(), 2.25, places=6)
         self.assertAlmostEqual(result["violation_rate"].item(), 0.0, places=6)
 
         result["fixed_point"].backward()
-        self.assertIsNotNone(states[-1].grad)
+        self.assertIsNotNone(states[0].grad)
+        self.assertIsNotNone(states[1].grad)
+        self.assertEqual(states[-1].grad.abs().item(), 0.0)
 
-    def test_fixed_point_loss_is_zero_without_a_probe(self):
+    def test_fixed_point_loss_is_zero_when_disabled(self):
         states = tuple(
             torch.tensor([[[value]]], requires_grad=True)
             for value in (0.0, 2.0, 3.0, 3.4)
@@ -210,6 +230,56 @@ class LoopedLlamaTest(unittest.TestCase):
 
         self.assertEqual(result["fixed_point"].item(), 0.0)
         self.assertEqual(tuple(result["distances"].shape), (1, 3))
+
+    def test_fixed_point_hinge_is_zero_below_epsilon(self):
+        states = tuple(
+            torch.tensor([[[value]]], requires_grad=True)
+            for value in (0.0, 0.4, 0.6)
+        )
+        result = contraction_losses(
+            states,
+            attention_mask=None,
+            start_loop=1,
+            gamma=0.9,
+            fixed_point_epsilon=0.5,
+        )
+
+        self.assertEqual(result["fixed_point"].item(), 0.0)
+
+    def test_fixed_point_anchor_backpropagates_through_recurrent_blocks(self):
+        model = _tiny_looped_model(num_loops=3)
+        input_ids = torch.randint(0, model.config.vocab_size, (2, 8))
+        attention_mask = torch.ones_like(input_ids)
+        output = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            output_loop_states=True,
+            return_dict=True,
+        )
+        result = contraction_losses(
+            output.loop_states,
+            attention_mask=attention_mask,
+            start_loop=1,
+            gamma=0.9,
+            fixed_point_epsilon=0.0,
+        )
+
+        result["fixed_point"].backward()
+
+        recurrent_gradients = [
+            parameter.grad
+            for layer_index in (1, 2, 3)
+            for parameter in model.model.layers[layer_index].parameters()
+            if parameter.grad is not None
+        ]
+        self.assertTrue(recurrent_gradients)
+        self.assertTrue(
+            all(torch.isfinite(gradient).all() for gradient in recurrent_gradients)
+        )
+        self.assertGreater(
+            sum(gradient.abs().sum().item() for gradient in recurrent_gradients),
+            0.0,
+        )
 
     def test_contraction_reference_distance_is_detached(self):
         states = tuple(

@@ -197,6 +197,9 @@ def print_wandb(
                     "loop/fixed_point_weight": float(
                         losses.get("fixed_point_weight", 0.0)
                     ),
+                    "loop/fixed_point_epsilon": float(
+                        losses.get("fixed_point_epsilon", 0.0)
+                    ),
                 })
 
     for s in layer_stats:

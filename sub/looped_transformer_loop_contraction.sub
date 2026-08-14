@@ -5,15 +5,15 @@ arguments = \
     --nproc_per_node=4 \
     --nnodes=1 \
     --rdzv_backend=c10d \
-    --rdzv_endpoint=127.0.0.1:29513 \
+    --rdzv_endpoint=127.0.0.1:29514 \
     scripts/train_salad.py \
     --cfg_version llama_looped_60m_contraction
 
 initialdir = /lustre/home/hma2/projects/awd-LoRA
 
-log = jobs_looped_transformer/loop_contraction_$(Cluster)_$(Process).log
-error = jobs_looped_transformer/loop_contraction_$(Cluster)_$(Process).err
-output = jobs_looped_transformer/loop_contraction_$(Cluster)_$(Process).out
+log = jobs_looped_transformer/loop_contraction_fp_$(Cluster)_$(Process).log
+error = jobs_looped_transformer/loop_contraction_fp_$(Cluster)_$(Process).err
+output = jobs_looped_transformer/loop_contraction_fp_$(Cluster)_$(Process).out
 
 request_cpus = 4
 request_memory = 100000

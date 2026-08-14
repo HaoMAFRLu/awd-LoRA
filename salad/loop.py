@@ -149,14 +149,15 @@ def contraction_losses(
     start_loop: int,
     gamma: float,
     ratio_epsilon: float = 1e-12,
-    has_fixed_point_probe: bool = False,
+    fixed_point_epsilon: Optional[float] = None,
 ) -> dict:
-    """Compute trajectory contraction and an optional fixed-point loss.
+    """Compute trajectory contraction and an optional first-step anchor.
 
-    ``loop_states`` contains h[0] through h[K]. When
-    ``has_fixed_point_probe`` is true, its last item is instead an auxiliary
-    h[K+1] used to measure the residual at h[K]. The contraction condition
-    begins with d[start_loop + 1] <= gamma * d[start_loop].
+    ``loop_states`` contains z[1] through z[K], where z[k] is the Tn-1 output
+    after the k-th complete logical loop. The fixed-point term anchors
+    d[1] = D(z[1], z[2]) with a hinge at ``fixed_point_epsilon``. The
+    contraction condition begins with
+    d[start_loop + 1] <= gamma * d[start_loop].
     """
     if not isinstance(start_loop, int) or isinstance(start_loop, bool) or start_loop < 1:
         raise ValueError("start_loop must be a positive integer")
@@ -164,8 +165,10 @@ def contraction_losses(
         raise ValueError("gamma must be finite and strictly between 0 and 1")
     if not math.isfinite(ratio_epsilon) or ratio_epsilon <= 0.0:
         raise ValueError("ratio_epsilon must be finite and positive")
-    if not isinstance(has_fixed_point_probe, bool):
-        raise TypeError("has_fixed_point_probe must be a boolean")
+    if fixed_point_epsilon is not None and (
+        not math.isfinite(fixed_point_epsilon) or fixed_point_epsilon < 0.0
+    ):
+        raise ValueError("fixed_point_epsilon must be finite and non-negative")
     if len(loop_states) < start_loop + 2:
         raise ValueError(
             "loop_states must contain enough complete-loop states for one contraction inequality"
@@ -183,8 +186,8 @@ def contraction_losses(
     violations = torch.relu(following - gamma * previous.detach())
     ratios = following.detach() / previous.detach().clamp_min(ratio_epsilon)
     fixed_point = (
-        distances[:, -1].square().mean()
-        if has_fixed_point_probe
+        torch.relu(distances[:, 0] - fixed_point_epsilon).square().mean()
+        if fixed_point_epsilon is not None
         else distances.new_zeros(())
     )
 

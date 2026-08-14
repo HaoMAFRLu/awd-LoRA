@@ -573,7 +573,6 @@ class LlamaModel(LlamaPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         output_loop_states: bool = False,
-        probe_next_loop: bool = False,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, LoopBaseModelOutput]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -584,8 +583,6 @@ class LlamaModel(LlamaPreTrainedModel):
 
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        if probe_next_loop and not output_loop_states:
-            raise ValueError("probe_next_loop requires output_loop_states=True")
         if output_loop_states and not self.loop_layers:
             raise ValueError("output_loop_states requires a looped model")
         if output_loop_states and (use_cache or past_key_values is not None):
@@ -645,9 +642,10 @@ class LlamaModel(LlamaPreTrainedModel):
         next_decoder_cache = () if use_cache else None
         loop_states = None
         if output_loop_states:
-            # h[0] is the state entering the recurrent region. If there is no
-            # entry block, the token embeddings already are h[0].
-            loop_states = (hidden_states,) if not self.entry_layers else ()
+            # Store only outputs of the final recurrent block (Tn-1), once
+            # per complete logical loop. The entry-block output is not a
+            # Tn-1 output and therefore is not part of the trajectory loss.
+            loop_states = ()
 
         if past_key_values is not None and len(past_key_values) != len(self.layer_order):
             raise ValueError(
@@ -695,12 +693,11 @@ class LlamaModel(LlamaPreTrainedModel):
                 entry_depth = len(self.entry_layers)
                 loop_depth = len(self.loop_layers)
                 loop_end = entry_depth + loop_depth * self.num_loops
-                is_entry_boundary = executed_layers == entry_depth
                 is_loop_boundary = (
                     entry_depth < executed_layers <= loop_end
                     and (executed_layers - entry_depth) % loop_depth == 0
                 )
-                if is_entry_boundary or is_loop_boundary:
+                if is_loop_boundary:
                     loop_states += (hidden_states,)
 
             if use_cache:
@@ -708,40 +705,6 @@ class LlamaModel(LlamaPreTrainedModel):
 
             if output_attentions:
                 all_self_attns += (layer_outputs[1],)
-
-        if probe_next_loop:
-            # Branch from h[K] and execute the recurrent region once more.
-            # The ordinary task path above has already sent h[K] through the
-            # exit block, so this probe cannot change the task logits.
-            probe_hidden_states = loop_states[-1]
-            for layer_idx in self.loop_layers:
-                decoder_layer = self.layers[layer_idx]
-                if self.gradient_checkpointing and self.training:
-
-                    def create_probe_forward(module):
-                        def custom_forward(*inputs):
-                            return module(*inputs, False, None)
-
-                        return custom_forward
-
-                    layer_outputs = torch.utils.checkpoint.checkpoint(
-                        create_probe_forward(decoder_layer),
-                        probe_hidden_states,
-                        attention_mask,
-                        position_ids,
-                        None,
-                    )
-                else:
-                    layer_outputs = decoder_layer(
-                        probe_hidden_states,
-                        attention_mask=attention_mask,
-                        position_ids=position_ids,
-                        past_key_value=None,
-                        output_attentions=False,
-                        use_cache=False,
-                    )
-                probe_hidden_states = layer_outputs[0]
-            loop_states += (probe_hidden_states,)
 
         hidden_states = self.norm(hidden_states)
 
@@ -813,7 +776,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         output_loop_states: bool = False,
-        probe_next_loop: bool = False,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, LoopCausalLMOutput]:
         r"""
@@ -859,7 +821,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             output_loop_states=output_loop_states,
-            probe_next_loop=probe_next_loop,
             return_dict=return_dict,
         )
 
