@@ -445,8 +445,10 @@ def main() -> None:
             precision,
         )
         loop_values = [int(value) for value in config["loop_values"]]
-        if loop_values != list(range(1, 11)):
-            raise ValueError("loop_values must be exactly [1, 2, ..., 10]")
+        if not loop_values or loop_values != list(range(1, loop_values[-1] + 1)):
+            raise ValueError(
+                "loop_values must be consecutive positive integers starting at 1"
+            )
 
         for num_loops in loop_values:
             looped.model.set_num_loops(num_loops)
