@@ -31,6 +31,3 @@ loop_units_per_middle_pass: 2
 loop_values: [2, 4, 6, 8, 10]
 
 output_directory: data/looped_transformer/evaluation/vanilla_middle6_c4_seed43
-is_wandb: true
-wandb_project: LOOPED_TRANSFORMER
-wandb_group: vanilla_middle6_c4_seed43_evaluation

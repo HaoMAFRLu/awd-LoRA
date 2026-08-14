@@ -385,21 +385,6 @@ def main() -> None:
     timestamp = timestamp_values[0]
     output_directory = _resolve_path(config["output_directory"]) / timestamp
 
-    run = None
-    if rank == 0 and config.get("is_wandb", False):
-        import wandb
-
-        wandb.login(key=os.getenv("WANDB_API_KEY"), relogin=False)
-        run = wandb.init(
-            project=config.get("wandb_project", "LOOPED_TRANSFORMER"),
-            entity=config.get("wandb_entity", "hao-ma-eth-z-rich"),
-            group=config.get("wandb_group", "c4_evaluation"),
-            config=config,
-            name=timestamp,
-        )
-        run.define_metric("condition_index")
-        run.define_metric("eval/*", step_metric="condition_index")
-
     evaluation_mode = config.get("evaluation_mode", "vanilla_and_looped")
     if evaluation_mode == "vanilla_middle_loop":
         results = _run_vanilla_middle_loop_evaluation(
@@ -470,29 +455,11 @@ def main() -> None:
 
     if rank == 0:
         vanilla_loss = results[0]["loss"]
-        for condition_index, result in enumerate(results):
+        for result in results:
             result["loss_delta_vs_vanilla"] = result["loss"] - vanilla_loss
-            if run is not None:
-                run.log({
-                    "condition_index": condition_index,
-                    "eval/loss": result["loss"],
-                    "eval/perplexity": result["perplexity"],
-                    "eval/loss_delta_vs_vanilla": result["loss_delta_vs_vanilla"],
-                    "eval/num_loops": (
-                        -1 if result["num_loops"] is None else result["num_loops"]
-                    ),
-                    "eval/middle_passes": result.get("middle_passes", -1),
-                    "eval/logical_depth": result["logical_depth"],
-                    "eval/tokens": result["tokens"],
-                    "eval/seconds": result["seconds"],
-                    "eval/tokens_per_second": result["tokens_per_second"],
-                })
         _write_results(output_directory, config, fingerprints, results)
         _print_results(results)
         print(f"Results written to {output_directory}")
-        if run is not None:
-            run.summary["results_path"] = str(output_directory / "results.json")
-            run.finish()
 
     dist.barrier()
     dist.destroy_process_group()

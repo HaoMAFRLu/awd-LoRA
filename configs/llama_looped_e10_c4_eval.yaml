@@ -29,6 +29,3 @@ checkpoints:
 loop_values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 output_directory: data/looped_transformer/evaluation/c4_seed43_e10
-is_wandb: true
-wandb_project: LOOPED_TRANSFORMER
-wandb_group: c4_seed43_e10_evaluation
