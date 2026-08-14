@@ -10,7 +10,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "1800")
 os.environ.setdefault("HF_HUB_ETAG_TIMEOUT", "120")
@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from salad.register import get_data, get_model, get_preprocessed_dataset, get_tokenizer
+from salad.loop import hidden_distance
 from salad.utils import hf_login_once, set_seed
 
 
@@ -285,11 +286,128 @@ def _evaluate_condition(
     }
 
 
+@torch.inference_mode()
+def _evaluate_loop_distances(
+    model: torch.nn.Module,
+    batches: List[Dict[str, torch.Tensor]],
+    device: torch.device,
+    num_loops: int,
+    gamma: float,
+) -> Dict[str, Any]:
+    """Measure Tn-1 output changes along one fixed-depth trajectory."""
+    if num_loops < 3:
+        raise ValueError("distance monitoring requires at least three loops")
+    if not 0.0 < gamma < 1.0:
+        raise ValueError("distance-monitor gamma must be between 0 and 1")
+
+    model.model.set_num_loops(num_loops)
+    num_distances = num_loops - 1
+    num_comparisons = num_distances - 1
+    distance_sums = torch.zeros(
+        num_distances,
+        dtype=torch.float64,
+        device=device,
+    )
+    ratio_sums = torch.zeros(
+        num_comparisons,
+        dtype=torch.float64,
+        device=device,
+    )
+    decrease_counts = torch.zeros_like(ratio_sums)
+    gamma_compliance_counts = torch.zeros_like(ratio_sums)
+    example_count = torch.zeros((), dtype=torch.float64, device=device)
+
+    for cached_batch in batches:
+        input_ids = cached_batch["input_ids"].to(
+            device=device,
+            dtype=torch.long,
+            non_blocking=True,
+        )
+        attention_mask = cached_batch["attention_mask"].to(
+            device=device,
+            dtype=torch.long,
+            non_blocking=True,
+        )
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            use_cache=False,
+            output_loop_states=True,
+            return_dict=True,
+        )
+        if outputs.loop_states is None or len(outputs.loop_states) != num_loops:
+            observed = (
+                None if outputs.loop_states is None else len(outputs.loop_states)
+            )
+            raise RuntimeError(
+                f"expected {num_loops} Tn-1 outputs, observed {observed}"
+            )
+
+        distances = torch.stack(
+            tuple(
+                hidden_distance(current, previous, attention_mask)
+                for previous, current in zip(
+                    outputs.loop_states[:-1],
+                    outputs.loop_states[1:],
+                )
+            ),
+            dim=1,
+        )
+        previous = distances[:, :-1]
+        following = distances[:, 1:]
+        ratios = following / previous.clamp_min(1e-12)
+
+        distance_sums += distances.to(torch.float64).sum(dim=0)
+        ratio_sums += ratios.to(torch.float64).sum(dim=0)
+        decrease_counts += (following < previous).to(torch.float64).sum(dim=0)
+        gamma_compliance_counts += (
+            following <= gamma * previous
+        ).to(torch.float64).sum(dim=0)
+        example_count += input_ids.shape[0]
+
+    for value in (
+        distance_sums,
+        ratio_sums,
+        decrease_counts,
+        gamma_compliance_counts,
+        example_count,
+    ):
+        dist.all_reduce(value, op=dist.ReduceOp.SUM)
+
+    total_examples = int(example_count.item())
+    if total_examples == 0:
+        raise RuntimeError("distance monitoring received no examples")
+
+    mean_distances = (distance_sums / example_count).tolist()
+    mean_ratios = (ratio_sums / example_count).tolist()
+    decrease_rates = (decrease_counts / example_count).tolist()
+    gamma_compliance_rates = (
+        gamma_compliance_counts / example_count
+    ).tolist()
+    return {
+        "num_loops": num_loops,
+        "examples": total_examples,
+        "gamma": gamma,
+        "distances": mean_distances,
+        "ratios_to_previous": mean_ratios,
+        "decrease_rates": decrease_rates,
+        "gamma_compliance_rates": gamma_compliance_rates,
+        "mean_distances_strictly_decrease": all(
+            following < previous
+            for previous, following in zip(
+                mean_distances[:-1],
+                mean_distances[1:],
+            )
+        ),
+    }
+
+
 def _write_results(
     output_directory: Path,
     config: Dict[str, Any],
     fingerprints: List[str],
     results: List[Dict[str, Any]],
+    distance_monitor: Optional[Dict[str, Any]] = None,
 ) -> None:
     output_directory.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -300,6 +418,7 @@ def _write_results(
         "num_eval_batches": int(config["num_eval_batches"]),
         "rank_batch_fingerprints": fingerprints,
         "results": results,
+        "distance_monitor": distance_monitor,
     }
     with (output_directory / "results.json").open("w", encoding="utf-8") as file:
         json.dump(payload, file, indent=2)
@@ -333,6 +452,39 @@ def _print_results(results: List[Dict[str, Any]]) -> None:
             f"{result['seconds']:>10.2f} {result['tokens_per_second']:>12.0f}"
         )
     print("=" * 125)
+
+
+def _print_distance_monitor(monitor: Dict[str, Any]) -> None:
+    print("\nTn-1 hidden-distance monitor")
+    print("=" * 100)
+    print(
+        f"{'transition':<14} {'distance':>12} {'ratio':>12} "
+        f"{'decrease rate':>16} {'gamma compliance':>18}"
+    )
+    print("-" * 100)
+    for index, distance in enumerate(monitor["distances"], start=1):
+        if index == 1:
+            ratio = decrease_rate = gamma_rate = "-"
+        else:
+            comparison_index = index - 2
+            ratio = f"{monitor['ratios_to_previous'][comparison_index]:.6f}"
+            decrease_rate = (
+                f"{monitor['decrease_rates'][comparison_index]:.4f}"
+            )
+            gamma_rate = (
+                f"{monitor['gamma_compliance_rates'][comparison_index]:.4f}"
+            )
+        transition = f"z{index}->z{index + 1}"
+        print(
+            f"{transition:<14} {distance:>12.6f} {ratio:>12} "
+            f"{decrease_rate:>16} {gamma_rate:>18}"
+        )
+    print("-" * 100)
+    print(
+        "Mean distances strictly decrease: "
+        f"{monitor['mean_distances_strictly_decrease']}"
+    )
+    print("=" * 100)
 
 
 def main() -> None:
@@ -386,6 +538,7 @@ def main() -> None:
     output_directory = _resolve_path(config["output_directory"]) / timestamp
 
     evaluation_mode = config.get("evaluation_mode", "vanilla_and_looped")
+    distance_monitor = None
     if evaluation_mode == "vanilla_middle_loop":
         results = _run_vanilla_middle_loop_evaluation(
             config,
@@ -450,6 +603,16 @@ def main() -> None:
                     f"loop={num_loops:>2d}, depth={result['logical_depth']:>2d}: "
                     f"loss={result['loss']:.6f}, ppl={result['perplexity']:.4f}"
                 )
+
+        distance_config = config.get("distance_monitor", {})
+        if distance_config.get("enabled", False):
+            distance_monitor = _evaluate_loop_distances(
+                looped,
+                batches,
+                device,
+                num_loops=int(distance_config.get("num_loops", loop_values[-1])),
+                gamma=float(distance_config.get("gamma", 0.95)),
+            )
     else:
         raise ValueError(f"unsupported evaluation_mode: {evaluation_mode!r}")
 
@@ -457,8 +620,16 @@ def main() -> None:
         vanilla_loss = results[0]["loss"]
         for result in results:
             result["loss_delta_vs_vanilla"] = result["loss"] - vanilla_loss
-        _write_results(output_directory, config, fingerprints, results)
+        _write_results(
+            output_directory,
+            config,
+            fingerprints,
+            results,
+            distance_monitor,
+        )
         _print_results(results)
+        if distance_monitor is not None:
+            _print_distance_monitor(distance_monitor)
         print(f"Results written to {output_directory}")
 
     dist.barrier()
