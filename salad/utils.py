@@ -112,21 +112,42 @@ def print_wandb(
             losses.get("avg_loss", float("nan"))
             + losses.get("avg_loss_penalty", 0.0)
             + losses.get("avg_stability_loss", 0.0)
+            + losses.get("avg_contraction_loss", 0.0)
+            + losses.get("avg_fixed_point_loss", 0.0)
         ),
-        "train/layer_diff": float(losses.get("avg_diff", float("nan"))),
-        "train/penalty": float(losses.get("avg_loss_penalty", float("nan"))),
         "train/lr": float(lr),
         "train/tokens_M": float(num_tokens) / 1e6,
         # DO NOT add "epoch": step already carries this
     }
 
+    if losses.get("training_mode") != "loop" or losses.get(
+        "soft_tie_enabled",
+        False,
+    ):
+        payload.update({
+            "train/layer_diff": float(losses.get("avg_diff", float("nan"))),
+            "train/penalty": float(
+                losses.get("avg_loss_penalty", float("nan"))
+            ),
+        })
+
     if losses.get("training_mode") == "loop":
         payload.update({
-            "loop/block_distance": float(losses.get("avg_diff", float("nan"))),
-            "loop/soft_penalty": float(losses.get("avg_loss_penalty", float("nan"))),
             "loop/num_loops": int(losses["num_loops"]),
             "loop/mean_num_loops": float(losses["mean_num_loops"]),
+            "loop/soft_tie_enabled": int(
+                losses.get("soft_tie_enabled", False)
+            ),
         })
+        if losses.get("soft_tie_enabled", False):
+            payload.update({
+                "loop/block_distance": float(
+                    losses.get("avg_diff", float("nan"))
+                ),
+                "loop/soft_penalty": float(
+                    losses.get("avg_loss_penalty", float("nan"))
+                ),
+            })
         for num_loops, ratio in losses.get("loop_ratios", {}).items():
             payload[f"loop/depth_{num_loops}_ratio"] = float(ratio)
         if losses.get("stability_enabled", False):
@@ -147,6 +168,36 @@ def print_wandb(
                     losses.get("stability_weight", 0.0)
                 ),
             })
+        if losses.get("contraction_enabled", False):
+            payload.update({
+                "loop/periodic_weighted_contraction_loss": float(
+                    losses.get("avg_contraction_loss", 0.0)
+                ),
+                "loop/periodic_contraction_violation_rate": float(
+                    losses.get("avg_contraction_violation_rate", float("nan"))
+                ),
+                "loop/periodic_mean_distance_ratio": float(
+                    losses.get("avg_distance_ratio", float("nan"))
+                ),
+                "loop/contraction_gamma": float(
+                    losses.get("contraction_gamma", float("nan"))
+                ),
+                "loop/contraction_weight": float(
+                    losses.get("contraction_weight", 0.0)
+                ),
+                "loop/fixed_point_enabled": int(
+                    losses.get("fixed_point_enabled", False)
+                ),
+            })
+            if losses.get("fixed_point_enabled", False):
+                payload.update({
+                    "loop/periodic_weighted_fixed_point_loss": float(
+                        losses.get("avg_fixed_point_loss", 0.0)
+                    ),
+                    "loop/fixed_point_weight": float(
+                        losses.get("fixed_point_weight", 0.0)
+                    ),
+                })
 
     for s in layer_stats:
         name = s.get("name")
@@ -198,15 +249,23 @@ def print_epoch(epoch: int,
         losses['avg_loss']
         + losses['avg_loss_penalty']
         + losses.get('avg_stability_loss', 0.0)
+        + losses.get('avg_contraction_loss', 0.0)
+        + losses.get('avg_fixed_point_loss', 0.0)
     )
     header = (f"Epoch {epoch}/{total_epochs} | "
               f"It {epoch * num_freq}/{total_epochs * num_freq} | "
               f"Lr: {lr:.6f} | "
               f"Tokens: {num_tokens / 1000000:.3f}M | "
               f"Task loss: {losses['avg_loss']:.6f} | "
-              f"Total loss: {total_loss:.6f} | "
-              f"Block/layer distance: {losses['avg_diff']:.6f} | "
-              f"Penalty: {losses['avg_loss_penalty']:.6f}")
+              f"Total loss: {total_loss:.6f}")
+    if losses.get("training_mode") != "loop" or losses.get(
+        "soft_tie_enabled",
+        False,
+    ):
+        header += (
+            f" | Block/layer distance: {losses['avg_diff']:.6f}"
+            f" | Penalty: {losses['avg_loss_penalty']:.6f}"
+        )
     if losses.get("training_mode") == "loop":
         header += (
             f" | Loops: {losses['num_loops']}"
@@ -219,6 +278,17 @@ def print_epoch(epoch: int,
                 f" | Long branch rate: {losses['stability_branch_rate']:.2f}"
                 f" | Violation rate: {losses['stability_violation_rate']:.2f}"
             )
+        if losses.get("contraction_enabled", False):
+            header += (
+                f" | Contraction: {losses['avg_contraction_loss']:.6f}"
+                f" | Distance ratio: {losses['avg_distance_ratio']:.4f}"
+                f" | Contraction violations: "
+                f"{losses['avg_contraction_violation_rate']:.2f}"
+            )
+            if losses.get("fixed_point_enabled", False):
+                header += (
+                    f" | Fixed point: {losses['avg_fixed_point_loss']:.6f}"
+                )
     print(header)
 
     headers = ["name", "layer diff", "non-zero", "rank", 

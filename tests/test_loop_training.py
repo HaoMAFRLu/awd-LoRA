@@ -10,7 +10,9 @@ from salad.loop import (
     LoopStabilitySampler,
     block_distance,
     block_parameter_errors,
+    contraction_losses,
     get_block_reference_norms,
+    hidden_distance,
     monotonic_stability_loss,
 )
 
@@ -44,6 +46,17 @@ class LoopedLlamaTest(unittest.TestCase):
         )
         self.assertAlmostEqual(sampler.expected_value, 2.0)
         self.assertTrue(all(sampler.sample() in {1, 2, 3, 4} for _ in range(100)))
+
+    def test_contraction_loop_distribution_has_expected_value_four(self):
+        sampler = LoopSampler(
+            values=[3, 4, 5, 6],
+            probabilities=[0.4, 0.3, 0.2, 0.1],
+            seed=42,
+            expected_value=4.0,
+        )
+
+        self.assertAlmostEqual(sampler.expected_value, 4.0)
+        self.assertTrue(all(sampler.sample() in {3, 4, 5, 6} for _ in range(100)))
 
     def test_num_loops_is_configurable(self):
         model = _tiny_looped_model()
@@ -103,6 +116,118 @@ class LoopedLlamaTest(unittest.TestCase):
 
         self.assertEqual(model.model.layer_order, (0, 1, 2, 3, 1, 2, 3, 4))
         self.assertEqual(counts, [1, 2, 2, 2, 1])
+
+    def test_loop_states_are_captured_after_complete_loops(self):
+        model = _tiny_looped_model(num_loops=3)
+        model.eval()
+        input_ids = torch.randint(0, model.config.vocab_size, (2, 8))
+
+        with torch.no_grad():
+            ordinary = model(input_ids=input_ids, return_dict=True)
+            probed = model(
+                input_ids=input_ids,
+                output_loop_states=True,
+                probe_next_loop=True,
+                return_dict=True,
+            )
+
+        # h[0], h[1], h[2], h[3], and the auxiliary h[4] probe.
+        self.assertEqual(len(probed.loop_states), 5)
+        self.assertTrue(torch.allclose(ordinary.logits, probed.logits))
+
+    def test_random_contraction_depths_do_not_add_a_probe(self):
+        model = _tiny_looped_model()
+        input_ids = torch.randint(0, model.config.vocab_size, (2, 8))
+        attention_mask = torch.ones_like(input_ids)
+
+        for num_loops in (3, 4, 5, 6):
+            model.model.set_num_loops(num_loops)
+            output = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                output_loop_states=True,
+                probe_next_loop=False,
+                return_dict=True,
+            )
+            result = contraction_losses(
+                output.loop_states,
+                attention_mask,
+                start_loop=1,
+                gamma=0.9,
+            )
+
+            self.assertEqual(len(output.loop_states), num_loops + 1)
+            self.assertEqual(
+                tuple(result["distances"].shape),
+                (input_ids.shape[0], num_loops),
+            )
+            self.assertEqual(result["fixed_point"].item(), 0.0)
+
+    def test_hidden_distance_ignores_padding(self):
+        first = torch.zeros(2, 3, 2)
+        second = torch.zeros_like(first)
+        second[0, 0] = 2.0
+        second[0, 2] = 100.0
+        mask = torch.tensor([[1, 1, 0], [1, 1, 1]])
+
+        distance = hidden_distance(first, second, mask)
+
+        self.assertTrue(torch.allclose(distance, torch.tensor([2.0**0.5, 0.0])))
+
+    def test_contraction_loss_uses_adjacent_loop_distances(self):
+        # Distances are d1=2, d2=1, d3=0.4. With gamma=0.5, both
+        # contraction inequalities hold and the terminal residual is 0.4.
+        states = tuple(
+            torch.tensor([[[value]]], requires_grad=True)
+            for value in (0.0, 2.0, 3.0, 3.4)
+        )
+        result = contraction_losses(
+            states,
+            attention_mask=torch.ones(1, 1),
+            start_loop=1,
+            gamma=0.5,
+            has_fixed_point_probe=True,
+        )
+
+        self.assertAlmostEqual(result["contraction"].item(), 0.0, places=6)
+        self.assertAlmostEqual(result["fixed_point"].item(), 0.16, places=6)
+        self.assertAlmostEqual(result["violation_rate"].item(), 0.0, places=6)
+
+        result["fixed_point"].backward()
+        self.assertIsNotNone(states[-1].grad)
+
+    def test_fixed_point_loss_is_zero_without_a_probe(self):
+        states = tuple(
+            torch.tensor([[[value]]], requires_grad=True)
+            for value in (0.0, 2.0, 3.0, 3.4)
+        )
+        result = contraction_losses(
+            states,
+            attention_mask=None,
+            start_loop=1,
+            gamma=0.5,
+        )
+
+        self.assertEqual(result["fixed_point"].item(), 0.0)
+        self.assertEqual(tuple(result["distances"].shape), (1, 3))
+
+    def test_contraction_reference_distance_is_detached(self):
+        states = tuple(
+            torch.tensor([[[value]]], requires_grad=True)
+            for value in (0.0, 1.0, 3.0)
+        )
+        result = contraction_losses(
+            states,
+            attention_mask=None,
+            start_loop=1,
+            gamma=0.5,
+        )
+
+        result["contraction"].backward()
+
+        self.assertEqual(states[0].grad.abs().item(), 0.0)
+        self.assertIsNotNone(states[-1].grad)
+        self.assertGreater(states[-1].grad.abs().item(), 0.0)
 
     def test_soft_tie_is_name_aligned_and_differentiable(self):
         model = _tiny_looped_model()

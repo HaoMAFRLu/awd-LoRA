@@ -15,6 +15,7 @@ from salad.loop import (
     LoopStabilitySampler,
     block_distance,
     block_parameter_errors,
+    contraction_losses,
     get_block_reference_norms,
     monotonic_stability_loss,
 )
@@ -149,7 +150,7 @@ class SALADTrainer():
 
         self.ddp_model = DDP(self.model.to(torch.bfloat16), 
                              device_ids=[torch.cuda.current_device()])
-        if self.training_mode == 'loop':
+        if self.training_mode == 'loop' and self.soft_tie_enabled:
             # Capture the fixed denominator after DDP has synchronized rank 0's
             # initialization to every worker.
             self.soft_tie_reference_norms = get_block_reference_norms(
@@ -157,6 +158,8 @@ class SALADTrainer():
                 self.soft_tie_source_block,
                 self.soft_tie_parameter_names,
             )
+        elif self.training_mode == 'loop':
+            self.soft_tie_reference_norms = ()
 
         data = datasets.distributed.split_dataset_by_node(data, rank=self.rank, world_size=self.world_size)
 
@@ -247,6 +250,13 @@ class SALADTrainer():
             self.layer_info['stability_loss'] = []
             self.layer_info['weighted_stability_loss'] = []
             self.layer_info['stability_violation'] = []
+            self.layer_info['contraction_loss'] = []
+            self.layer_info['weighted_contraction_loss'] = []
+            self.layer_info['fixed_point_loss'] = []
+            self.layer_info['weighted_fixed_point_loss'] = []
+            self.layer_info['contraction_violation_rate'] = []
+            self.layer_info['mean_distance_ratio'] = []
+            self.layer_info['loop_distances'] = []
             self.layer_info['parameter_errors'] = {
                 name: [] for name in self.soft_tie_parameter_names
             }
@@ -257,40 +267,72 @@ class SALADTrainer():
             raise ValueError("training_mode='loop' requires a 'loop' section in the model config")
 
         soft_tie = self.config.get("soft_tie")
-        if not isinstance(soft_tie, dict):
-            raise ValueError("training_mode='loop' requires a 'soft_tie' section")
-
-        self.soft_tie_rho = float(soft_tie.get("rho", 0.0))
-
-        self.soft_tie_source_block = soft_tie.get("source_block", "layers.0")
-        self.soft_tie_target_block = soft_tie.get("target_block", "layers.3")
-        self.soft_tie_parameter_names = tuple(
-            soft_tie.get("parameter_names", DEFAULT_TIED_PARAMETER_NAMES)
+        if soft_tie is not None and not isinstance(soft_tie, dict):
+            raise ValueError("soft_tie must be a mapping when provided")
+        self.soft_tie_enabled = (
+            soft_tie.get("enabled", True) if soft_tie is not None else False
         )
-        self.soft_tie_epsilon = float(soft_tie.get("epsilon", 1e-12))
-        if not isinstance(self.soft_tie_source_block, str) or not isinstance(
-            self.soft_tie_target_block, str
-        ):
-            raise TypeError("soft_tie source_block and target_block must be strings")
-        if self.soft_tie_source_block == self.soft_tie_target_block:
-            raise ValueError("soft_tie source_block and target_block must be different")
+        if not isinstance(self.soft_tie_enabled, bool):
+            raise TypeError("soft_tie.enabled must be a boolean")
+        self.soft_tie_rho = 0.0
+        self.soft_tie_source_block = ""
+        self.soft_tie_target_block = ""
+        self.soft_tie_parameter_names = ()
+        self.soft_tie_epsilon = 1e-12
+        if self.soft_tie_enabled:
+            self.soft_tie_rho = float(soft_tie.get("rho", 0.0))
+            self.soft_tie_source_block = soft_tie.get(
+                "source_block",
+                "layers.0",
+            )
+            self.soft_tie_target_block = soft_tie.get(
+                "target_block",
+                "layers.3",
+            )
+            self.soft_tie_parameter_names = tuple(
+                soft_tie.get("parameter_names", DEFAULT_TIED_PARAMETER_NAMES)
+            )
+            self.soft_tie_epsilon = float(soft_tie.get("epsilon", 1e-12))
+            if not isinstance(self.soft_tie_source_block, str) or not isinstance(
+                self.soft_tie_target_block,
+                str,
+            ):
+                raise TypeError(
+                    "soft_tie source_block and target_block must be strings"
+                )
+            if self.soft_tie_source_block == self.soft_tie_target_block:
+                raise ValueError(
+                    "soft_tie source_block and target_block must be different"
+                )
 
         training_loop_config = self.config.get("loop")
         if not isinstance(training_loop_config, dict):
             raise ValueError("training_mode='loop' requires a 'loop' section")
+        configured_num_loops = training_loop_config.get(
+            "num_loops",
+            loop_config.get("num_loops", 1),
+        )
+        if not isinstance(configured_num_loops, int) or isinstance(
+            configured_num_loops,
+            bool,
+        ) or configured_num_loops < 1:
+            raise ValueError("loop.num_loops must be a positive integer")
+        self.current_num_loops = configured_num_loops
+
         sampling = training_loop_config.get("sampling")
-        if not isinstance(sampling, dict):
-            raise ValueError("loop training requires loop.sampling")
-        self.loop_sampler = LoopSampler(
-            values=sampling.get("values", []),
-            probabilities=sampling.get("probabilities", []),
-            seed=int(sampling.get("seed", self.config.get("seed", 42))),
-            expected_value=sampling.get("expected_value"),
-        )
-        self.current_num_loops = int(
-            training_loop_config.get("num_loops", loop_config.get("num_loops", 1))
-        )
-        self.loop_counts = {value: 0 for value in self.loop_sampler.values}
+        if sampling is None:
+            self.loop_sampler = None
+            self.loop_counts = {self.current_num_loops: 0}
+        elif isinstance(sampling, dict):
+            self.loop_sampler = LoopSampler(
+                values=sampling.get("values", []),
+                probabilities=sampling.get("probabilities", []),
+                seed=int(sampling.get("seed", self.config.get("seed", 42))),
+                expected_value=sampling.get("expected_value"),
+            )
+            self.loop_counts = {value: 0 for value in self.loop_sampler.values}
+        else:
+            raise ValueError("loop.sampling must be a mapping when provided")
 
         stability = training_loop_config.get("stability", {})
         if not isinstance(stability, dict):
@@ -319,17 +361,93 @@ class SALADTrainer():
         self.current_weighted_stability_loss = 0.0
         self.current_stability_violation = False
 
-        # Validate all names and shapes before DDP and the optimizer are built.
-        block_distance(
-            self.model,
-            self.soft_tie_source_block,
-            self.soft_tie_target_block,
-            self.soft_tie_parameter_names,
-            self.soft_tie_epsilon,
+        contraction = training_loop_config.get("contraction", {})
+        if not isinstance(contraction, dict):
+            raise ValueError("loop.contraction must be a mapping")
+        self.contraction_enabled = contraction.get("enabled", False)
+        if not isinstance(self.contraction_enabled, bool):
+            raise TypeError("loop.contraction.enabled must be a boolean")
+        self.contraction_start_loop = contraction.get("start_loop", 5)
+        self.contraction_gamma = float(contraction.get("gamma", 0.9))
+        self.contraction_weight = float(contraction.get("weight", 0.1))
+        self.fixed_point_weight = float(
+            contraction.get("fixed_point_weight", 0.1)
         )
+        self.contraction_ratio_epsilon = float(
+            contraction.get("ratio_epsilon", 1e-12)
+        )
+        self.fixed_point_enabled = self.fixed_point_weight > 0.0
+        if self.contraction_enabled:
+            if self.stability_enabled:
+                raise ValueError(
+                    "loop.stability and loop.contraction cannot both be enabled"
+                )
+            if not isinstance(self.contraction_start_loop, int) or isinstance(
+                self.contraction_start_loop,
+                bool,
+            ) or self.contraction_start_loop < 1:
+                raise ValueError("loop.contraction.start_loop must be positive")
+            minimum_num_loops = (
+                min(self.loop_sampler.values)
+                if self.loop_sampler is not None
+                else self.current_num_loops
+            )
+            if minimum_num_loops < self.contraction_start_loop + 1:
+                raise ValueError(
+                    "every sampled loop depth must allow at least one contraction inequality"
+                )
+            if not math.isfinite(self.contraction_gamma) or not (
+                0.0 < self.contraction_gamma < 1.0
+            ):
+                raise ValueError(
+                    "loop.contraction.gamma must be strictly between 0 and 1"
+                )
+            if not math.isfinite(self.contraction_weight) or (
+                self.contraction_weight <= 0.0
+            ):
+                raise ValueError(
+                    "loop.contraction.weight must be finite and positive"
+                )
+            if not math.isfinite(self.fixed_point_weight) or (
+                self.fixed_point_weight < 0.0
+            ):
+                raise ValueError(
+                    "loop.contraction.fixed_point_weight must be finite and non-negative"
+                )
+            if not math.isfinite(self.contraction_ratio_epsilon) or (
+                self.contraction_ratio_epsilon <= 0.0
+            ):
+                raise ValueError(
+                    "loop.contraction.ratio_epsilon must be finite and positive"
+                )
+
+        self.current_contraction_loss = 0.0
+        self.current_weighted_contraction_loss = 0.0
+        self.current_fixed_point_loss = 0.0
+        self.current_weighted_fixed_point_loss = 0.0
+        self.current_contraction_violation_rate = 0.0
+        self.current_mean_distance_ratio = float("nan")
+        self.current_loop_distances = ()
+
+        if self.soft_tie_enabled:
+            # Validate all names and shapes before DDP and the optimizer.
+            block_distance(
+                self.model,
+                self.soft_tie_source_block,
+                self.soft_tie_target_block,
+                self.soft_tie_parameter_names,
+                self.soft_tie_epsilon,
+            )
 
     def get_loop_penalty(self):
         """Return the penalty, block distance, and per-matrix errors."""
+        if not self.soft_tie_enabled:
+            zero = next(self.ddp_model.parameters()).new_zeros(
+                (),
+                dtype=torch.float32,
+            )
+            return zero, zero, {}
+
         errors = block_parameter_errors(
             self.ddp_model,
             self.soft_tie_source_block,
@@ -352,20 +470,28 @@ class SALADTrainer():
         if self.rank != 0:
             return
 
-        for name, error in errors.items():
-            self.layer_info['parameter_errors'][name].append(float(error.item()))
+        if self.soft_tie_enabled:
+            for name, error in errors.items():
+                self.layer_info['parameter_errors'][name].append(
+                    float(error.item())
+                )
         if not self.is_wandb:
             return
         payload = {
-            f"loop/parameter_error/{name.removesuffix('.weight')}": float(error.item())
-            for name, error in errors.items()
-        }
-        payload.update({
-            "loop/pre_update_block_distance": float(distance.item()),
             "loop/num_loops": self.current_num_loops,
+            "loop/soft_tie_enabled": int(self.soft_tie_enabled),
             "loop/stability_enabled": int(self.stability_enabled),
             "loop/stability_active": int(self.current_stability_active),
-        })
+            "loop/contraction_enabled": int(self.contraction_enabled),
+        }
+        if self.soft_tie_enabled:
+            payload.update({
+                f"loop/parameter_error/{name.removesuffix('.weight')}": float(
+                    error.item()
+                )
+                for name, error in errors.items()
+            })
+            payload["loop/pre_update_block_distance"] = float(distance.item())
         if self.current_stability_active:
             payload.update({
                 "loop/long_num_loops": self.current_long_num_loops,
@@ -379,6 +505,33 @@ class SALADTrainer():
                     self.current_stability_violation
                 ),
             })
+        if self.contraction_enabled:
+            payload.update({
+                "loop/contraction_loss": self.current_contraction_loss,
+                "loop/weighted_contraction_loss": (
+                    self.current_weighted_contraction_loss
+                ),
+                "loop/contraction_violation_rate": (
+                    self.current_contraction_violation_rate
+                ),
+                "loop/mean_distance_ratio": self.current_mean_distance_ratio,
+                "loop/contraction_gamma": self.contraction_gamma,
+                "loop/fixed_point_enabled": int(self.fixed_point_enabled),
+            })
+            if self.fixed_point_enabled:
+                payload.update({
+                    "loop/fixed_point_loss": self.current_fixed_point_loss,
+                    "loop/weighted_fixed_point_loss": (
+                        self.current_weighted_fixed_point_loss
+                    ),
+                })
+            payload.update({
+                f"loop/hidden_distance/d_{loop_index}": distance
+                for loop_index, distance in enumerate(
+                    self.current_loop_distances,
+                    start=1,
+                )
+            })
         payload["iteration"] = iteration
         # Keep the row open when the periodic summary is written at this same
         # iteration, so W&B stores one history row rather than duplicate x-axis
@@ -387,6 +540,12 @@ class SALADTrainer():
 
     def sample_num_loops(self) -> int:
         """Draw one depth on rank 0 and use it on every DDP rank."""
+        if self.loop_sampler is None:
+            sampled = self.current_num_loops
+            self._set_num_loops(sampled)
+            self.loop_counts[sampled] += 1
+            return sampled
+
         if self.rank == 0:
             sampled = self.loop_sampler.sample()
         else:
@@ -603,14 +762,110 @@ class SALADTrainer():
                 raise ValueError("loop training requires the current iteration")
             self.optimizer.zero_grad(set_to_none=True)
             base_num_loops = self.sample_num_loops()
-            stability_delta = self.sample_stability_delta()
-            self.current_stability_active = stability_delta is not None
+            self.current_stability_active = False
             self.current_long_num_loops = 0
             self.current_long_task_loss = float("nan")
             self.current_long_loss_delta = float("nan")
             self.current_stability_loss = 0.0
             self.current_weighted_stability_loss = 0.0
             self.current_stability_violation = False
+            self.current_contraction_loss = 0.0
+            self.current_weighted_contraction_loss = 0.0
+            self.current_fixed_point_loss = 0.0
+            self.current_weighted_fixed_point_loss = 0.0
+            self.current_contraction_violation_rate = 0.0
+            self.current_mean_distance_ratio = float("nan")
+            self.current_loop_distances = ()
+
+            if self.contraction_enabled:
+                outputs = self.ddp_model(
+                    **batch,
+                    labels=labels,
+                    output_loop_states=True,
+                    probe_next_loop=self.fixed_point_enabled,
+                    return_dict=True,
+                )
+                if outputs.loop_states is None:
+                    raise RuntimeError("looped model did not return loop states")
+
+                dynamics = contraction_losses(
+                    outputs.loop_states,
+                    batch.get("attention_mask"),
+                    self.contraction_start_loop,
+                    self.contraction_gamma,
+                    self.contraction_ratio_epsilon,
+                    self.fixed_point_enabled,
+                )
+                task_loss = outputs.loss
+                task_loss_for_logging = task_loss.detach()
+                loss_penalty, normalized_distance, parameter_errors = (
+                    self.get_loop_penalty()
+                )
+                weighted_contraction = (
+                    self.contraction_weight * dynamics["contraction"]
+                )
+                weighted_fixed_point = (
+                    self.fixed_point_weight * dynamics["fixed_point"]
+                )
+                total_loss = (
+                    task_loss
+                    + loss_penalty
+                    + weighted_contraction
+                    + weighted_fixed_point
+                )
+                total_loss.backward()
+
+                if self.is_clip > 0:
+                    torch.nn.utils.clip_grad_norm_(
+                        self.ddp_model.parameters(),
+                        max_norm=self.is_clip,
+                    )
+
+                self.optimizer.step()
+                self.lr_scheduler.step()
+
+                global_avg_loss = self.get_global_loss(task_loss_for_logging)
+                global_avg_loss_penalty = self.get_global_loss(
+                    loss_penalty.detach()
+                )
+                global_avg_distance = self.get_global_loss(
+                    normalized_distance.detach().clone()
+                )
+                self.current_contraction_loss = self.get_global_loss(
+                    dynamics["contraction"].detach().clone()
+                )
+                self.current_weighted_contraction_loss = (
+                    self.contraction_weight * self.current_contraction_loss
+                )
+                self.current_fixed_point_loss = self.get_global_loss(
+                    dynamics["fixed_point"].detach().clone()
+                )
+                self.current_weighted_fixed_point_loss = (
+                    self.fixed_point_weight * self.current_fixed_point_loss
+                )
+                self.current_contraction_violation_rate = self.get_global_loss(
+                    dynamics["violation_rate"].detach().clone()
+                )
+                self.current_mean_distance_ratio = self.get_global_loss(
+                    dynamics["ratios"].detach().mean().clone()
+                )
+                self.current_loop_distances = self.get_global_values(
+                    dynamics["distances"].detach().mean(dim=0)
+                )
+
+                self.log_loop_parameter_errors(
+                    iteration,
+                    parameter_errors,
+                    normalized_distance,
+                )
+                return (
+                    global_avg_loss,
+                    global_avg_loss_penalty,
+                    global_avg_distance,
+                )
+
+            stability_delta = self.sample_stability_delta()
+            self.current_stability_active = stability_delta is not None
 
             if stability_delta is None:
                 task_loss = self.ddp_model(**batch, labels=labels).loss
@@ -797,6 +1052,15 @@ class SALADTrainer():
                 dist.all_reduce(log_loss, op=dist.ReduceOp.SUM)
                 log_loss = log_loss / self.world_size
         return log_loss.item()
+
+    def get_global_values(self, values: torch.Tensor) -> tuple:
+        """Return rank-averaged values as an immutable CPU tuple."""
+        with torch.no_grad():
+            values = values.detach().clone()
+            if dist.is_available() and dist.is_initialized():
+                dist.all_reduce(values, op=dist.ReduceOp.SUM)
+                values = values / self.world_size
+        return tuple(values.cpu().tolist())
 
     def _resolve_name(self, name, param_dict):
         if name in param_dict: return name
@@ -1065,6 +1329,10 @@ class SALADTrainer():
                   'avg_loss_penalty': loss_penalty,
                   'avg_diff': loss_diff,
                   'training_mode': self.training_mode,
+                  'soft_tie_enabled': (
+                      self.soft_tie_enabled
+                      if self.training_mode == 'loop' else False
+                  ),
                   'num_loops': self.current_num_loops if self.training_mode == 'loop' else 1,
                   'mean_num_loops': mean_num_loops,
                   'loop_ratios': loop_ratios}
@@ -1137,6 +1405,10 @@ class SALADTrainer():
         ep_long_loss = 0.0
         ep_stability_steps = 0
         ep_stability_violations = 0
+        ep_contraction_loss = 0.0
+        ep_fixed_point_loss = 0.0
+        ep_contraction_violation_rate = 0.0
+        ep_mean_distance_ratio = 0.0
         num_tokens = 0
         acc_num_tokens = 0
 
@@ -1188,6 +1460,27 @@ class SALADTrainer():
                 self.layer_info['stability_violation'].append(
                     self.current_stability_violation
                 )
+                self.layer_info['contraction_loss'].append(
+                    self.current_contraction_loss
+                )
+                self.layer_info['weighted_contraction_loss'].append(
+                    self.current_weighted_contraction_loss
+                )
+                self.layer_info['fixed_point_loss'].append(
+                    self.current_fixed_point_loss
+                )
+                self.layer_info['weighted_fixed_point_loss'].append(
+                    self.current_weighted_fixed_point_loss
+                )
+                self.layer_info['contraction_violation_rate'].append(
+                    self.current_contraction_violation_rate
+                )
+                self.layer_info['mean_distance_ratio'].append(
+                    self.current_mean_distance_ratio
+                )
+                self.layer_info['loop_distances'].append(
+                    self.current_loop_distances
+                )
                 ep_stability_loss += self.current_weighted_stability_loss
                 if self.current_stability_active:
                     ep_long_loss += self.current_long_task_loss
@@ -1195,6 +1488,17 @@ class SALADTrainer():
                     ep_stability_violations += int(
                         self.current_stability_violation
                     )
+                if self.contraction_enabled:
+                    ep_contraction_loss += (
+                        self.current_weighted_contraction_loss
+                    )
+                    ep_fixed_point_loss += (
+                        self.current_weighted_fixed_point_loss
+                    )
+                    ep_contraction_violation_rate += (
+                        self.current_contraction_violation_rate
+                    )
+                    ep_mean_distance_ratio += self.current_mean_distance_ratio
 
             ep_loss += avg_loss
             ep_penalty += avg_loss_penalty
@@ -1260,6 +1564,24 @@ class SALADTrainer():
                         ),
                         'long_num_loops': self.current_long_num_loops,
                         'stability_weight': self.stability_weight,
+                        'contraction_enabled': self.contraction_enabled,
+                        'avg_contraction_loss': (
+                            ep_contraction_loss / self.num_freq
+                        ),
+                        'avg_fixed_point_loss': (
+                            ep_fixed_point_loss / self.num_freq
+                        ),
+                        'avg_contraction_violation_rate': (
+                            ep_contraction_violation_rate / self.num_freq
+                        ),
+                        'avg_distance_ratio': (
+                            ep_mean_distance_ratio / self.num_freq
+                            if self.contraction_enabled else float('nan')
+                        ),
+                        'contraction_gamma': self.contraction_gamma,
+                        'contraction_weight': self.contraction_weight,
+                        'fixed_point_enabled': self.fixed_point_enabled,
+                        'fixed_point_weight': self.fixed_point_weight,
                     }
                 
                 if self.rank == 0:
@@ -1284,6 +1606,10 @@ class SALADTrainer():
                 ep_long_loss = 0.0
                 ep_stability_steps = 0
                 ep_stability_violations = 0
+                ep_contraction_loss = 0.0
+                ep_fixed_point_loss = 0.0
+                ep_contraction_violation_rate = 0.0
+                ep_mean_distance_ratio = 0.0
             
             else:
                 if self.is_asyn:

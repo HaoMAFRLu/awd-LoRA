@@ -37,12 +37,12 @@ def get_model(cfg: str, training_config: Optional[dict] = None):
         if not isinstance(loop_override, dict):
             raise TypeError("training config 'loop' must be a dictionary")
         model_loop = dict(getattr(model_cfg, "loop", {}) or {})
-        # Sampling and stability are training policies, not part of the
+        # Sampling and auxiliary losses are training policies, not part of the
         # inference architecture. Persist only architectural/default-depth
         # overrides.
         model_loop.update({
             key: value for key, value in loop_override.items()
-            if key not in {"sampling", "stability"}
+            if key not in {"sampling", "stability", "contraction"}
         })
         model_cfg.loop = model_loop
 

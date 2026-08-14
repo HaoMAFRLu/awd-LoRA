@@ -113,6 +113,90 @@ def monotonic_stability_loss(
     return torch.relu(long_loss - short_loss.detach())
 
 
+def hidden_distance(
+    first: torch.Tensor,
+    second: torch.Tensor,
+    attention_mask: Optional[torch.Tensor] = None,
+) -> torch.Tensor:
+    """Return one RMS Euclidean hidden-state distance per batch item."""
+    if first.shape != second.shape or first.ndim != 3:
+        raise ValueError(
+            "hidden states must have the same [batch, sequence, hidden] shape"
+        )
+
+    batch_size, sequence_length, hidden_size = first.shape
+    if attention_mask is None:
+        mask = torch.ones(
+            (batch_size, sequence_length),
+            device=first.device,
+            dtype=torch.float32,
+        )
+    else:
+        if attention_mask.shape != (batch_size, sequence_length):
+            raise ValueError(
+                "attention_mask must match the hidden-state batch and sequence dimensions"
+            )
+        mask = attention_mask.to(device=first.device, dtype=torch.float32)
+
+    difference = (first.float() - second.float()) * mask.unsqueeze(-1)
+    element_count = (mask.sum(dim=1) * hidden_size).clamp_min(1.0)
+    return torch.linalg.vector_norm(difference, dim=(1, 2)) / element_count.sqrt()
+
+
+def contraction_losses(
+    loop_states: Sequence[torch.Tensor],
+    attention_mask: Optional[torch.Tensor],
+    start_loop: int,
+    gamma: float,
+    ratio_epsilon: float = 1e-12,
+    has_fixed_point_probe: bool = False,
+) -> dict:
+    """Compute trajectory contraction and an optional fixed-point loss.
+
+    ``loop_states`` contains h[0] through h[K]. When
+    ``has_fixed_point_probe`` is true, its last item is instead an auxiliary
+    h[K+1] used to measure the residual at h[K]. The contraction condition
+    begins with d[start_loop + 1] <= gamma * d[start_loop].
+    """
+    if not isinstance(start_loop, int) or isinstance(start_loop, bool) or start_loop < 1:
+        raise ValueError("start_loop must be a positive integer")
+    if not math.isfinite(gamma) or not 0.0 < gamma < 1.0:
+        raise ValueError("gamma must be finite and strictly between 0 and 1")
+    if not math.isfinite(ratio_epsilon) or ratio_epsilon <= 0.0:
+        raise ValueError("ratio_epsilon must be finite and positive")
+    if not isinstance(has_fixed_point_probe, bool):
+        raise TypeError("has_fixed_point_probe must be a boolean")
+    if len(loop_states) < start_loop + 2:
+        raise ValueError(
+            "loop_states must contain enough complete-loop states for one contraction inequality"
+        )
+
+    distances = torch.stack(
+        tuple(
+            hidden_distance(current, previous, attention_mask)
+            for previous, current in zip(loop_states[:-1], loop_states[1:])
+        ),
+        dim=1,
+    )
+    previous = distances[:, start_loop - 1 : -1]
+    following = distances[:, start_loop:]
+    violations = torch.relu(following - gamma * previous.detach())
+    ratios = following.detach() / previous.detach().clamp_min(ratio_epsilon)
+    fixed_point = (
+        distances[:, -1].square().mean()
+        if has_fixed_point_probe
+        else distances.new_zeros(())
+    )
+
+    return {
+        "contraction": violations.square().mean(),
+        "fixed_point": fixed_point,
+        "distances": distances,
+        "ratios": ratios,
+        "violation_rate": (violations.detach() > 0).float().mean(),
+    }
+
+
 def _unwrap_model(model: nn.Module) -> nn.Module:
     return model.module if hasattr(model, "module") else model
 

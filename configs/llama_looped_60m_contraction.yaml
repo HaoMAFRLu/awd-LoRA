@@ -1,0 +1,58 @@
+seed: 42
+name: llama_looped_60m_contraction
+model_config: llama_looped_60m_model.json
+training_mode: loop
+output_folder: looped_transformer
+wandb_project: LOOPED_TRANSFORMER
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 10
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+batch_size: 512
+num_workers: 0
+
+# One logical loop is the complete layers.1 -> layers.2 -> layers.3 path.
+# The sampled loop depth is shared by all DDP ranks for each iteration.
+loop:
+  num_loops: 4
+  sampling:
+    values: [3, 4, 5, 6]
+    probabilities: [0.4, 0.3, 0.2, 0.1]
+    expected_value: 4.0
+    seed: 42
+  contraction:
+    enabled: true
+    start_loop: 1
+    gamma: 0.95
+    weight: 0.1
+    fixed_point_weight: 0.0
+    ratio_epsilon: 1.0e-12
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas:
+      - 0.9
+      - 0.95
+    eps: 1.0e-08
+    weight_decay: 0.0
