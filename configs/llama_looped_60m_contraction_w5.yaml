@@ -1,0 +1,64 @@
+seed: 42
+name: llama_looped_60m_contraction_w5
+model_config: llama_looped_60m_model.json
+training_mode: loop
+output_folder: looped_transformer
+wandb_project: LOOPED_TRANSFORMER
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 10
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+batch_size: 512
+num_workers: 0
+
+# One logical loop is the complete layers.1 -> layers.2 -> layers.3 path.
+# Only the layers.3 (Tn-1) output from each complete loop is retained:
+# K loops produce K states, K-1 distances, and K-2 contraction comparisons.
+# The sampled loop depth is shared by all DDP ranks for each iteration.
+loop:
+  num_loops: 7
+  sampling:
+    # Relative weights are normalized internally. Their exact expectation is
+    # 1498 / 214 = 7, while loop=12 remains part of the training support.
+    values: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    probabilities: [10, 15, 25, 35, 45, 35, 25, 15, 5, 4]
+    expected_value: 7.0
+    seed: 42
+  contraction:
+    enabled: true
+    start_loop: 1
+    gamma: 0.8
+    weight: 5.0
+    # Anchor D(z1, z2) only when it exceeds the observed initial scale.
+    fixed_point_weight: 0.01
+    fixed_point_epsilon: 0.5
+    ratio_epsilon: 1.0e-12
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas:
+      - 0.9
+      - 0.95
+    eps: 1.0e-08
+    weight_decay: 0.0
