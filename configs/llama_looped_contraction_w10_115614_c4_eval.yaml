@@ -1,0 +1,35 @@
+seed: 43
+seed_for_shuffle: 43
+
+tokenizer_name: t5-base
+max_length: 256
+precision: bfloat16
+
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: validation
+  streaming: true
+
+# Match the established C4 evaluation protocol used by earlier looped runs.
+batch_size: 512
+num_eval_batches: 250
+num_workers: 0
+
+checkpoints:
+  vanilla:
+    model_config: configs/llama_60m_model.json
+    checkpoint: data/looped_transformer/llama_vanilla_60m/20260813_184120/model.pth
+  looped:
+    model_config: configs/llama_looped_60m_model.json
+    checkpoint: data/looped_transformer/llama_looped_60m_contraction_w10/20260815_115614/model.pth
+
+loop_values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+distance_monitor:
+  enabled: true
+  num_loops: 12
+  gamma: 0.8
+
+output_directory: data/looped_transformer/evaluation/c4_seed43_contraction_w10_20260815_115614
