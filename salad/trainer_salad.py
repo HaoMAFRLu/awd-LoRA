@@ -334,10 +334,10 @@ class SALADTrainer():
                 seed=int(sampling.get('seed', self.config.get('seed', 42))),
                 expected_value=sampling.get('expected_value'),
             )
-            if max(self.loop_sampler.values) > loop_model.consensus_num_loops:
+            if max(self.loop_sampler.values) > loop_model.max_num_loops:
                 raise ValueError(
                     "the largest sampled loop count exceeds "
-                    "consensus_salaad.num_loop_weights"
+                    "loop.max_num_loops"
                 )
             self.loop_counts = {value: 0 for value in self.loop_sampler.values}
         else:

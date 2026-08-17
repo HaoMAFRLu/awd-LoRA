@@ -444,16 +444,80 @@ class LlamaModel(LlamaPreTrainedModel):
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
 
+        # For the count-based loop protocol, physical depth is derived from
+        # the loop structure. ``num_hidden_layers`` is then an output of the
+        # architecture definition rather than a second value to keep in sync.
+        config.num_hidden_layers = self._get_num_physical_layers(config)
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList([LlamaDecoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.entry_layers, self.loop_layers, self.exit_layers = self._get_loop_regions(config)
+        self.num_blocks_per_loop = len(self.loop_layers)
         self.num_loops = self._get_num_loops(config)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
-        self.consensus_num_loops, self.consensus_target_modules = self._install_consensus_layers(config)
+        self.max_num_loops, self.consensus_target_modules = self._install_consensus_layers(config)
+
+    @staticmethod
+    def _get_loop_counts(config: LlamaConfig) -> Optional[Tuple[int, int, int]]:
+        """Return entry/body/exit physical counts for the general protocol."""
+        loop_config = getattr(config, "loop", None)
+        if not loop_config:
+            return None
+        if not isinstance(loop_config, dict):
+            raise TypeError("model config 'loop' must be a dictionary")
+
+        count_keys = {
+            "num_entry_blocks",
+            "num_blocks_per_loop",
+            "num_exit_blocks",
+        }
+        index_keys = {"entry_layers", "loop_layers", "exit_layers"}
+        has_counts = any(key in loop_config for key in count_keys)
+        has_indices = any(key in loop_config for key in index_keys)
+        if has_counts and has_indices:
+            raise ValueError(
+                "loop configuration must use block counts or explicit layer "
+                "indices, not both"
+            )
+        if not has_counts:
+            if not has_indices:
+                raise ValueError(
+                    "loop configuration requires num_blocks_per_loop or "
+                    "explicit entry_layers/loop_layers/exit_layers"
+                )
+            return None
+
+        values = (
+            loop_config.get("num_entry_blocks", 1),
+            loop_config.get("num_blocks_per_loop"),
+            loop_config.get("num_exit_blocks", 1),
+        )
+        names = (
+            "num_entry_blocks",
+            "num_blocks_per_loop",
+            "num_exit_blocks",
+        )
+        for name, value in zip(names, values):
+            minimum = 1 if name == "num_blocks_per_loop" else 0
+            if (
+                not isinstance(value, int)
+                or isinstance(value, bool)
+                or value < minimum
+            ):
+                raise ValueError(
+                    f"loop.{name} must be an integer >= {minimum}, got {value!r}"
+                )
+        return values
+
+    @classmethod
+    def _get_num_physical_layers(cls, config: LlamaConfig) -> int:
+        counts = cls._get_loop_counts(config)
+        if counts is None:
+            return config.num_hidden_layers
+        return sum(counts)
 
     def _get_loop_regions(self, config: LlamaConfig) -> Tuple[Tuple[int, ...], Tuple[int, ...], Tuple[int, ...]]:
         """Validate the entry, recurrent, and exit regions."""
@@ -462,6 +526,19 @@ class LlamaModel(LlamaPreTrainedModel):
             return tuple(range(len(self.layers))), (), ()
         if not isinstance(loop_config, dict):
             raise TypeError("model config 'loop' must be a dictionary")
+        if getattr(config, "use_cache", False):
+            raise ValueError("looped Llama requires use_cache=false")
+
+        counts = self._get_loop_counts(config)
+        if counts is not None:
+            num_entry, num_body, num_exit = counts
+            body_start = num_entry
+            exit_start = body_start + num_body
+            return (
+                tuple(range(num_entry)),
+                tuple(range(body_start, exit_start)),
+                tuple(range(exit_start, exit_start + num_exit)),
+            )
 
         entry_layers = loop_config.get("entry_layers", [])
         loop_layers = loop_config.get("loop_layers", [])
@@ -487,8 +564,6 @@ class LlamaModel(LlamaPreTrainedModel):
                 f"decoder layer exactly once in order; got {physical_order}, "
                 f"expected {expected_order}"
             )
-        if getattr(config, "use_cache", False):
-            raise ValueError("looped Llama requires use_cache=false")
         return tuple(entry_layers), tuple(loop_layers), tuple(exit_layers)
 
     @staticmethod
@@ -509,14 +584,29 @@ class LlamaModel(LlamaPreTrainedModel):
         if not isinstance(consensus, dict):
             raise TypeError("model config 'consensus_salaad' must be a dictionary")
 
-        num_loop_weights = consensus.get("num_loop_weights")
+        loop_config = getattr(config, "loop", {})
+        configured_max = loop_config.get("max_num_loops")
+        legacy_max = consensus.get("num_loop_weights")
+        if (
+            configured_max is not None
+            and legacy_max is not None
+            and configured_max != legacy_max
+        ):
+            raise ValueError(
+                "loop.max_num_loops and consensus_salaad.num_loop_weights disagree"
+            )
+        num_loop_weights = (
+            configured_max
+            if configured_max is not None
+            else legacy_max if legacy_max is not None else self.num_loops
+        )
         if (
             not isinstance(num_loop_weights, int)
             or isinstance(num_loop_weights, bool)
             or num_loop_weights < self.num_loops
         ):
             raise ValueError(
-                "consensus_salaad.num_loop_weights must be an integer no smaller "
+                "loop.max_num_loops must be an integer no smaller "
                 f"than loop.num_loops ({self.num_loops}), got {num_loop_weights!r}"
             )
         target_modules = consensus.get("target_modules")
@@ -565,14 +655,18 @@ class LlamaModel(LlamaPreTrainedModel):
     def layer_order(self) -> Tuple[int, ...]:
         return tuple(layer_index for layer_index, _ in self.execution_plan)
 
+    @property
+    def logical_num_layers(self) -> int:
+        return len(self.execution_plan)
+
     def set_num_loops(self, num_loops: int) -> None:
         if not self.loop_layers:
             raise ValueError("cannot set num_loops on a non-looped model")
         if not isinstance(num_loops, int) or isinstance(num_loops, bool) or num_loops < 1:
             raise ValueError(f"num_loops must be a positive integer, got {num_loops!r}")
-        if self.consensus_num_loops and num_loops > self.consensus_num_loops:
+        if self.max_num_loops and num_loops > self.max_num_loops:
             raise ValueError(
-                f"num_loops={num_loops} exceeds the {self.consensus_num_loops} "
+                f"num_loops={num_loops} exceeds the {self.max_num_loops} "
                 "available loop-specific weights"
             )
         self.num_loops = num_loops

@@ -85,6 +85,12 @@ Important fields:
 - `rho_dict`, `alpha_dict`, `beta_dict`: ADMM penalty and adaptive threshold
   settings.
 - `loop.sampling`: distributed sampling policy for the logical loop count.
+- `loop.num_blocks_per_loop`: number of distinct physical blocks in one
+  recurrent body.
+- `loop.num_loops`: default number of body repetitions; logical middle depth is
+  `num_blocks_per_loop * num_loops`.
+- `loop.max_num_loops`: number of loop-specific effective weights and the
+  maximum depth supported by Consensus SALAAD.
 - `consensus_salaad`: consensus `rho`, nuclear-norm coefficient
   `lambda_low_rank`, and l1 coefficient `lambda_sparse`.
 
@@ -175,20 +181,26 @@ Every `num_freq` iterations, each assigned layer updates:
 The saved `L` and `S` matrices can later be recombined or further truncated to
 study parameter-count/perplexity tradeoffs.
 
-In Consensus SALAAD, the recurrent body uses a dense matrix `X_i` for logical
-loop `i`, while ADMM enforces:
+Let `r` denote the logical loop, `p` the physical position inside an `n`-block
+recurrent body, and `t` the linear-matrix type. Consensus SALAAD uses a dense
+effective matrix for each logical occurrence and enforces:
 
 ```text
-X_i = X + L_i + S_i
+W[r,p,t] = X_shared[p,t] + L[r,p,t] + S[r,p,t]
 ```
 
-Here `X` is shared by every loop, and `L_i` and `S_i` are loop-specific
-low-rank and sparse residuals. The task optimizer updates the dense `X_i`
-variables through both the language-model loss and the augmented penalty.
-Every `num_freq` iterations, the solver updates the shared mean `X`, applies
-singular-value and elementwise thresholding to `L_i` and `S_i`, and updates the
-scaled dual. `salad.consensus.apply_decomposition` materializes `X + L_i + S_i`
-into the model for evaluation.
+Only occurrences with the same `(p, t)` share `X_shared`; different positions
+inside one recurrent body have different shared matrices. Every occurrence has
+its own low-rank and sparse residuals. With `R` repetitions and `n` body blocks,
+the middle logical depth is `R*n`: `R=1, n=M` recovers an unfolded standard
+Transformer, while `R=M, n=1` gives one shared center per matrix type across all
+middle logical depths.
+
+The task optimizer updates each dense `W` through both the language-model loss
+and the augmented penalty. Every `num_freq` iterations, the solver updates the
+shared center, applies singular-value and elementwise thresholding to `L` and
+`S`, and updates the scaled dual. `salad.consensus.apply_decomposition`
+materializes `X_shared + L + S` into the model for evaluation.
 
 ## Notes for Contributors
 

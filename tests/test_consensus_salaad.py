@@ -20,20 +20,21 @@ def tiny_config(num_loop_weights=3):
         vocab_size=32,
         hidden_size=8,
         intermediate_size=16,
-        num_hidden_layers=5,
+        # The count-based loop protocol overrides this default automatically.
+        num_hidden_layers=1,
         num_attention_heads=2,
         max_position_embeddings=16,
         pad_token_id=0,
         use_cache=False,
     )
     config.loop = {
-        "entry_layers": [0],
-        "loop_layers": [1, 2, 3],
-        "exit_layers": [4],
+        "num_entry_blocks": 1,
+        "num_blocks_per_loop": 3,
+        "num_exit_blocks": 1,
         "num_loops": 2,
+        "max_num_loops": num_loop_weights,
     }
     config.consensus_salaad = {
-        "num_loop_weights": num_loop_weights,
         "target_modules": ["self_attn.q_proj"],
     }
     return config
@@ -183,6 +184,62 @@ class ConsensusSALAADTests(unittest.TestCase):
         model = LlamaForCausalLM(tiny_config(num_loop_weights=2))
         with self.assertRaisesRegex(ValueError, "available loop-specific weights"):
             model.model.set_num_loops(3)
+
+    def test_standard_transformer_is_the_r1_nm_extreme(self):
+        config = tiny_config(num_loop_weights=1)
+        config.loop.update({
+            "num_blocks_per_loop": 4,
+            "num_loops": 1,
+        })
+        model = LlamaForCausalLM(config)
+        loop_model = model.model
+        consensus_modules = [
+            module for module in model.modules()
+            if isinstance(module, ConsensusLinear)
+        ]
+
+        self.assertEqual(len(loop_model.layers), 6)
+        self.assertEqual(loop_model.logical_num_layers, 6)
+        self.assertEqual(len(consensus_modules), 4)
+        self.assertTrue(all(module.weight.shape[0] == 1 for module in consensus_modules))
+
+    def test_maximum_shared_center_is_the_rm_n1_extreme(self):
+        config = tiny_config(num_loop_weights=4)
+        config.loop.update({
+            "num_blocks_per_loop": 1,
+            "num_loops": 4,
+        })
+        model = LlamaForCausalLM(config)
+        loop_model = model.model
+        consensus_modules = [
+            module for module in model.modules()
+            if isinstance(module, ConsensusLinear)
+        ]
+
+        self.assertEqual(len(loop_model.layers), 3)
+        self.assertEqual(loop_model.logical_num_layers, 6)
+        self.assertEqual(len(consensus_modules), 1)
+        self.assertEqual(consensus_modules[0].weight.shape, (4, 8, 8))
+        self.assertEqual(
+            loop_model.execution_plan,
+            ((0, None), (1, 0), (1, 1), (1, 2), (1, 3), (2, None)),
+        )
+
+    def test_explicit_layer_index_protocol_remains_supported(self):
+        config = tiny_config()
+        config.loop = {
+            "entry_layers": [0],
+            "loop_layers": [1, 2, 3],
+            "exit_layers": [4],
+            "num_loops": 2,
+        }
+        config.num_hidden_layers = 5
+        config.consensus_salaad["num_loop_weights"] = 3
+
+        model = LlamaForCausalLM(config)
+
+        self.assertEqual(len(model.model.layers), 5)
+        self.assertEqual(model.model.logical_num_layers, 8)
 
     def test_gradient_checkpointing_preserves_each_loop_index(self):
         torch.manual_seed(1)

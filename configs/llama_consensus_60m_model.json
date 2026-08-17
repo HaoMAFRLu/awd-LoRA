@@ -18,13 +18,13 @@
     "use_cache": false,
     "vocab_size": 32000,
     "loop": {
-        "entry_layers": [0],
-        "loop_layers": [1, 2, 3],
-        "exit_layers": [4],
-        "num_loops": 2
+        "num_entry_blocks": 1,
+        "num_blocks_per_loop": 3,
+        "num_exit_blocks": 1,
+        "num_loops": 2,
+        "max_num_loops": 5
     },
     "consensus_salaad": {
-        "num_loop_weights": 5,
         "target_modules": [
             "self_attn.q_proj",
             "self_attn.k_proj",
