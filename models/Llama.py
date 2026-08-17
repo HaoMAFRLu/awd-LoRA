@@ -32,12 +32,7 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
 from transformers.models.llama.configuration_llama import LlamaConfig
 
-
-
-
-
-
-
+from models.consensus import ConsensusLinear, apply_linear
 logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "LlamaConfig"
@@ -159,8 +154,10 @@ class LlamaMLP(nn.Module):
         self.up_proj = nn.Linear(hidden_size, intermediate_size, bias=False)
         self.act_fn = ACT2FN[hidden_act]
 
-    def forward(self, x):
-        return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+    def forward(self, x, loop_index: Optional[int] = None):
+        gate = apply_linear(self.gate_proj, x, loop_index)
+        up = apply_linear(self.up_proj, x, loop_index)
+        return apply_linear(self.down_proj, self.act_fn(gate) * up, loop_index)
 
 
 class LlamaAttention(nn.Module):
@@ -196,12 +193,19 @@ class LlamaAttention(nn.Module):
         past_key_value: Optional[Tuple[torch.Tensor]] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
+        loop_index: Optional[int] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
 
-        query_states = self.q_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = self.k_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        value_states = self.v_proj(hidden_states).view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
+        query_states = apply_linear(self.q_proj, hidden_states, loop_index).view(
+            bsz, q_len, self.num_heads, self.head_dim
+        ).transpose(1, 2)
+        key_states = apply_linear(self.k_proj, hidden_states, loop_index).view(
+            bsz, q_len, self.num_heads, self.head_dim
+        ).transpose(1, 2)
+        value_states = apply_linear(self.v_proj, hidden_states, loop_index).view(
+            bsz, q_len, self.num_heads, self.head_dim
+        ).transpose(1, 2)
 
         kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
@@ -237,7 +241,7 @@ class LlamaAttention(nn.Module):
         attn_output = attn_output.transpose(1, 2)
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
 
-        attn_output = self.o_proj(attn_output)
+        attn_output = apply_linear(self.o_proj, attn_output, loop_index)
 
         if not output_attentions:
             attn_weights = None
@@ -266,6 +270,7 @@ class LlamaDecoderLayer(nn.Module):
         past_key_value: Optional[Tuple[torch.Tensor]] = None,
         output_attentions: Optional[bool] = False,
         use_cache: Optional[bool] = False,
+        loop_index: Optional[int] = None,
     ) -> Tuple[torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]]:
         """
         Args:
@@ -293,13 +298,14 @@ class LlamaDecoderLayer(nn.Module):
             past_key_value=past_key_value,
             output_attentions=output_attentions,
             use_cache=use_cache,
+            loop_index=loop_index,
         )
         hidden_states = residual + hidden_states
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
-        hidden_states = self.mlp(hidden_states)
+        hidden_states = self.mlp(hidden_states, loop_index=loop_index)
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -441,10 +447,135 @@ class LlamaModel(LlamaPreTrainedModel):
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size, self.padding_idx)
         self.layers = nn.ModuleList([LlamaDecoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.entry_layers, self.loop_layers, self.exit_layers = self._get_loop_regions(config)
+        self.num_loops = self._get_num_loops(config)
 
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
+        self.consensus_num_loops, self.consensus_target_modules = self._install_consensus_layers(config)
+
+    def _get_loop_regions(self, config: LlamaConfig) -> Tuple[Tuple[int, ...], Tuple[int, ...], Tuple[int, ...]]:
+        """Validate the entry, recurrent, and exit regions."""
+        loop_config = getattr(config, "loop", None)
+        if not loop_config:
+            return tuple(range(len(self.layers))), (), ()
+        if not isinstance(loop_config, dict):
+            raise TypeError("model config 'loop' must be a dictionary")
+
+        entry_layers = loop_config.get("entry_layers", [])
+        loop_layers = loop_config.get("loop_layers", [])
+        exit_layers = loop_config.get("exit_layers", [])
+        for name, indices in (
+            ("entry_layers", entry_layers),
+            ("loop_layers", loop_layers),
+            ("exit_layers", exit_layers),
+        ):
+            if not isinstance(indices, list) or not all(
+                isinstance(index, int) and not isinstance(index, bool)
+                for index in indices
+            ):
+                raise TypeError(f"loop.{name} must be a list of integer layer indices")
+        if not loop_layers:
+            raise ValueError("loop.loop_layers must contain at least one layer")
+
+        physical_order = entry_layers + loop_layers + exit_layers
+        expected_order = list(range(len(self.layers)))
+        if physical_order != expected_order:
+            raise ValueError(
+                "entry_layers + loop_layers + exit_layers must list every physical "
+                f"decoder layer exactly once in order; got {physical_order}, "
+                f"expected {expected_order}"
+            )
+        if getattr(config, "use_cache", False):
+            raise ValueError("looped Llama requires use_cache=false")
+        return tuple(entry_layers), tuple(loop_layers), tuple(exit_layers)
+
+    @staticmethod
+    def _get_num_loops(config: LlamaConfig) -> int:
+        loop_config = getattr(config, "loop", None)
+        num_loops = loop_config.get("num_loops", 1) if loop_config else 1
+        if not isinstance(num_loops, int) or isinstance(num_loops, bool) or num_loops < 1:
+            raise ValueError(f"loop.num_loops must be a positive integer, got {num_loops!r}")
+        return num_loops
+
+    def _install_consensus_layers(self, config: LlamaConfig) -> Tuple[int, Tuple[str, ...]]:
+        """Replace recurrent linear matrices by loop-specific dense variables."""
+        consensus = getattr(config, "consensus_salaad", None)
+        if not consensus:
+            return 0, ()
+        if not self.loop_layers:
+            raise ValueError("consensus_salaad requires a looped model")
+        if not isinstance(consensus, dict):
+            raise TypeError("model config 'consensus_salaad' must be a dictionary")
+
+        num_loop_weights = consensus.get("num_loop_weights")
+        if (
+            not isinstance(num_loop_weights, int)
+            or isinstance(num_loop_weights, bool)
+            or num_loop_weights < self.num_loops
+        ):
+            raise ValueError(
+                "consensus_salaad.num_loop_weights must be an integer no smaller "
+                f"than loop.num_loops ({self.num_loops}), got {num_loop_weights!r}"
+            )
+        target_modules = consensus.get("target_modules")
+        if (
+            not isinstance(target_modules, list)
+            or not target_modules
+            or not all(isinstance(name, str) and name for name in target_modules)
+            or len(set(target_modules)) != len(target_modules)
+        ):
+            raise ValueError(
+                "consensus_salaad.target_modules must be a non-empty list of "
+                "unique module names"
+            )
+
+        for layer_index in self.loop_layers:
+            decoder_layer = self.layers[layer_index]
+            for module_name in target_modules:
+                try:
+                    linear = decoder_layer.get_submodule(module_name)
+                except AttributeError as error:
+                    raise KeyError(
+                        f"decoder layer {layer_index} has no module {module_name!r}"
+                    ) from error
+                if not isinstance(linear, nn.Linear):
+                    raise TypeError(
+                        f"layers.{layer_index}.{module_name} must be nn.Linear, "
+                        f"got {type(linear).__name__}"
+                    )
+                parent_name, _, child_name = module_name.rpartition(".")
+                parent = decoder_layer.get_submodule(parent_name) if parent_name else decoder_layer
+                setattr(parent, child_name, ConsensusLinear.from_linear(linear, num_loop_weights))
+
+        return num_loop_weights, tuple(target_modules)
+
+    @property
+    def execution_plan(self) -> Tuple[Tuple[int, Optional[int]], ...]:
+        if not self.loop_layers:
+            return tuple((layer_index, None) for layer_index in self.entry_layers)
+        plan = [(layer_index, None) for layer_index in self.entry_layers]
+        for loop_index in range(self.num_loops):
+            plan.extend((layer_index, loop_index) for layer_index in self.loop_layers)
+        plan.extend((layer_index, None) for layer_index in self.exit_layers)
+        return tuple(plan)
+
+    @property
+    def layer_order(self) -> Tuple[int, ...]:
+        return tuple(layer_index for layer_index, _ in self.execution_plan)
+
+    def set_num_loops(self, num_loops: int) -> None:
+        if not self.loop_layers:
+            raise ValueError("cannot set num_loops on a non-looped model")
+        if not isinstance(num_loops, int) or isinstance(num_loops, bool) or num_loops < 1:
+            raise ValueError(f"num_loops must be a positive integer, got {num_loops!r}")
+        if self.consensus_num_loops and num_loops > self.consensus_num_loops:
+            raise ValueError(
+                f"num_loops={num_loops} exceeds the {self.consensus_num_loops} "
+                "available loop-specific weights"
+            )
+        self.num_loops = num_loops
 
     def get_input_embeddings(self):
         return self.embed_tokens
@@ -548,27 +679,44 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = () if use_cache else None
 
-        for idx, decoder_layer in enumerate(self.layers):
+        if past_key_values is not None and len(past_key_values) != len(self.execution_plan):
+            raise ValueError(
+                "past_key_values must contain one entry per logical layer execution; "
+                f"got {len(past_key_values)}, expected {len(self.execution_plan)}"
+            )
+
+        for execution_index, (layer_index, loop_index) in enumerate(self.execution_plan):
+            decoder_layer = self.layers[layer_index]
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
-            past_key_value = past_key_values[idx] if past_key_values is not None else None
+            past_key_value = (
+                past_key_values[execution_index]
+                if past_key_values is not None
+                else None
+            )
 
             if self.gradient_checkpointing and self.training:
 
-                def create_custom_forward(module):
+                def create_custom_forward(module, current_loop_index):
                     def custom_forward(*inputs):
                         # None for past_key_value
-                        return module(*inputs, output_attentions, None)
+                        return module(
+                            *inputs,
+                            output_attentions,
+                            None,
+                            current_loop_index,
+                        )
 
                     return custom_forward
 
                 layer_outputs = torch.utils.checkpoint.checkpoint(
-                    create_custom_forward(decoder_layer),
+                    create_custom_forward(decoder_layer, loop_index),
                     hidden_states,
                     attention_mask,
                     position_ids,
                     None,
+                    use_reentrant=False,
                 )
             else:
                 layer_outputs = decoder_layer(
@@ -578,6 +726,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     past_key_value=past_key_value,
                     output_attentions=output_attentions,
                     use_cache=use_cache,
+                    loop_index=loop_index,
                 )
 
             hidden_states = layer_outputs[0]

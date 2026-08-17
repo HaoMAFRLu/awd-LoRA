@@ -1,0 +1,57 @@
+seed: 42
+name: llama_consensus_60m
+model_config: llama_consensus_60m_model.json
+training_mode: consensus
+output_folder: consensus_salaad
+wandb_project: CONSENSUS_SALAAD
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 10
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+# Global batch size: 128 samples on each of four DDP ranks.
+batch_size: 512
+num_workers: 0
+
+# One loop count is sampled on rank 0 and broadcast to all ranks per update.
+# E[num_loops] = 4.0; five X_i matrices are available in the model config.
+loop:
+  sampling:
+    values: [1, 2, 3, 4, 5]
+    probabilities: [0.05, 0.10, 0.15, 0.20, 0.50]
+    expected_value: 4.0
+    seed: 42
+
+# For each targeted recurrent matrix and logical loop:
+# X_i = X + L_i + S_i. The proximal thresholds are lambda/rho.
+consensus_salaad:
+  rho: 1.0e-5
+  lambda_low_rank: 1.0e-7
+  lambda_sparse: 1.0e-8
+  rank_tolerance: 1.0e-6
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas: [0.9, 0.95]
+    eps: 1.0e-8
+    weight_decay: 0.0

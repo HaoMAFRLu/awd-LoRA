@@ -72,8 +72,8 @@ configs live in `configs/*_model.json`.
 
 Important fields:
 
-- `training_mode`: `salad` for low-rank/sparse training or `vanilla` for normal
-  training.
+- `training_mode`: `salad` for the original decomposition, `consensus` for the
+  loop-specific consensus formulation, or `vanilla` for normal training.
 - `num_total_iters`: total optimizer updates.
 - `num_freq`: how often to run SALAD/ADMM updates.
 - `batch_size`, `max_length`, `num_workers`: data-loading and tokenization
@@ -84,6 +84,9 @@ Important fields:
 - `rate_sparsity`: target sparse density for a layer.
 - `rho_dict`, `alpha_dict`, `beta_dict`: ADMM penalty and adaptive threshold
   settings.
+- `loop.sampling`: distributed sampling policy for the logical loop count.
+- `consensus_salaad`: consensus `rho`, nuclear-norm coefficient
+  `lambda_low_rank`, and l1 coefficient `lambda_sparse`.
 
 To regenerate configs, edit `scripts/config_generator.py` and run:
 
@@ -101,22 +104,15 @@ torchrun \
   --nnodes=1 \
   --rdzv_backend=c10d \
   --rdzv_endpoint=127.0.0.1:29500 \
-  scripts/train_salad.py
+  scripts/train_salad.py \
+  --cfg_version llama_consensus_60m
 ```
 
 For multi-GPU training, increase `--nproc_per_node`. The trainer wraps the model
 with PyTorch DistributedDataParallel and assigns configured layers across ranks.
 
-The current `scripts/train_salad.py` selects a config internally near the bottom
-of the file:
-
-```python
-cfg_version = 'llama_350m'
-folder = 'review_wall_clock'
-```
-
-Change these values, or adapt the script to accept them as command-line
-arguments, before running a different experiment.
+Select a config with `--cfg_version`; `--folder` optionally overrides its
+`output_folder` value.
 
 Example HTCondor submit files are provided in `sub/`. They contain local cluster
 paths and hardware constraints from the original experiment environment, so they
@@ -137,6 +133,8 @@ Typical outputs:
 - `<cfg_version>_model.json`: copied model config.
 - `layer_info.pkl`: loss, rank, sparsity, rho, alpha, and beta traces.
 - `matrix_rank<N>.pkl`: rank-local low-rank/sparse/dual variables.
+- `consensus_rank<N>.pth`: rank-local shared, low-rank, sparse, and scaled-dual
+  variables for Consensus SALAAD.
 
 Generated data, caches, W&B runs, and checkpoints can be large and are not
 required for understanding the source code.
@@ -176,6 +174,21 @@ Every `num_freq` iterations, each assigned layer updates:
 
 The saved `L` and `S` matrices can later be recombined or further truncated to
 study parameter-count/perplexity tradeoffs.
+
+In Consensus SALAAD, the recurrent body uses a dense matrix `X_i` for logical
+loop `i`, while ADMM enforces:
+
+```text
+X_i = X + L_i + S_i
+```
+
+Here `X` is shared by every loop, and `L_i` and `S_i` are loop-specific
+low-rank and sparse residuals. The task optimizer updates the dense `X_i`
+variables through both the language-model loss and the augmented penalty.
+Every `num_freq` iterations, the solver updates the shared mean `X`, applies
+singular-value and elementwise thresholding to `L_i` and `S_i`, and updates the
+scaled dual. `salad.consensus.apply_decomposition` materializes `X + L_i + S_i`
+into the model for evaluation.
 
 ## Notes for Contributors
 

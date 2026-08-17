@@ -40,7 +40,8 @@ def get_tokenizer(max_length: int = 1024, config: Optional[dict] = None):
     config = config or {}
     if config.get("model_type") == "qwen3_vl" or config.get("data", {}).get("type") == "vlm":
         return get_processor(max_length=max_length, config=config)
-    return AutoTokenizer.from_pretrained("t5-base", model_max_length=max_length)
+    tokenizer_name = config.get("tokenizer_name", "t5-base")
+    return AutoTokenizer.from_pretrained(tokenizer_name, model_max_length=max_length)
 
 def get_processor(max_length: int = 1024, config: Optional[dict] = None):
     config = config or {}

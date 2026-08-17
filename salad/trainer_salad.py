@@ -7,6 +7,9 @@ import datasets
 import datasets.distributed
 from loguru import logger
 
+from models.consensus import ConsensusLinear
+from salad.consensus import ConsensusADMM
+from salad.loop import LoopSampler
 from salad.salad_solver import SALAD
 from salad.utils import *
 from salad.register import *
@@ -51,8 +54,15 @@ class SALADTrainer():
         self.is_wandb = config.get('is_wandb', False)
         self.is_monitor = config.get('is_monitor', False)
         self.save_interval = config.get('save_interval', 50)
+        if not isinstance(self.save_interval, int) or self.save_interval <= 0:
+            raise ValueError("save_interval must be a positive integer")
 
-        self.training_mode = config.get('training_mode', 'salad')  # or 'vanilla'
+        self.training_mode = config.get('training_mode', 'salad')
+        if self.training_mode not in {'salad', 'vanilla', 'consensus'}:
+            raise ValueError(
+                "training_mode must be 'salad', 'vanilla', or 'consensus'; "
+                f"got {self.training_mode!r}"
+            )
         # self.rank, self.world_size = self._init_distributed()
 
         if self.rank == 0:
@@ -78,8 +88,8 @@ class SALADTrainer():
         if self.is_wandb and self.rank == 0:
             import wandb
             wandb.login(key=os.getenv("WANDB_API_KEY"), relogin=False)
-            self.run_wandb = wandb.init(project="SALAD_"+self.config['name'], 
-                                        entity="hao-ma-eth-z-rich", 
+            self.run_wandb = wandb.init(project=self.config.get("wandb_project", "SALAD_"+self.config['name']),
+                                        entity=self.config.get("wandb_entity", "hao-ma-eth-z-rich"),
                                         config=self.config,
                                         name=folder_name)
             
@@ -89,8 +99,13 @@ class SALADTrainer():
         if self.rank == 0:
             print_setting(config)
 
-        # self.batch_size = config.get('batch_size', 32)
-        self.batch_size = int(config.get('batch_size', 32)/self.world_size) + 1
+        global_batch_size = int(config.get('batch_size', 32))
+        if global_batch_size % self.world_size != 0:
+            raise ValueError(
+                f"batch_size ({global_batch_size}) must be divisible by "
+                f"world_size ({self.world_size})"
+            )
+        self.batch_size = global_batch_size // self.world_size
 
         # print device info
         dev_idx = torch.cuda.current_device()
@@ -104,10 +119,13 @@ class SALADTrainer():
         # get specified layers in the config
         if self.training_mode == 'salad':
             self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
+        elif self.training_mode == 'consensus':
+            self.cfg_layers = self.get_consensus_layers(self.model)
+            self._configure_loop_sampling()
         else:
             self.cfg_layers = [{'name': 'layers.0.self_attn.q_proj'}]  # dummy for vanilla training
 
-        if self.is_init:
+        if self.is_init and self.training_mode == 'salad':
             for entry in self.cfg_layers:
                 name = entry['name']
                 params = entry['params']
@@ -183,6 +201,29 @@ class SALADTrainer():
             self.SS = {}
             self.YY = {}
 
+        elif self.training_mode == 'consensus':
+            consensus_config = self.config.get('consensus_salaad')
+            if not isinstance(consensus_config, dict):
+                raise ValueError(
+                    "training_mode='consensus' requires a consensus_salaad section"
+                )
+
+            self.assigned_layers, self.owner_map = self.assign_layers(
+                self.cfg_layers, self.rank, self.world_size
+            )
+            modules = dict(self.ddp_model.module.named_modules())
+            self.consensus_solvers = []
+            for entry in self.cfg_layers:
+                name = entry['name']
+                if name in self.assigned_layers:
+                    self.consensus_solvers.append(
+                        ConsensusADMM(name, modules[name].weight, consensus_config)
+                    )
+
+            self.name2idx = {
+                entry['name']: index for index, entry in enumerate(self.cfg_layers)
+            }
+
         self.layer_info = {entry['name']: {
             'loss': [],
             'rank': [],
@@ -203,6 +244,8 @@ class SALADTrainer():
         self.layer_info['avg_loss_penalty'] = []
         self.layer_info['avg_diff'] = []
         self.layer_info['num_tokens'] = []
+        if self.training_mode == 'consensus':
+            self.layer_info['num_loops'] = []
     @staticmethod    
     def canon(name: str) -> str:
         if name.startswith('module.'): name = name[7:]
@@ -255,6 +298,71 @@ class SALADTrainer():
                 raise KeyError(f"Layer {name} not found in model")
 
         return layers
+
+    @staticmethod
+    def get_consensus_layers(model: nn.Module) -> list:
+        layers = [
+            {'name': name}
+            for name, module in model.named_modules()
+            if isinstance(module, ConsensusLinear)
+        ]
+        if not layers:
+            raise ValueError(
+                "training_mode='consensus' requires ConsensusLinear modules in the model"
+            )
+        return layers
+
+    def _configure_loop_sampling(self) -> None:
+        loop_model = getattr(self.model, 'model', None)
+        if loop_model is None or not getattr(loop_model, 'loop_layers', ()):
+            raise ValueError("consensus training requires a looped model")
+
+        self.current_num_loops = loop_model.num_loops
+        self.loop_sampler = None
+        training_loop = self.config.get('loop', {})
+        if training_loop is None:
+            training_loop = {}
+        if not isinstance(training_loop, dict):
+            raise TypeError("training config 'loop' must be a dictionary")
+        sampling = training_loop.get('sampling')
+        if sampling is not None:
+            if not isinstance(sampling, dict):
+                raise TypeError("loop.sampling must be a dictionary")
+            self.loop_sampler = LoopSampler(
+                values=sampling.get('values', []),
+                probabilities=sampling.get('probabilities', []),
+                seed=int(sampling.get('seed', self.config.get('seed', 42))),
+                expected_value=sampling.get('expected_value'),
+            )
+            if max(self.loop_sampler.values) > loop_model.consensus_num_loops:
+                raise ValueError(
+                    "the largest sampled loop count exceeds "
+                    "consensus_salaad.num_loop_weights"
+                )
+            self.loop_counts = {value: 0 for value in self.loop_sampler.values}
+        else:
+            self.loop_counts = {self.current_num_loops: 0}
+
+    def sample_num_loops(self) -> int:
+        if self.training_mode != 'consensus':
+            raise RuntimeError("loop sampling is only used by consensus training")
+        if self.loop_sampler is None:
+            sampled = self.current_num_loops
+        elif self.rank == 0:
+            sampled = self.loop_sampler.sample()
+        else:
+            sampled = 0
+
+        if dist.is_available() and dist.is_initialized():
+            sampled_tensor = torch.tensor(sampled, device=self.device, dtype=torch.int64)
+            dist.broadcast(sampled_tensor, src=0)
+            sampled = int(sampled_tensor.item())
+
+        model = self.ddp_model.module if hasattr(self.ddp_model, 'module') else self.ddp_model
+        model.model.set_num_loops(sampled)
+        self.current_num_loops = sampled
+        self.loop_counts[sampled] += 1
+        return sampled
     
     @staticmethod
     def assign_layers(layers: dict, 
@@ -305,6 +413,70 @@ class SALADTrainer():
                 Z = solver.get_gradient(solver.X_with_grad.detach(), solver.L, solver.S, solver.Y, solver.rho)
                 gradient_per_layer[solver.layer_name] = Z
         return gradient_per_layer
+
+    def get_consensus_penalty(self) -> torch.Tensor:
+        penalty = torch.zeros((), device=self.device, dtype=torch.float32)
+        for solver in self.consensus_solvers:
+            penalty = penalty + solver.penalty()
+        # DDP averages gradients. Each matrix is owned by exactly one rank, so
+        # this factor makes the averaged gradient equal the full penalty sum.
+        return penalty * self.world_size
+
+    @torch.no_grad()
+    def get_consensus_diff(self) -> float:
+        difference = torch.zeros((), device=self.device, dtype=torch.float32)
+        for solver in self.consensus_solvers:
+            residual_norm = torch.linalg.vector_norm(solver.residual())
+            weight_norm = torch.linalg.vector_norm(
+                solver.effective_weight.detach().float()
+            ).clamp_min(1.0e-12)
+            difference += residual_norm / weight_norm
+        dist.all_reduce(difference, op=dist.ReduceOp.SUM)
+        return difference.item() / len(self.cfg_layers)
+
+    @torch.no_grad()
+    def update_consensus(self) -> None:
+        for solver in self.consensus_solvers:
+            solver.step()
+
+    @torch.no_grad()
+    def sync_consensus_info(self) -> None:
+        rows = torch.zeros(
+            len(self.cfg_layers), 12, device=self.device, dtype=torch.float32
+        )
+        for solver in self.consensus_solvers:
+            stats = solver.stats()
+            row = rows[self.name2idx[solver.name]]
+            row[0] = solver.lambda_low_rank
+            row[1] = solver.lambda_sparse
+            row[4] = solver.rho
+            row[7] = stats['relative_residual']
+            row[8] = stats['rank']
+            row[9] = stats['nonzero']
+            row[10] = stats['total_rank']
+            row[11] = stats['total_elements']
+        dist.all_reduce(rows, op=dist.ReduceOp.SUM)
+        if self.rank == 0:
+            self.gather_consensus_info(rows)
+
+    def gather_consensus_info(self, rows: torch.Tensor) -> None:
+        for name, index in self.name2idx.items():
+            row = rows[index]
+            info = self.layer_info[name]
+            info['alpha_mode'].append('nuclear')
+            info['beta_mode'].append('l1')
+            info['alpha'].append(row[0].item())
+            info['beta'].append(row[1].item())
+            info['dalpha'].append(0.0)
+            info['dbeta'].append(0.0)
+            info['rho'].append(row[4].item())
+            info['rate_decay_alpha'].append(0.0)
+            info['rate_decay_beta'].append(0.0)
+            info['loss'].append(row[7].item())
+            info['rank'].append(int(row[8].item()))
+            info['nonzero'].append(int(row[9].item()))
+            info['total_rank'].append(int(row[10].item()))
+            info['total_elements'].append(int(row[11].item()))
 
     def single_step_train(self, batch, labels, gradient: str='coupled'):
         if self.training_mode == 'salad':
@@ -374,6 +546,26 @@ class SALADTrainer():
             # broadcast the neural network loss
             global_avg_loss = self.get_global_loss(loss.detach())
             return global_avg_loss, 0.0, 0.0
+        elif self.training_mode == 'consensus':
+            self.optimizer.zero_grad(set_to_none=True)
+            self.sample_num_loops()
+
+            task_loss = self.ddp_model(**batch, labels=labels).loss
+            loss_penalty = self.get_consensus_penalty()
+            global_avg_diff = self.get_consensus_diff()
+            (task_loss + loss_penalty).backward()
+
+            if self.is_clip > 0:
+                torch.nn.utils.clip_grad_norm_(
+                    self.ddp_model.parameters(), max_norm=self.is_clip
+                )
+
+            self.optimizer.step()
+            self.lr_scheduler.step()
+
+            global_avg_loss = self.get_global_loss(task_loss.detach())
+            global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
+            return global_avg_loss, global_avg_loss_penalty, global_avg_diff
 
     def prepare_batch_and_labels(self, batch):
         batch = {k: v.to(self.device) for k, v in batch.items()}
@@ -543,6 +735,15 @@ class SALADTrainer():
             }
 
             atomic_pickle_dump(MATRIX, os.path.join(path_folder, 'matrix_rank'+str(self.rank)+'.pkl'))
+        elif self.training_mode == 'consensus':
+            state = {
+                solver.name: solver.state_dict()
+                for solver in self.consensus_solvers
+            }
+            atomic_torch_save(
+                state,
+                os.path.join(path_folder, f'consensus_rank{self.rank}.pth'),
+            )
 
     # def get_local_single_weight(self,
     #                             target: str='L'):
@@ -738,6 +939,8 @@ class SALADTrainer():
         losses = {'avg_loss': loss,
                   'avg_loss_penalty': loss_penalty,
                   'avg_diff': loss_diff}
+        if self.training_mode == 'consensus':
+            losses['num_loops'] = self.current_num_loops
         
         layer_stats = [{'name': entry['name'],
                         'loss': layer_info[entry['name']]['loss'][-1],
@@ -824,6 +1027,8 @@ class SALADTrainer():
             self.layer_info['avg_loss_penalty'].append(avg_loss_penalty)
             self.layer_info['avg_diff'].append(avg_diff)
             self.layer_info['num_tokens'].append(num_tokens)
+            if self.training_mode == 'consensus':
+                self.layer_info['num_loops'].append(self.current_num_loops)
             
             ep_loss += avg_loss
             ep_penalty += avg_loss_penalty
@@ -861,6 +1066,11 @@ class SALADTrainer():
                         self.sync_layer_info()
 
                     self.solvers_reset()
+                elif self.training_mode == 'consensus':
+                    with self.timers['L']:
+                        self.update_consensus()
+                    with self.timers['sync']:
+                        self.sync_consensus_info()
                 else:
                     self.generate_empty_layer_info()
 
@@ -872,13 +1082,6 @@ class SALADTrainer():
                 ep_penalty /= self.num_freq
                 ep_diff /= self.num_freq    
                 
-                # print and save 
-                with self.timers['save']:
-                    if path_folder is not None and epoch % self.save_interval == 0:
-                        # self.update_ADMM_single_step(target='weight')
-                        # self.sync_weights()
-                        self.save_results(path_folder)
-
                 if self.rank == 0:
                     self.print_info(epoch, 
                                     num_epochs,
@@ -907,6 +1110,14 @@ class SALADTrainer():
 
                     # self.sync_single_weight(target='S')
                     # self.sync_single_weight(target='Y')
+
+            should_save = (
+                num_it % self.save_interval == 0
+                or num_it == self.num_total_iters
+            )
+            if path_folder is not None and should_save:
+                with self.timers['save']:
+                    self.save_results(path_folder)
 
         dist.destroy_process_group()
         if self.is_wandb and self.rank == 0:

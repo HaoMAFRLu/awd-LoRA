@@ -19,6 +19,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import io
 
 from salad.register import *
+from models.consensus import ConsensusLinear
 
 def mkdir(path: Path) -> None:
     """Check if the folder exists and create it if it does not."""
@@ -112,6 +113,8 @@ def print_wandb(
         "train/tokens_M": float(num_tokens) / 1e6,
         # DO NOT add "epoch": step already carries this
     }
+    if "num_loops" in losses:
+        payload["train/num_loops"] = int(losses["num_loops"])
 
     for s in layer_stats:
         name = s.get("name")
@@ -164,6 +167,8 @@ def print_epoch(epoch: int,
               f"Loss: {losses['avg_loss']:.6f} | "
               f"Layer diff: {losses['avg_diff']:.6f} | "
               f"Penalty: {losses['avg_loss_penalty']:.6f}")
+    if "num_loops" in losses:
+        header += f" | Loops: {int(losses['num_loops'])}"
     print(header)
 
     headers = ["name", "layer diff", "non-zero", "rank", 
@@ -247,7 +252,10 @@ def get_linear_layers_name(model):
         name for name, module in model.named_modules()
         if isinstance(module, torch.nn.Embedding) and name.endswith("embed_tokens")
     ]
-    linears = [name for name, module in model.named_modules() if isinstance(module, torch.nn.Linear)]
+    linears = [
+        name for name, module in model.named_modules()
+        if isinstance(module, (torch.nn.Linear, ConsensusLinear))
+    ]
     return embeddings + linears
 
 def unwrap(m):
