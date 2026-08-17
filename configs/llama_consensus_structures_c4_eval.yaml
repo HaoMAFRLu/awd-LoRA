@@ -29,6 +29,7 @@ checkpoints:
   - name: loop1_block6
     model_config: configs/llama_consensus_60m_loop1_block6_model.json
     checkpoint: data/consensus_salaad_loop1_block6/llama_consensus_60m_loop1_block6/20260817_174605/model.pth
+    consensus_state_directory: data/consensus_salaad_loop1_block6/llama_consensus_60m_loop1_block6/20260817_174605
     physical_depth: 8
     logical_depth: 8
     num_loops: 1
@@ -37,6 +38,7 @@ checkpoints:
   - name: loop2_block3
     model_config: configs/llama_consensus_60m_model.json
     checkpoint: data/consensus_salaad/llama_consensus_60m/20260817_173113/model.pth
+    consensus_state_directory: data/consensus_salaad/llama_consensus_60m/20260817_173113
     physical_depth: 5
     logical_depth: 8
     num_loops: 2
@@ -45,6 +47,7 @@ checkpoints:
   - name: loop3_block2
     model_config: configs/llama_consensus_60m_loop3_block2_model.json
     checkpoint: data/consensus_salaad_loop3_block2/llama_consensus_60m_loop3_block2/20260817_174014/model.pth
+    consensus_state_directory: data/consensus_salaad_loop3_block2/llama_consensus_60m_loop3_block2/20260817_174014
     physical_depth: 4
     logical_depth: 8
     num_loops: 3
@@ -53,9 +56,10 @@ checkpoints:
   - name: loop6_block1
     model_config: configs/llama_consensus_60m_loop6_block1_model.json
     checkpoint: data/consensus_salaad_loop6_block1/llama_consensus_60m_loop6_block1/20260817_173723/model.pth
+    consensus_state_directory: data/consensus_salaad_loop6_block1/llama_consensus_60m_loop6_block1/20260817_173723
     physical_depth: 3
     logical_depth: 8
     num_loops: 6
     blocks_per_loop: 1
 
-output_directory: data/consensus_salaad_evaluation/c4_seed43
+output_directory: data/consensus_salaad_evaluation/c4_seed43_raw_and_reconstructed

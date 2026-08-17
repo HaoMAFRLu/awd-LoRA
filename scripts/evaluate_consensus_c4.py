@@ -24,6 +24,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from salad.register import get_data, get_model, get_preprocessed_dataset, get_tokenizer
+from salad.consensus import apply_decomposition
+from models.consensus import ConsensusLinear
 from salad.utils import hf_login_once, set_seed
 
 
@@ -68,6 +70,56 @@ def _load_state_dict(path: Path) -> Dict[str, torch.Tensor]:
             name.removeprefix("module."): value for name, value in state_dict.items()
         }
     return state_dict
+
+
+def _load_consensus_states(directory: Path) -> Dict[str, Dict[str, Any]]:
+    if not directory.is_dir():
+        raise FileNotFoundError(f"consensus state directory does not exist: {directory}")
+    paths = sorted(directory.glob("consensus_rank*.pth"))
+    if not paths:
+        raise FileNotFoundError(f"no consensus_rank*.pth files found in {directory}")
+
+    states: Dict[str, Dict[str, Any]] = {}
+    for path in paths:
+        try:
+            rank_states = torch.load(path, map_location="cpu", weights_only=True)
+        except TypeError:
+            rank_states = torch.load(path, map_location="cpu")
+        if not isinstance(rank_states, dict):
+            raise TypeError(f"consensus state file is not a dictionary: {path}")
+        duplicate_names = set(states).intersection(rank_states)
+        if duplicate_names:
+            raise KeyError(
+                f"duplicate consensus states in {path}: {sorted(duplicate_names)}"
+            )
+        states.update(rank_states)
+    return states
+
+
+@torch.no_grad()
+def _apply_reconstruction(
+    model: torch.nn.Module,
+    states: Dict[str, Dict[str, Any]],
+) -> float:
+    modules = dict(model.named_modules())
+    squared_error = torch.zeros((), dtype=torch.float64, device=next(model.parameters()).device)
+    squared_weight = torch.zeros_like(squared_error)
+    for name, state in states.items():
+        module = modules.get(name)
+        if not isinstance(module, ConsensusLinear):
+            raise KeyError(f"model has no ConsensusLinear named {name!r}")
+        reconstructed = (
+            state["shared"].unsqueeze(0) + state["low_rank"] + state["sparse"]
+        ).to(device=module.weight.device, dtype=torch.float32)
+        original = module.weight.detach().to(dtype=torch.float32)
+        squared_error += (original - reconstructed).square().sum(dtype=torch.float64)
+        squared_weight += original.square().sum(dtype=torch.float64)
+
+    relative_error = torch.sqrt(
+        squared_error / squared_weight.clamp_min(1.0e-24)
+    ).item()
+    apply_decomposition(model, states, strict=True)
+    return relative_error
 
 
 def _build_model(
@@ -245,14 +297,15 @@ def _print_results(results: List[Dict[str, Any]]) -> None:
     print("\nConsensus structure evaluation")
     print("=" * 132)
     print(
-        f"{'condition':<22} {'loops':>5} {'blocks':>6} {'physical':>8} "
+        f"{'condition':<32} {'source':>13} {'loops':>5} {'blocks':>6} {'physical':>8} "
         f"{'logical':>7} {'loss':>10} {'delta':>10} {'ppl':>10} "
         f"{'tokens':>12} {'tokens/s':>12}"
     )
     print("-" * 132)
     for result in results:
         print(
-            f"{result['condition']:<22} {result['num_loops']:>5d} "
+            f"{result['condition']:<32} {result['weight_source']:>13} "
+            f"{result['num_loops']:>5d} "
             f"{result['blocks_per_loop']:>6d} {result['physical_depth']:>8d} "
             f"{result['logical_depth']:>7d} {result['loss']:>10.6f} "
             f"{result['loss_delta_vs_vanilla']:>10.6f} "
@@ -305,12 +358,20 @@ def main() -> None:
         model = _build_model(specification, device, precision)
         decoder = model.model
         metrics = _evaluate_model(model, batches, device)
+        has_reconstruction = "consensus_state_directory" in specification
+        raw_condition = (
+            f"{specification['name']}_raw"
+            if has_reconstruction
+            else specification["name"]
+        )
         result = {
-            "condition": specification["name"],
+            "condition": raw_condition,
+            "weight_source": "raw",
             "num_loops": decoder.num_loops,
             "blocks_per_loop": len(decoder.loop_layers),
             "physical_depth": len(decoder.layers),
             "logical_depth": decoder.logical_num_layers,
+            "reconstruction_relative_frobenius": None,
             **metrics,
         }
         results.append(result)
@@ -319,6 +380,31 @@ def main() -> None:
                 f"{specification['name']}: loss={metrics['loss']:.6f}, "
                 f"ppl={metrics['perplexity']:.4f}"
             )
+
+        if has_reconstruction:
+            states = _load_consensus_states(
+                _resolve_path(specification["consensus_state_directory"])
+            )
+            relative_error = _apply_reconstruction(model, states)
+            reconstructed_metrics = _evaluate_model(model, batches, device)
+            reconstructed_result = {
+                "condition": f"{specification['name']}_reconstructed",
+                "weight_source": "reconstructed",
+                "num_loops": decoder.num_loops,
+                "blocks_per_loop": len(decoder.loop_layers),
+                "physical_depth": len(decoder.layers),
+                "logical_depth": decoder.logical_num_layers,
+                "reconstruction_relative_frobenius": relative_error,
+                **reconstructed_metrics,
+            }
+            results.append(reconstructed_result)
+            if rank == 0:
+                print(
+                    f"{specification['name']} reconstructed: "
+                    f"loss={reconstructed_metrics['loss']:.6f}, "
+                    f"ppl={reconstructed_metrics['perplexity']:.4f}, "
+                    f"relative_frobenius={relative_error:.6f}"
+                )
         del model
         torch.cuda.empty_cache()
 
