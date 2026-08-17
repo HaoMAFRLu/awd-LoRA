@@ -173,6 +173,143 @@ def _run_vanilla_middle_loop_evaluation(
     return results
 
 
+def _run_loop_projection_evaluation(
+    config: Dict[str, Any],
+    batches: List[Dict[str, torch.Tensor]],
+    pad_token_id: int,
+    device: torch.device,
+    precision: torch.dtype,
+    rank: int,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """Compare one looped checkpoint with and without inference projection."""
+    projection_config = config.get("loop_projection", {})
+    if not projection_config.get("enabled", False):
+        raise ValueError(
+            "evaluation_mode='loop_projection' requires loop_projection.enabled=true"
+        )
+
+    projection_gammas = [
+        float(value) for value in projection_config.get("gammas", [])
+    ]
+    if not projection_gammas:
+        raise ValueError("loop_projection.gammas must not be empty")
+    if any(
+        not math.isfinite(gamma) or not 0.0 < gamma < 1.0
+        for gamma in projection_gammas
+    ):
+        raise ValueError(
+            "every loop_projection gamma must be finite and between 0 and 1"
+        )
+    if len(set(projection_gammas)) != len(projection_gammas):
+        raise ValueError("loop_projection.gammas must be unique")
+
+    loop_values = [int(value) for value in config["loop_values"]]
+    if (
+        not loop_values
+        or any(value < 1 for value in loop_values)
+        or loop_values != sorted(set(loop_values))
+    ):
+        raise ValueError("loop_values must be sorted, unique positive integers")
+
+    checkpoint_config = config["checkpoints"]
+    results: List[Dict[str, Any]] = []
+    if projection_config.get("include_vanilla", True):
+        if rank == 0:
+            print("\nLoading vanilla checkpoint...")
+        vanilla = _build_model(
+            checkpoint_config["vanilla"]["model_config"],
+            checkpoint_config["vanilla"]["checkpoint"],
+            device,
+            precision,
+        )
+        vanilla_metrics = _evaluate_condition(
+            vanilla,
+            batches,
+            pad_token_id,
+            device,
+        )
+        results.append({
+            "condition": "vanilla",
+            "num_loops": None,
+            "projection_gamma": None,
+            "logical_depth": len(vanilla.model.layer_order),
+            **vanilla_metrics,
+        })
+        if rank == 0:
+            print(
+                f"vanilla: loss={vanilla_metrics['loss']:.6f}, "
+                f"ppl={vanilla_metrics['perplexity']:.4f}"
+            )
+        del vanilla
+        torch.cuda.empty_cache()
+
+    if rank == 0:
+        print("\nLoading contraction checkpoint...")
+    looped = _build_model(
+        checkpoint_config["looped"]["model_config"],
+        checkpoint_config["looped"]["checkpoint"],
+        device,
+        precision,
+    )
+
+    conditions = [("unprojected", None)] + [
+        (f"projected_g{gamma:g}", gamma) for gamma in projection_gammas
+    ]
+    distance_config = config.get("distance_monitor", {})
+    distance_monitors: Dict[str, Any] = {}
+
+    for condition_name, projection_gamma in conditions:
+        if rank == 0:
+            gamma_description = (
+                "disabled"
+                if projection_gamma is None
+                else f"gamma={projection_gamma:g}"
+            )
+            print(f"\nCondition: {condition_name} ({gamma_description})")
+
+        for num_loops in loop_values:
+            looped.model.set_num_loops(num_loops)
+            metrics = _evaluate_condition(
+                looped,
+                batches,
+                pad_token_id,
+                device,
+                loop_projection_gamma=projection_gamma,
+            )
+            result = {
+                "condition": condition_name,
+                "num_loops": num_loops,
+                "projection_gamma": projection_gamma,
+                "logical_depth": len(looped.model.layer_order),
+                **metrics,
+            }
+            results.append(result)
+            if rank == 0:
+                print(
+                    f"loop={num_loops:>2d}, depth={result['logical_depth']:>2d}: "
+                    f"loss={result['loss']:.6f}, ppl={result['perplexity']:.4f}"
+                )
+
+        if distance_config.get("enabled", False):
+            monitor_gamma = (
+                projection_gamma
+                if projection_gamma is not None
+                else float(distance_config.get("gamma", 0.8))
+            )
+            distance_monitors[condition_name] = _evaluate_loop_distances(
+                looped,
+                batches,
+                device,
+                num_loops=int(
+                    distance_config.get("num_loops", loop_values[-1])
+                ),
+                gamma=monitor_gamma,
+                loop_projection_gamma=projection_gamma,
+            )
+
+    return results, distance_monitors
+
+
 def _cache_eval_batches(
     config: Dict[str, Any],
     tokenizer,
@@ -231,6 +368,7 @@ def _evaluate_condition(
     batches: List[Dict[str, torch.Tensor]],
     pad_token_id: int,
     device: torch.device,
+    loop_projection_gamma: Optional[float] = None,
 ) -> Dict[str, float]:
     totals = torch.zeros(4, dtype=torch.float64, device=device)
     dist.barrier()
@@ -259,6 +397,7 @@ def _evaluate_condition(
             attention_mask=attention_mask,
             labels=labels,
             use_cache=False,
+            loop_projection_gamma=loop_projection_gamma,
         ).loss
         totals[0] += loss.detach().to(torch.float64) * valid_tokens
         totals[1] += valid_tokens
@@ -293,6 +432,7 @@ def _evaluate_loop_distances(
     device: torch.device,
     num_loops: int,
     gamma: float,
+    loop_projection_gamma: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Measure Tn-1 output changes along one fixed-depth trajectory."""
     if num_loops < 3:
@@ -316,6 +456,19 @@ def _evaluate_loop_distances(
     decrease_counts = torch.zeros_like(ratio_sums)
     gamma_compliance_counts = torch.zeros_like(ratio_sums)
     example_count = torch.zeros((), dtype=torch.float64, device=device)
+    projection_raw_sums = None
+    projection_radius_sums = None
+    projection_scale_sums = None
+    projection_clip_counts = None
+    if loop_projection_gamma is not None:
+        projection_raw_sums = torch.zeros(
+            num_distances,
+            dtype=torch.float64,
+            device=device,
+        )
+        projection_radius_sums = torch.zeros_like(projection_raw_sums)
+        projection_scale_sums = torch.zeros_like(projection_raw_sums)
+        projection_clip_counts = torch.zeros_like(projection_raw_sums)
 
     for cached_batch in batches:
         input_ids = cached_batch["input_ids"].to(
@@ -333,6 +486,7 @@ def _evaluate_loop_distances(
             attention_mask=attention_mask,
             use_cache=False,
             output_loop_states=True,
+            loop_projection_gamma=loop_projection_gamma,
             return_dict=True,
         )
         if outputs.loop_states is None or len(outputs.loop_states) != num_loops:
@@ -363,6 +517,29 @@ def _evaluate_loop_distances(
         gamma_compliance_counts += (
             following <= gamma * previous
         ).to(torch.float64).sum(dim=0)
+        if loop_projection_gamma is not None:
+            projection_fields = (
+                outputs.loop_projection_raw_distances,
+                outputs.loop_projection_radii,
+                outputs.loop_projection_scales,
+            )
+            if any(
+                values is None or len(values) != num_distances
+                for values in projection_fields
+            ):
+                raise RuntimeError(
+                    "loop projection did not return one diagnostic per transition"
+                )
+            raw_distances = torch.stack(
+                outputs.loop_projection_raw_distances,
+                dim=1,
+            )
+            radii = torch.stack(outputs.loop_projection_radii, dim=1)
+            scales = torch.stack(outputs.loop_projection_scales, dim=1)
+            projection_raw_sums += raw_distances.to(torch.float64).sum(dim=0)
+            projection_radius_sums += radii.to(torch.float64).sum(dim=0)
+            projection_scale_sums += scales.to(torch.float64).sum(dim=0)
+            projection_clip_counts += (scales < 1.0).to(torch.float64).sum(dim=0)
         example_count += input_ids.shape[0]
 
     for value in (
@@ -373,6 +550,14 @@ def _evaluate_loop_distances(
         example_count,
     ):
         dist.all_reduce(value, op=dist.ReduceOp.SUM)
+    if loop_projection_gamma is not None:
+        for value in (
+            projection_raw_sums,
+            projection_radius_sums,
+            projection_scale_sums,
+            projection_clip_counts,
+        ):
+            dist.all_reduce(value, op=dist.ReduceOp.SUM)
 
     total_examples = int(example_count.item())
     if total_examples == 0:
@@ -384,7 +569,7 @@ def _evaluate_loop_distances(
     gamma_compliance_rates = (
         gamma_compliance_counts / example_count
     ).tolist()
-    return {
+    result = {
         "num_loops": num_loops,
         "examples": total_examples,
         "gamma": gamma,
@@ -400,6 +585,21 @@ def _evaluate_loop_distances(
             )
         ),
     }
+    if loop_projection_gamma is not None:
+        result["projection"] = {
+            "gamma": loop_projection_gamma,
+            "raw_distances": (
+                projection_raw_sums / example_count
+            ).tolist(),
+            "radii": (projection_radius_sums / example_count).tolist(),
+            "mean_scales": (
+                projection_scale_sums / example_count
+            ).tolist(),
+            "clip_rates": (
+                projection_clip_counts / example_count
+            ).tolist(),
+        }
+    return result
 
 
 def _write_results(
@@ -436,22 +636,25 @@ def _write_results(
 
 def _print_results(results: List[Dict[str, Any]]) -> None:
     print("\nEvaluation results")
-    print("=" * 125)
+    print("=" * 140)
     print(
-        f"{'condition':<18} {'loops':>5} {'passes':>7} {'depth':>6} {'loss':>10} "
+        f"{'condition':<22} {'loops':>5} {'gamma':>8} {'passes':>7} "
+        f"{'depth':>6} {'loss':>10} "
         f"{'ppl':>10} {'tokens':>12} {'seconds':>10} {'tokens/s':>12}"
     )
-    print("-" * 125)
+    print("-" * 140)
     for result in results:
         loops = "-" if result["num_loops"] is None else str(result["num_loops"])
+        gamma_value = result.get("projection_gamma")
+        gamma = "-" if gamma_value is None else f"{gamma_value:g}"
         passes = str(result.get("middle_passes", "-"))
         print(
-            f"{result['condition']:<18} {loops:>5} {passes:>7} "
+            f"{result['condition']:<22} {loops:>5} {gamma:>8} {passes:>7} "
             f"{result['logical_depth']:>6d} {result['loss']:>10.6f} "
             f"{result['perplexity']:>10.4f} {result['tokens']:>12d} "
             f"{result['seconds']:>10.2f} {result['tokens_per_second']:>12.0f}"
         )
-    print("=" * 125)
+    print("=" * 140)
 
 
 def _print_distance_monitor(monitor: Dict[str, Any]) -> None:
@@ -485,6 +688,41 @@ def _print_distance_monitor(monitor: Dict[str, Any]) -> None:
         f"{monitor['mean_distances_strictly_decrease']}"
     )
     print("=" * 100)
+
+    projection = monitor.get("projection")
+    if projection is None:
+        return
+
+    print(f"\nProjection diagnostics | gamma={projection['gamma']:g}")
+    print("=" * 88)
+    print(
+        f"{'transition':<14} {'raw update':>12} {'radius':>12} "
+        f"{'actual':>12} {'mean scale':>12} {'clip rate':>12}"
+    )
+    print("-" * 88)
+    for index, (
+        raw_distance,
+        radius,
+        actual_distance,
+        mean_scale,
+        clip_rate,
+    ) in enumerate(
+        zip(
+            projection["raw_distances"],
+            projection["radii"],
+            monitor["distances"],
+            projection["mean_scales"],
+            projection["clip_rates"],
+        ),
+        start=1,
+    ):
+        transition = f"z{index}->z{index + 1}"
+        print(
+            f"{transition:<14} {raw_distance:>12.6f} "
+            f"{radius:>12.6f} {actual_distance:>12.6f} "
+            f"{mean_scale:>12.6f} {clip_rate:>12.4f}"
+        )
+    print("=" * 88)
 
 
 def main() -> None:
@@ -613,6 +851,15 @@ def main() -> None:
                 num_loops=int(distance_config.get("num_loops", loop_values[-1])),
                 gamma=float(distance_config.get("gamma", 0.95)),
             )
+    elif evaluation_mode == "loop_projection":
+        results, distance_monitor = _run_loop_projection_evaluation(
+            config,
+            batches,
+            pad_token_id,
+            device,
+            precision,
+            rank,
+        )
     else:
         raise ValueError(f"unsupported evaluation_mode: {evaluation_mode!r}")
 
@@ -629,7 +876,12 @@ def main() -> None:
         )
         _print_results(results)
         if distance_monitor is not None:
-            _print_distance_monitor(distance_monitor)
+            if evaluation_mode == "loop_projection":
+                for condition, monitor in distance_monitor.items():
+                    print(f"\nDistance condition: {condition}")
+                    _print_distance_monitor(monitor)
+            else:
+                _print_distance_monitor(distance_monitor)
         print(f"Results written to {output_directory}")
 
     dist.barrier()

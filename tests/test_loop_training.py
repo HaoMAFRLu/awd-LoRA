@@ -150,6 +150,76 @@ class LoopedLlamaTest(unittest.TestCase):
             self.assertTrue(torch.allclose(loop_state, layer_output))
         self.assertTrue(torch.allclose(ordinary.logits, captured.logits))
 
+    def test_inference_projection_starts_after_second_complete_loop(self):
+        model = _tiny_looped_model(num_loops=4)
+        model.eval()
+        input_ids = torch.randint(0, model.config.vocab_size, (2, 8))
+        attention_mask = torch.tensor(
+            [
+                [1, 1, 1, 1, 1, 1, 1, 1],
+                [1, 1, 1, 1, 1, 0, 0, 0],
+            ]
+        )
+
+        with torch.no_grad():
+            baseline = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                output_loop_states=True,
+                return_dict=True,
+            )
+            projected = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                output_loop_states=True,
+                loop_projection_gamma=0.25,
+                return_dict=True,
+            )
+
+        self.assertEqual(len(projected.loop_states), 4)
+        self.assertTrue(torch.equal(projected.loop_states[0], baseline.loop_states[0]))
+        self.assertTrue(torch.equal(projected.loop_states[1], baseline.loop_states[1]))
+
+        distances = torch.stack(
+            tuple(
+                hidden_distance(current, previous, attention_mask)
+                for previous, current in zip(
+                    projected.loop_states[:-1],
+                    projected.loop_states[1:],
+                )
+            ),
+            dim=1,
+        )
+        r0 = distances[:, 0]
+        self.assertTrue(torch.all(distances[:, 1] <= 0.25 * r0 + 1.0e-5))
+        self.assertTrue(torch.all(distances[:, 2] <= 0.25**2 * r0 + 1.0e-5))
+
+        self.assertEqual(len(projected.loop_projection_raw_distances), 3)
+        self.assertEqual(len(projected.loop_projection_radii), 3)
+        self.assertEqual(len(projected.loop_projection_scales), 3)
+        self.assertTrue(
+            torch.equal(
+                projected.loop_projection_raw_distances[0],
+                projected.loop_projection_radii[0],
+            )
+        )
+        self.assertTrue(
+            torch.equal(
+                projected.loop_projection_scales[0],
+                torch.ones_like(projected.loop_projection_scales[0]),
+            )
+        )
+
+    def test_loop_projection_is_inference_only(self):
+        model = _tiny_looped_model(num_loops=3)
+        input_ids = torch.randint(0, model.config.vocab_size, (2, 8))
+
+        with self.assertRaisesRegex(ValueError, "inference-only"):
+            model(
+                input_ids=input_ids,
+                loop_projection_gamma=0.8,
+            )
+
     def test_random_contraction_depths_capture_only_sampled_loops(self):
         model = _tiny_looped_model()
         input_ids = torch.randint(0, model.config.vocab_size, (2, 8))

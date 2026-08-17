@@ -49,6 +49,9 @@ class LoopBaseModelOutput(BaseModelOutputWithPast):
     """Base model output with states captured after complete loop passes."""
 
     loop_states: Optional[Tuple[torch.FloatTensor, ...]] = None
+    loop_projection_raw_distances: Optional[Tuple[torch.FloatTensor, ...]] = None
+    loop_projection_radii: Optional[Tuple[torch.FloatTensor, ...]] = None
+    loop_projection_scales: Optional[Tuple[torch.FloatTensor, ...]] = None
 
 
 @dataclass
@@ -56,6 +59,22 @@ class LoopCausalLMOutput(CausalLMOutputWithPast):
     """Causal LM output with states captured after complete loop passes."""
 
     loop_states: Optional[Tuple[torch.FloatTensor, ...]] = None
+    loop_projection_raw_distances: Optional[Tuple[torch.FloatTensor, ...]] = None
+    loop_projection_radii: Optional[Tuple[torch.FloatTensor, ...]] = None
+    loop_projection_scales: Optional[Tuple[torch.FloatTensor, ...]] = None
+
+
+def _hidden_rms_distance(
+    first: torch.Tensor,
+    second: torch.Tensor,
+    attention_mask: torch.Tensor,
+) -> torch.Tensor:
+    """Return one padding-aware RMS hidden-state distance per batch item."""
+    difference = (first.float() - second.float()) * attention_mask.unsqueeze(-1)
+    element_count = (
+        attention_mask.sum(dim=1) * first.shape[-1]
+    ).clamp_min(1.0)
+    return torch.linalg.vector_norm(difference, dim=(1, 2)) / element_count.sqrt()
 
 
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
@@ -573,6 +592,7 @@ class LlamaModel(LlamaPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         output_loop_states: bool = False,
+        loop_projection_gamma: Optional[float] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, LoopBaseModelOutput]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -589,6 +609,25 @@ class LlamaModel(LlamaPreTrainedModel):
             raise ValueError(
                 "loop-state capture does not support use_cache or past_key_values"
             )
+
+        projection_enabled = loop_projection_gamma is not None
+        if projection_enabled:
+            if not self.loop_layers:
+                raise ValueError("loop projection requires a looped model")
+            if self.training:
+                raise ValueError("loop projection is an inference-only operation")
+            if use_cache or past_key_values is not None:
+                raise ValueError(
+                    "loop projection does not support use_cache or past_key_values"
+                )
+            if (
+                isinstance(loop_projection_gamma, bool)
+                or not math.isfinite(loop_projection_gamma)
+                or not 0.0 < loop_projection_gamma < 1.0
+            ):
+                raise ValueError(
+                    "loop_projection_gamma must be finite and strictly between 0 and 1"
+                )
 
         # retrieve input_ids and inputs_embeds
         if input_ids is not None and inputs_embeds is not None:
@@ -623,6 +662,14 @@ class LlamaModel(LlamaPreTrainedModel):
             attention_mask = torch.ones(
                 (batch_size, seq_length_with_past), dtype=torch.bool, device=inputs_embeds.device
             )
+        loop_projection_mask = (
+            attention_mask.to(
+                device=inputs_embeds.device,
+                dtype=torch.float32,
+            )
+            if projection_enabled
+            else None
+        )
         attention_mask = self._prepare_decoder_attention_mask(
             attention_mask, (batch_size, seq_length), inputs_embeds, past_key_values_length
         )
@@ -646,6 +693,11 @@ class LlamaModel(LlamaPreTrainedModel):
             # per complete logical loop. The entry-block output is not a
             # Tn-1 output and therefore is not part of the trajectory loss.
             loop_states = ()
+        loop_projection_raw_distances = () if projection_enabled else None
+        loop_projection_radii = () if projection_enabled else None
+        loop_projection_scales = () if projection_enabled else None
+        previous_loop_state = None
+        initial_loop_update_distance = None
 
         if past_key_values is not None and len(past_key_values) != len(self.layer_order):
             raise ValueError(
@@ -688,16 +740,62 @@ class LlamaModel(LlamaPreTrainedModel):
 
             hidden_states = layer_outputs[0]
 
-            if output_loop_states:
-                executed_layers = execution_idx + 1
-                entry_depth = len(self.entry_layers)
-                loop_depth = len(self.loop_layers)
-                loop_end = entry_depth + loop_depth * self.num_loops
-                is_loop_boundary = (
-                    entry_depth < executed_layers <= loop_end
-                    and (executed_layers - entry_depth) % loop_depth == 0
-                )
-                if is_loop_boundary:
+            executed_layers = execution_idx + 1
+            entry_depth = len(self.entry_layers)
+            loop_depth = len(self.loop_layers)
+            loop_end = entry_depth + loop_depth * self.num_loops
+            is_loop_boundary = (
+                loop_depth > 0
+                and entry_depth < executed_layers <= loop_end
+                and (executed_layers - entry_depth) % loop_depth == 0
+            )
+            if is_loop_boundary:
+                completed_loops = (executed_layers - entry_depth) // loop_depth
+                if projection_enabled:
+                    if completed_loops == 1:
+                        previous_loop_state = hidden_states
+                    else:
+                        raw_distance = _hidden_rms_distance(
+                            hidden_states,
+                            previous_loop_state,
+                            loop_projection_mask,
+                        )
+                        if completed_loops == 2:
+                            # z1 -> z2 defines r0 and remains completely unchanged.
+                            initial_loop_update_distance = raw_distance
+                            radius = raw_distance
+                            scale = torch.ones_like(raw_distance)
+                        else:
+                            radius = initial_loop_update_distance * (
+                                loop_projection_gamma ** (completed_loops - 2)
+                            )
+                            scale = torch.where(
+                                raw_distance > radius,
+                                radius / raw_distance.clamp_min(1.0e-12),
+                                torch.ones_like(raw_distance),
+                            )
+                            clipped = scale < 1.0
+                            if clipped.any():
+                                difference = (
+                                    hidden_states.float()
+                                    - previous_loop_state.float()
+                                )
+                                projected = (
+                                    previous_loop_state.float()
+                                    + difference * scale[:, None, None]
+                                ).to(dtype=hidden_states.dtype)
+                                hidden_states = torch.where(
+                                    clipped[:, None, None],
+                                    projected,
+                                    hidden_states,
+                                )
+
+                        loop_projection_raw_distances += (raw_distance,)
+                        loop_projection_radii += (radius,)
+                        loop_projection_scales += (scale,)
+                        previous_loop_state = hidden_states
+
+                if output_loop_states:
                     loop_states += (hidden_states,)
 
             if use_cache:
@@ -722,6 +820,9 @@ class LlamaModel(LlamaPreTrainedModel):
                     all_hidden_states,
                     all_self_attns,
                     loop_states,
+                    loop_projection_raw_distances,
+                    loop_projection_radii,
+                    loop_projection_scales,
                 ]
                 if value is not None
             )
@@ -731,6 +832,9 @@ class LlamaModel(LlamaPreTrainedModel):
             hidden_states=all_hidden_states,
             attentions=all_self_attns,
             loop_states=loop_states,
+            loop_projection_raw_distances=loop_projection_raw_distances,
+            loop_projection_radii=loop_projection_radii,
+            loop_projection_scales=loop_projection_scales,
         )
 
 
@@ -776,6 +880,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         output_loop_states: bool = False,
+        loop_projection_gamma: Optional[float] = None,
         return_dict: Optional[bool] = None,
     ) -> Union[Tuple, LoopCausalLMOutput]:
         r"""
@@ -821,6 +926,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             output_loop_states=output_loop_states,
+            loop_projection_gamma=loop_projection_gamma,
             return_dict=return_dict,
         )
 
@@ -854,6 +960,11 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
             loop_states=outputs.loop_states,
+            loop_projection_raw_distances=(
+                outputs.loop_projection_raw_distances
+            ),
+            loop_projection_radii=outputs.loop_projection_radii,
+            loop_projection_scales=outputs.loop_projection_scales,
         )
 
     def prepare_inputs_for_generation(
