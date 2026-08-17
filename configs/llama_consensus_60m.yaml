@@ -1,8 +1,8 @@
 seed: 42
-name: llama_consensus_60m_local
+name: llama_consensus_60m
 model_config: llama_consensus_60m_model.json
 training_mode: consensus
-output_folder: consensus_salaad_local
+output_folder: consensus_salaad
 wandb_project: CONSENSUS_SALAAD
 
 tokenizer_name: t5-base
@@ -13,21 +13,21 @@ data:
   split: train
   streaming: true
 
-num_total_iters: 4
-num_freq: 2
+num_total_iters: 11000
+num_freq: 20
 is_wandb: true
 is_monitor: true
-save_interval: 4
+save_interval: 1000
 is_clip: 1.0
 max_length: 256
 seed_for_shuffle: 42
 
-# Local smoke test on one GPU.
-batch_size: 2
+# Global batch size: 128 samples per GPU with four DDP ranks.
+batch_size: 512
 num_workers: 0
 
-# Local debug structure: one entry block, a two-block recurrent body executed
-# twice, and one exit block (physical depth 4, logical depth 6).
+# Intermediate structure: one entry block, a three-block recurrent body
+# executed twice, and one exit block (physical depth 5, logical depth 8).
 
 # For each targeted recurrent matrix and logical loop:
 # X_i = X + L_i + S_i. All matrices share these controller targets/gains,
@@ -53,7 +53,7 @@ consensus_salaad:
 scheduler:
   name: cosine
   params:
-    warmup_steps: 1
+    warmup_steps: 2200
     min_lr_ratio: 0.1
 optimizer:
   name: AdamW
