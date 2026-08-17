@@ -91,8 +91,9 @@ Important fields:
   `num_blocks_per_loop * num_loops`.
 - `loop.max_num_loops`: number of loop-specific effective weights and the
   maximum depth supported by Consensus SALAAD.
-- `consensus_salaad`: consensus `rho`, nuclear-norm coefficient
-  `lambda_low_rank`, and l1 coefficient `lambda_sparse`.
+- `consensus_salaad`: global consensus `rho`, target energy-rank/density, and
+  the `alpha_dict`/`beta_dict` integral-controller gains. Every matrix uses the
+  same configuration but keeps independent controller state.
 
 To regenerate configs, edit `scripts/config_generator.py` and run:
 
@@ -199,8 +200,9 @@ middle logical depths.
 The task optimizer updates each dense `W` through both the language-model loss
 and the augmented penalty. Every `num_freq` iterations, the solver updates the
 shared center, applies singular-value and elementwise thresholding to `L` and
-`S`, and updates the scaled dual. `salad.consensus.apply_decomposition`
-materializes `X_shared + L + S` into the model for evaluation.
+`S`, updates `alpha` and `beta` by the original SALAAD integral-control rule,
+and updates the scaled dual. `salad.consensus.apply_decomposition` materializes
+`X_shared + L + S` into the model for evaluation.
 
 ## Notes for Contributors
 

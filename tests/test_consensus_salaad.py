@@ -40,6 +40,39 @@ def tiny_config(num_loop_weights=3):
     return config
 
 
+def consensus_solver_config(
+    *,
+    rho=1.0,
+    energy=0.999,
+    rate_rank=0.15,
+    rate_sparsity=0.05,
+    alpha_init=0.0,
+    beta_init=0.0,
+    alpha_rate_decay=0.0,
+    beta_rate_decay=0.0,
+):
+    return {
+        "rho": rho,
+        "energy": energy,
+        "rate_rank": rate_rank,
+        "rate_sparsity": rate_sparsity,
+        "alpha_dict": {
+            "init": alpha_init,
+            "mode": "adaptive",
+            "rate_decay": alpha_rate_decay,
+            "drate": 0.01,
+            "start_epoch": 1500,
+        },
+        "beta_dict": {
+            "init": beta_init,
+            "mode": "adaptive",
+            "rate_decay": beta_rate_decay,
+            "drate": 0.01,
+            "start_epoch": 1500,
+        },
+    }
+
+
 class ConsensusSALAADTests(unittest.TestCase):
     def test_consensus_linear_selects_the_requested_weight(self):
         dense = nn.Linear(2, 1, bias=False)
@@ -78,18 +111,18 @@ class ConsensusSALAADTests(unittest.TestCase):
         solver = ConsensusADMM(
             "matrix",
             effective,
-            {"rho": 1.0, "lambda_low_rank": 0.0, "lambda_sparse": 0.0},
+            consensus_solver_config(),
         )
         with torch.no_grad():
             solver.low_rank[0].fill_(0.25)
             solver.sparse[1].fill_(0.5)
-            solver.dual[0].fill_(0.75)
+            solver.scaled_dual[0].fill_(0.75)
 
         expected_shared = (
             effective.detach().float()
             - solver.low_rank
             - solver.sparse
-            + solver.dual
+            + solver.scaled_dual
         ).mean(dim=0)
         solver.step()
 
@@ -98,7 +131,7 @@ class ConsensusSALAADTests(unittest.TestCase):
         clean_solver = ConsensusADMM(
             "clean_matrix",
             effective,
-            {"rho": 1.0, "lambda_low_rank": 0.0, "lambda_sparse": 0.0},
+            consensus_solver_config(),
         )
         clean_solver.step()
         torch.testing.assert_close(
@@ -114,12 +147,85 @@ class ConsensusSALAADTests(unittest.TestCase):
             rtol=1.0e-5,
         )
 
+    def test_consensus_uses_independent_integral_controller_state(self):
+        effective = nn.Parameter(
+            torch.tensor(
+                [
+                    [[2.0, 0.0], [0.0, 0.0]],
+                    [[-2.0, 0.0], [0.0, 0.0]],
+                ]
+            )
+        )
+        config = consensus_solver_config(
+            rho=2.0,
+            energy=1.0,
+            rate_rank=0.25,
+            rate_sparsity=0.10,
+            alpha_rate_decay=0.4,
+            beta_rate_decay=0.2,
+        )
+        solver = ConsensusADMM("matrix", effective, config)
+
+        self.assertIsNot(solver.alpha_controllers[0], solver.alpha_controllers[1])
+        self.assertIsNot(solver.beta_controllers[0], solver.beta_controllers[1])
+
+        solver.step()
+        for controller in solver.alpha_controllers:
+            self.assertAlmostEqual(controller.value, 0.2)
+        for controller in solver.beta_controllers:
+            self.assertEqual(controller.value, 0.0)
+
+        solver.step()
+        for controller in solver.alpha_controllers:
+            self.assertAlmostEqual(controller.value, 0.4)
+        for controller in solver.beta_controllers:
+            self.assertAlmostEqual(controller.value, 0.06)
+
+        state = solver.state_dict()
+        restored = ConsensusADMM("matrix", effective, config)
+        restored.load_state_dict(state)
+        for expected, actual in zip(
+            solver.alpha_controllers, restored.alpha_controllers
+        ):
+            self.assertEqual(actual.nr_updates, expected.nr_updates)
+            self.assertAlmostEqual(actual.value, expected.value)
+            self.assertAlmostEqual(actual.pre_rate, expected.pre_rate)
+        for expected, actual in zip(
+            solver.beta_controllers, restored.beta_controllers
+        ):
+            self.assertEqual(actual.nr_updates, expected.nr_updates)
+            self.assertAlmostEqual(actual.value, expected.value)
+            self.assertAlmostEqual(actual.pre_rate, expected.pre_rate)
+
+    def test_integral_controller_never_makes_a_negative_threshold(self):
+        effective = nn.Parameter(torch.zeros(2, 2, 2))
+        solver = ConsensusADMM(
+            "matrix",
+            effective,
+            consensus_solver_config(
+                rho=1.0,
+                rate_rank=0.5,
+                rate_sparsity=0.5,
+                alpha_rate_decay=1.0,
+                beta_rate_decay=1.0,
+            ),
+        )
+
+        solver.step()
+
+        self.assertTrue(
+            all(controller.value == 0.0 for controller in solver.alpha_controllers)
+        )
+        self.assertTrue(
+            all(controller.value == 0.0 for controller in solver.beta_controllers)
+        )
+
     def test_augmented_penalty_backpropagates_to_effective_weights(self):
         effective = nn.Parameter(torch.zeros(2, 2, 2))
         solver = ConsensusADMM(
             "matrix",
             effective,
-            {"rho": 2.0, "lambda_low_rank": 0.0, "lambda_sparse": 0.0},
+            consensus_solver_config(rho=2.0),
         )
         with torch.no_grad():
             effective[1, 0, 0] = 1.0
@@ -262,11 +368,11 @@ class ConsensusSALAADTests(unittest.TestCase):
             ConsensusADMM(
                 name,
                 module.weight,
-                {
-                    "rho": 0.1,
-                    "lambda_low_rank": 1.0e-4,
-                    "lambda_sparse": 1.0e-5,
-                },
+                consensus_solver_config(
+                    rho=0.1,
+                    alpha_init=1.0e-4,
+                    beta_init=1.0e-5,
+                ),
             )
             for name, module in model.named_modules()
             if isinstance(module, ConsensusLinear)

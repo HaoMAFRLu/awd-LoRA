@@ -88,7 +88,7 @@ class SALADTrainer():
         if self.is_wandb and self.rank == 0:
             import wandb
             wandb.login(key=os.getenv("WANDB_API_KEY"), relogin=False)
-            self.run_wandb = wandb.init(project=self.config.get("wandb_project", "SALAD_"+self.config['name']),
+            self.run_wandb = wandb.init(project=self.config.get("wandb_project", "CONSENSUS_SALAAD"),
                                         entity=self.config.get("wandb_entity", "hao-ma-eth-z-rich"),
                                         config=self.config,
                                         name=folder_name)
@@ -447,9 +447,13 @@ class SALADTrainer():
         for solver in self.consensus_solvers:
             stats = solver.stats()
             row = rows[self.name2idx[solver.name]]
-            row[0] = solver.lambda_low_rank
-            row[1] = solver.lambda_sparse
+            row[0] = stats['alpha']
+            row[1] = stats['beta']
+            row[2] = stats['dalpha']
+            row[3] = stats['dbeta']
             row[4] = solver.rho
+            row[5] = stats['rate_decay_alpha']
+            row[6] = stats['rate_decay_beta']
             row[7] = stats['relative_residual']
             row[8] = stats['rank']
             row[9] = stats['nonzero']
@@ -463,15 +467,15 @@ class SALADTrainer():
         for name, index in self.name2idx.items():
             row = rows[index]
             info = self.layer_info[name]
-            info['alpha_mode'].append('nuclear')
-            info['beta_mode'].append('l1')
+            info['alpha_mode'].append('I-controller')
+            info['beta_mode'].append('I-controller')
             info['alpha'].append(row[0].item())
             info['beta'].append(row[1].item())
-            info['dalpha'].append(0.0)
-            info['dbeta'].append(0.0)
+            info['dalpha'].append(row[2].item())
+            info['dbeta'].append(row[3].item())
             info['rho'].append(row[4].item())
-            info['rate_decay_alpha'].append(0.0)
-            info['rate_decay_beta'].append(0.0)
+            info['rate_decay_alpha'].append(row[5].item())
+            info['rate_decay_beta'].append(row[6].item())
             info['loss'].append(row[7].item())
             info['rank'].append(int(row[8].item()))
             info['nonzero'].append(int(row[9].item()))

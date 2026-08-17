@@ -6,6 +6,82 @@ import torch
 from torch import nn
 
 from models.consensus import ConsensusLinear
+from salad.adaptive_param import PARAM
+from salad.utils import get_energy_quantile
+
+
+_CONTROLLER_FLOAT_FIELDS = (
+    "target_rate",
+    "value",
+    "rate_decay",
+    "drate",
+    "dvalue",
+    "pre_rate",
+)
+_CONTROLLER_INT_FIELDS = ("nr_updates", "start_epoch")
+
+
+def _make_integral_controller(
+    config: Mapping[str, Any],
+    key: str,
+    target_rate: float,
+) -> PARAM:
+    controller_config = config.get(key)
+    if not isinstance(controller_config, Mapping):
+        raise ValueError(f"consensus_salaad.{key} must be a dictionary")
+
+    controller_config = dict(controller_config)
+    controller_config["target_rate"] = target_rate
+    if controller_config.get("mode") != "adaptive":
+        raise ValueError(
+            f"consensus_salaad.{key}.mode must be 'adaptive' for I-control"
+        )
+    for field in ("init", "rate_decay", "drate"):
+        value = float(controller_config.get(field, 0.0))
+        if value < 0:
+            raise ValueError(
+                f"consensus_salaad.{key}.{field} must be non-negative, got {value}"
+            )
+
+    controller = PARAM(controller_config)
+    start_epoch = controller_config.get("start_epoch", controller.start_epoch)
+    if (
+        not isinstance(start_epoch, int)
+        or isinstance(start_epoch, bool)
+        or start_epoch < 0
+    ):
+        raise ValueError(
+            f"consensus_salaad.{key}.start_epoch must be a non-negative integer"
+        )
+    controller.start_epoch = start_epoch
+    return controller
+
+
+def _controller_state(controller: PARAM) -> Dict[str, Any]:
+    state = {"mode": controller.mode}
+    for field in _CONTROLLER_FLOAT_FIELDS:
+        state[field] = float(getattr(controller, field))
+    for field in _CONTROLLER_INT_FIELDS:
+        state[field] = int(getattr(controller, field))
+    return state
+
+
+def _load_controller_state(controller: PARAM, state: Mapping[str, Any]) -> None:
+    if state.get("mode") != "adaptive":
+        raise ValueError("saved consensus controller mode must be 'adaptive'")
+    controller.mode = "adaptive"
+    for field in _CONTROLLER_FLOAT_FIELDS:
+        if field in state:
+            setattr(controller, field, float(state[field]))
+    for field in _CONTROLLER_INT_FIELDS:
+        if field in state:
+            setattr(controller, field, int(state[field]))
+
+
+def _mean_controller_value(controllers, field: str) -> float:
+    return sum(float(getattr(controller, field)) for controller in controllers) / len(
+        controllers
+    )
 
 
 def soft_threshold(value: torch.Tensor, threshold: float) -> torch.Tensor:
@@ -38,11 +114,14 @@ class ConsensusADMM:
     """ADMM state for one stack of loop-specific effective matrices.
 
     ``effective_weight[i]`` is :math:`X_i`, while ``shared`` is :math:`X`.
-    The scaled dual variable is denoted by ``dual`` (the usual :math:`U_i`).
+    The scaled dual variable is stored explicitly as ``scaled_dual`` (the
+    usual :math:`U_i = Y_i / rho`).
     One update performs
 
     ``X <- mean_i(X_i - L_i - S_i + U_i)``, followed by the nuclear- and
-    l1-proximal updates for ``L`` and ``S`` and finally the dual update.
+    l1-proximal updates for ``L`` and ``S`` and finally the scaled-dual update. Each
+    loop-specific ``L_i`` and ``S_i`` has its own integral-controller state,
+    while all controllers use the same globally configured targets and gains.
     """
 
     def __init__(
@@ -59,30 +138,35 @@ class ConsensusADMM:
         self.name = name
         self.effective_weight = effective_weight
         self.rho = float(config.get("rho", 0.0))
-        self.lambda_low_rank = float(config.get("lambda_low_rank", 0.0))
-        self.lambda_sparse = float(config.get("lambda_sparse", 0.0))
-        self.rank_tolerance = float(config.get("rank_tolerance", 1.0e-6))
         if self.rho <= 0:
             raise ValueError(f"rho must be positive, got {self.rho}")
-        if self.lambda_low_rank < 0:
-            raise ValueError(
-                f"lambda_low_rank must be non-negative, got {self.lambda_low_rank}"
-            )
-        if self.lambda_sparse < 0:
-            raise ValueError(
-                f"lambda_sparse must be non-negative, got {self.lambda_sparse}"
-            )
-        if self.rank_tolerance < 0:
-            raise ValueError(
-                f"rank_tolerance must be non-negative, got {self.rank_tolerance}"
-            )
+
+        self.energy = float(config.get("energy", 0.999))
+        self.rate_rank = float(config.get("rate_rank", 0.15))
+        self.rate_sparsity = float(config.get("rate_sparsity", 0.05))
+        if not 0.0 < self.energy <= 1.0:
+            raise ValueError(f"energy must be in (0, 1], got {self.energy}")
+        for name, value in (
+            ("rate_rank", self.rate_rank),
+            ("rate_sparsity", self.rate_sparsity),
+        ):
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"{name} must be in [0, 1], got {value}")
 
         initial = effective_weight.detach().float()
         self.shared = initial.mean(dim=0).clone()
         self.low_rank = torch.zeros_like(initial)
         self.sparse = torch.zeros_like(initial)
-        self.dual = torch.zeros_like(initial)
+        self.scaled_dual = torch.zeros_like(initial)
         self.ranks = [0] * self.num_loops
+        self.alpha_controllers = [
+            _make_integral_controller(config, "alpha_dict", self.rate_rank)
+            for _ in range(self.num_loops)
+        ]
+        self.beta_controllers = [
+            _make_integral_controller(config, "beta_dict", self.rate_sparsity)
+            for _ in range(self.num_loops)
+        ]
 
     @property
     def num_loops(self) -> int:
@@ -99,46 +183,69 @@ class ConsensusADMM:
 
     def penalty(self) -> torch.Tensor:
         """Augmented-Lagrangian term whose gradient updates every ``X_i``."""
-        shifted_residual = self.residual(detach=False) + self.dual
+        shifted_residual = self.residual(detach=False) + self.scaled_dual
         return 0.5 * self.rho * shifted_residual.square().sum()
+
+    def _update_controller(self, controller: PARAM, current_rate: float) -> None:
+        """Apply the original SALAAD I update with a non-negative projection."""
+        previous_value = float(controller.value)
+        controller.update(float(current_rate), self.rho)
+        controller.value = max(0.0, float(controller.value))
+        controller.dvalue = controller.value - previous_value
 
     @torch.no_grad()
     def step(self) -> None:
-        """Run one consensus, low-rank, sparse, and dual update."""
+        """Run one consensus, low-rank, sparse, and scaled-dual update."""
         effective = self.effective_weight.detach().float()
 
         self.shared.copy_(
-            (effective - self.low_rank - self.sparse + self.dual).mean(dim=0)
+            (
+                effective
+                - self.low_rank
+                - self.sparse
+                + self.scaled_dual
+            ).mean(dim=0)
         )
 
-        low_rank_threshold = self.lambda_low_rank / self.rho
         for loop_index in range(self.num_loops):
             value = (
                 effective[loop_index]
                 - self.shared
                 - self.sparse[loop_index]
-                + self.dual[loop_index]
+                + self.scaled_dual[loop_index]
             )
+            alpha_controller = self.alpha_controllers[loop_index]
             low_rank, singular_values = _shrink_singular_values(
-                value, low_rank_threshold
+                value, alpha_controller.value / self.rho
             )
             self.low_rank[loop_index].copy_(low_rank)
-            scale = singular_values.max() if singular_values.numel() else 0.0
-            rank_threshold = self.rank_tolerance * max(float(scale), 1.0)
-            self.ranks[loop_index] = int(
-                (singular_values > rank_threshold).sum().item()
+            self.ranks[loop_index] = get_energy_quantile(
+                singular_values, quantile=self.energy
             )
+            rank_rate = self.ranks[loop_index] / min(value.shape)
+            self._update_controller(alpha_controller, rank_rate)
 
         sparse_value = (
             effective
             - self.shared.unsqueeze(0)
             - self.low_rank
-            + self.dual
+            + self.scaled_dual
         )
-        self.sparse.copy_(
-            soft_threshold(sparse_value, self.lambda_sparse / self.rho)
-        )
-        self.dual.add_(self.residual())
+        elements_per_loop = self.sparse[0].numel()
+        for loop_index in range(self.num_loops):
+            beta_controller = self.beta_controllers[loop_index]
+            self.sparse[loop_index].copy_(
+                soft_threshold(
+                    sparse_value[loop_index], beta_controller.value / self.rho
+                )
+            )
+            nonzero_rate = (
+                int(torch.count_nonzero(self.sparse[loop_index]).item())
+                / elements_per_loop
+            )
+            self._update_controller(beta_controller, nonzero_rate)
+
+        self.scaled_dual.add_(self.residual())
 
     @torch.no_grad()
     def reconstruction(self) -> torch.Tensor:
@@ -158,20 +265,38 @@ class ConsensusADMM:
             "total_rank": self.num_loops * min(self.effective_weight.shape[-2:]),
             "nonzero": int(torch.count_nonzero(self.sparse).item()),
             "total_elements": self.sparse.numel(),
+            "alpha": _mean_controller_value(self.alpha_controllers, "value"),
+            "beta": _mean_controller_value(self.beta_controllers, "value"),
+            "dalpha": _mean_controller_value(self.alpha_controllers, "dvalue"),
+            "dbeta": _mean_controller_value(self.beta_controllers, "dvalue"),
+            "rate_decay_alpha": _mean_controller_value(
+                self.alpha_controllers, "rate_decay"
+            ),
+            "rate_decay_beta": _mean_controller_value(
+                self.beta_controllers, "rate_decay"
+            ),
         }
 
     def state_dict(self) -> Dict[str, Any]:
         return {
             "name": self.name,
             "rho": self.rho,
-            "lambda_low_rank": self.lambda_low_rank,
-            "lambda_sparse": self.lambda_sparse,
-            "rank_tolerance": self.rank_tolerance,
+            "energy": self.energy,
+            "rate_rank": self.rate_rank,
+            "rate_sparsity": self.rate_sparsity,
             "ranks": list(self.ranks),
+            "alpha_controllers": [
+                _controller_state(controller)
+                for controller in self.alpha_controllers
+            ],
+            "beta_controllers": [
+                _controller_state(controller)
+                for controller in self.beta_controllers
+            ],
             "shared": self.shared.detach().cpu(),
             "low_rank": self.low_rank.detach().cpu(),
             "sparse": self.sparse.detach().cpu(),
-            "dual": self.dual.detach().cpu(),
+            "scaled_dual": self.scaled_dual.detach().cpu(),
         }
 
     @torch.no_grad()
@@ -180,15 +305,10 @@ class ConsensusADMM:
             raise ValueError(
                 f"solver name mismatch: expected {self.name!r}, got {state.get('name')!r}"
             )
-        for name in (
-            "rho",
-            "lambda_low_rank",
-            "lambda_sparse",
-            "rank_tolerance",
-        ):
+        for name in ("rho", "energy", "rate_rank", "rate_sparsity"):
             if name in state:
                 setattr(self, name, float(state[name]))
-        for name in ("shared", "low_rank", "sparse", "dual"):
+        for name in ("shared", "low_rank", "sparse"):
             source = state[name]
             target = getattr(self, name)
             if source.shape != target.shape:
@@ -196,11 +316,45 @@ class ConsensusADMM:
                     f"{name} shape mismatch: {tuple(source.shape)} != {tuple(target.shape)}"
                 )
             target.copy_(source.to(device=target.device, dtype=target.dtype))
+
+        # ``dual`` was the ambiguous key used by the initial implementation.
+        # Accept it when loading an older checkpoint, but only save the clear
+        # ``scaled_dual`` name going forward.
+        scaled_dual = state.get("scaled_dual")
+        if scaled_dual is None:
+            scaled_dual = state.get("dual")
+        if scaled_dual is None:
+            raise KeyError("consensus state is missing 'scaled_dual'")
+        if scaled_dual.shape != self.scaled_dual.shape:
+            raise ValueError(
+                "scaled_dual shape mismatch: "
+                f"{tuple(scaled_dual.shape)} != {tuple(self.scaled_dual.shape)}"
+            )
+        self.scaled_dual.copy_(
+            scaled_dual.to(
+                device=self.scaled_dual.device,
+                dtype=self.scaled_dual.dtype,
+            )
+        )
         ranks = state.get("ranks")
         if ranks is not None:
             if len(ranks) != self.num_loops:
                 raise ValueError("ranks must contain one value per logical loop")
             self.ranks = [int(rank) for rank in ranks]
+
+        for name, controllers in (
+            ("alpha_controllers", self.alpha_controllers),
+            ("beta_controllers", self.beta_controllers),
+        ):
+            saved_controllers = state.get(name)
+            if saved_controllers is None:
+                continue
+            if len(saved_controllers) != self.num_loops:
+                raise ValueError(f"{name} must contain one state per logical loop")
+            for controller, controller_state in zip(
+                controllers, saved_controllers
+            ):
+                _load_controller_state(controller, controller_state)
 
 
 @torch.no_grad()
