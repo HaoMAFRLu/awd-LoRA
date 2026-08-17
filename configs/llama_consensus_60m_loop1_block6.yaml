@@ -1,0 +1,64 @@
+seed: 42
+name: llama_consensus_60m_loop1_block6
+model_config: llama_consensus_60m_loop1_block6_model.json
+training_mode: consensus
+output_folder: consensus_salaad_loop1_block6
+wandb_project: CONSENSUS_SALAAD
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 20
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+# Global batch size: 128 samples per GPU with four DDP ranks.
+batch_size: 512
+num_workers: 0
+
+# One entry block, a six-block body executed once, and one exit block
+# (physical depth 8, logical depth 8).
+
+# For each targeted recurrent matrix and logical loop:
+# X_i = X + L_i + S_i. All matrices share these controller targets/gains,
+# while every X_i keeps an independent accumulated alpha/beta state.
+consensus_salaad:
+  rho: 1.0e-6
+  energy: 0.999
+  rate_rank: 0.15
+  rate_sparsity: 0.05
+  alpha_dict:
+    init: 0.0
+    mode: adaptive
+    rate_decay: 0.2
+    drate: 0.01
+    start_epoch: 1500
+  beta_dict:
+    init: 0.0
+    mode: adaptive
+    rate_decay: 0.002
+    drate: 0.01
+    start_epoch: 1500
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas: [0.9, 0.95]
+    eps: 1.0e-8
+    weight_decay: 0.0
