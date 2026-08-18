@@ -29,7 +29,8 @@ requirements = ( \
     !regexp("GPU-b65aba4e", TARGET.DetectedGPUs) && \
     !regexp("GPU-90f1a7d5", TARGET.DetectedGPUs) && \
     !regexp("GPU-2d57d3d7", TARGET.DetectedGPUs) && \
-    !regexp("GPU-1feef0b3", TARGET.DetectedGPUs) \
+    !regexp("GPU-1feef0b3", TARGET.DetectedGPUs) && \
+    !regexp("GPU-a82810cc", TARGET.DetectedGPUs) \
 )
 
 getenv = True
