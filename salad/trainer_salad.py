@@ -118,7 +118,8 @@ class SALADTrainer():
         # get all the names of the model layers
         self.names_model_layers = get_linear_layers_name(self.model)
         self.consensus_components = ()
-        self.consensus_shared_only = False
+        self.consensus_has_low_rank = False
+        self.consensus_has_sparse = False
         # get specified layers in the config
         if self.training_mode == 'salad':
             self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
@@ -150,7 +151,10 @@ class SALADTrainer():
                         "training and model consensus components disagree: "
                         f"{expected_components} != {self.consensus_components}"
                     )
-            self.consensus_shared_only = self.consensus_components == ('shared',)
+            self.consensus_has_low_rank = (
+                'low_rank' in self.consensus_components
+            )
+            self.consensus_has_sparse = 'sparse' in self.consensus_components
             self.cfg_layers = self.get_consensus_layers(self.model)
             self._configure_loop_sampling()
         else:
@@ -536,8 +540,12 @@ class SALADTrainer():
         for name, index in self.name2idx.items():
             row = rows[index]
             info = self.layer_info[name]
-            info['alpha_mode'].append('I-controller')
-            info['beta_mode'].append('I-controller')
+            info['alpha_mode'].append(
+                'I-controller' if self.consensus_has_low_rank else 'N/A'
+            )
+            info['beta_mode'].append(
+                'I-controller' if self.consensus_has_sparse else 'N/A'
+            )
             info['alpha'].append(row[0].item())
             info['beta'].append(row[1].item())
             info['dalpha'].append(row[2].item())
@@ -1016,9 +1024,18 @@ class SALADTrainer():
                   'avg_diff': loss_diff}
         if self.training_mode in {'loop', 'consensus'}:
             losses['num_loops'] = self.current_num_loops
+
+        if self.training_mode == 'consensus':
+            has_low_rank = self.consensus_has_low_rank
+            has_sparse = self.consensus_has_sparse
+        else:
+            has_low_rank = True
+            has_sparse = True
         
         layer_stats = [{'name': entry['name'],
-                        'has_decomposition': not self.consensus_shared_only,
+                        'has_decomposition': has_low_rank or has_sparse,
+                        'has_low_rank': has_low_rank,
+                        'has_sparse': has_sparse,
                         'loss': layer_info[entry['name']]['loss'][-1],
                         'alpha_mode': layer_info[entry['name']]['alpha_mode'][-1],
                         'beta_mode': layer_info[entry['name']]['beta_mode'][-1],

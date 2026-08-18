@@ -130,18 +130,24 @@ def print_wandb(
             f"{prefix}/diff": layer_diff,
             f"{prefix}/rho": rho,
         })
-        if s.get("has_decomposition", True):
+        has_decomposition = s.get("has_decomposition", True)
+        has_low_rank = s.get("has_low_rank", has_decomposition)
+        has_sparse = s.get("has_sparse", has_decomposition)
+        if has_sparse:
             nz = int(s.get("non_zero", 0))
             tot = int(s.get("total_elements", 0))
             non_zero_ratio = float(nz / tot) if tot else 0.0
+            payload.update({
+                f"{prefix}/non_zero_ratio": non_zero_ratio,
+                f"{prefix}/beta": float(s.get("beta", float("nan"))),
+            })
+        if has_low_rank:
             rnk = int(s.get("rank", 0))
             trk = int(s.get("total_rank", 0))
             rank_ratio = float(rnk / trk) if trk else 0.0
             payload.update({
-                f"{prefix}/non_zero_ratio": non_zero_ratio,
                 f"{prefix}/rank_ratio": rank_ratio,
                 f"{prefix}/alpha": float(s.get("alpha", float("nan"))),
-                f"{prefix}/beta": float(s.get("beta", float("nan"))),
             })
 
     # Single log call per epoch
@@ -180,23 +186,38 @@ def print_epoch(epoch: int,
     headers = ["name", "layer diff", "non-zero", "rank", 
                "mode", "alpha", "dalpha", "decay", 
                "mode", "beta", "dbeta", "decay", "rho"]
-    rows = [
-        [s["name"], 
-         f"{s['loss']:.6f}", 
-         f"{s['non_zero']}/{s['total_elements']} ({100. * s['non_zero']/s['total_elements']:.2f}%)", 
-         f"{s['rank']}/{s['total_rank']} ({100. * s['rank']/s['total_rank']:.2f}%)",
-         f"{s['alpha_mode']}",
-         f"{s['alpha']:.12f}", 
-         f"{s['dalpha']:.12f}",
-         f"{s['rate_decay_alpha']:.6f}",
-         f"{s['beta_mode']}",
-         f"{s['beta']:.8f}",
-         f"{s['dbeta']:.8f}",
-         f"{s['rate_decay_beta']:.6f}",
-         f"{s['rho']:.12f}"
-        ]
-        for s in layer_stats
-    ]
+    rows = []
+    for s in layer_stats:
+        has_decomposition = s.get("has_decomposition", True)
+        has_low_rank = s.get("has_low_rank", has_decomposition)
+        has_sparse = s.get("has_sparse", has_decomposition)
+        non_zero = (
+            f"{s['non_zero']}/{s['total_elements']} "
+            f"({100. * s['non_zero']/s['total_elements']:.2f}%)"
+            if has_sparse and s['total_elements']
+            else "N/A"
+        )
+        rank = (
+            f"{s['rank']}/{s['total_rank']} "
+            f"({100. * s['rank']/s['total_rank']:.2f}%)"
+            if has_low_rank and s['total_rank']
+            else "N/A"
+        )
+        rows.append([
+            s["name"],
+            f"{s['loss']:.6f}",
+            non_zero,
+            rank,
+            s['alpha_mode'] if has_low_rank else "N/A",
+            f"{s['alpha']:.12f}" if has_low_rank else "N/A",
+            f"{s['dalpha']:.12f}" if has_low_rank else "N/A",
+            f"{s['rate_decay_alpha']:.6f}" if has_low_rank else "N/A",
+            s['beta_mode'] if has_sparse else "N/A",
+            f"{s['beta']:.8f}" if has_sparse else "N/A",
+            f"{s['dbeta']:.8f}" if has_sparse else "N/A",
+            f"{s['rate_decay_beta']:.6f}" if has_sparse else "N/A",
+            f"{s['rho']:.12f}",
+        ])
 
     print(tabulate(rows, headers=headers, tablefmt="grid"))
 

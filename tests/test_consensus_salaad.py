@@ -395,10 +395,72 @@ class ConsensusSALAADTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "available loop-specific weights"):
             loop_model.set_num_loops(4)
 
-    def test_consensus_components_reject_partial_residual_modes(self):
+    def test_sparse_only_uses_shared_plus_sparse_without_low_rank_state(self):
+        torch.manual_seed(3)
+        config = tiny_config()
+        config.consensus_salaad["components"] = ["sparse", "shared"]
+        model = LlamaForCausalLM(config)
+        loop_model = model.model
+        q_proj = loop_model.layers[1].self_attn.q_proj
+
+        self.assertEqual(loop_model.consensus_components, ("shared", "sparse"))
+        solver_config = {
+            "components": ["shared", "sparse"],
+            "rho": 1.0,
+            "rate_sparsity": 0.10,
+            "beta_dict": {
+                "init": 0.0,
+                "mode": "adaptive",
+                "rate_decay": 0.0,
+                "drate": 0.01,
+                "start_epoch": 1500,
+            },
+        }
+        solver = ConsensusADMM("q_proj", q_proj.weight, solver_config)
+
+        self.assertFalse(solver.has_low_rank)
+        self.assertTrue(solver.has_sparse)
+        self.assertIsNone(solver.low_rank)
+        self.assertEqual(solver.alpha_controllers, [])
+        self.assertEqual(len(solver.beta_controllers), 3)
+
+        with torch.no_grad():
+            q_proj.weight[0].add_(1.0)
+            q_proj.weight[1].sub_(0.5)
+        solver.step()
+        torch.testing.assert_close(
+            solver.reconstruction(),
+            q_proj.weight.detach().float(),
+            atol=1.0e-6,
+            rtol=1.0e-6,
+        )
+        torch.testing.assert_close(
+            solver.residual(),
+            torch.zeros_like(q_proj.weight),
+            atol=1.0e-6,
+            rtol=1.0e-6,
+        )
+
+        state = solver.state_dict()
+        self.assertEqual(state["components"], ["shared", "sparse"])
+        self.assertIn("sparse", state)
+        self.assertIn("beta_controllers", state)
+        self.assertNotIn("low_rank", state)
+        self.assertNotIn("alpha_controllers", state)
+        torch.testing.assert_close(
+            compose_decomposition(state), solver.reconstruction()
+        )
+
+        restored = ConsensusADMM("q_proj", q_proj.weight, solver_config)
+        restored.load_state_dict(state)
+        torch.testing.assert_close(restored.shared, solver.shared)
+        torch.testing.assert_close(restored.sparse, solver.sparse)
+        torch.testing.assert_close(restored.scaled_dual, solver.scaled_dual)
+
+    def test_consensus_components_reject_low_rank_without_sparse(self):
         config = tiny_config()
         config.consensus_salaad["components"] = ["shared", "low_rank"]
-        with self.assertRaisesRegex(ValueError, "must be either"):
+        with self.assertRaisesRegex(ValueError, "must be"):
             LlamaForCausalLM(config)
 
     def test_model_rejects_depth_without_a_loop_specific_weight(self):

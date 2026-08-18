@@ -125,7 +125,9 @@ class ConsensusADMM:
     loop-specific ``L_i`` and ``S_i`` has its own integral-controller state,
     while all controllers use the same globally configured targets and gains.
 
-    In shared-only mode, the constraint is ``X_i = X_hat``. The update becomes
+    In sparse-only mode, the constraint is ``X_i = X_hat + S_i``.  The shared
+    and sparse updates are performed without allocating ``L_i`` or running an
+    SVD.  In shared-only mode, the constraint is ``X_i = X_hat``. The update becomes
     ``X_hat <- mean_i(X_i + U_i)`` followed by ``U_i <- U_i + X_i - X_hat``;
     no ``L_i``, ``S_i``, alpha, or beta state is allocated.
     """
@@ -144,7 +146,9 @@ class ConsensusADMM:
         self.name = name
         self.effective_weight = effective_weight
         self.components = get_consensus_components(config)
-        self.shared_only = self.components == ("shared",)
+        self.has_low_rank = "low_rank" in self.components
+        self.has_sparse = "sparse" in self.components
+        self.shared_only = not self.has_low_rank and not self.has_sparse
         self.rho = float(config.get("rho", 0.0))
         if self.rho <= 0:
             raise ValueError(f"rho must be positive, got {self.rho}")
@@ -153,39 +157,46 @@ class ConsensusADMM:
         self.shared = initial.mean(dim=0).clone()
         self.scaled_dual = torch.zeros_like(initial)
 
-        if self.shared_only:
-            self.energy = None
-            self.rate_rank = None
-            self.rate_sparsity = None
-            self.low_rank = None
-            self.sparse = None
-            self.ranks = []
-            self.alpha_controllers = []
-            self.beta_controllers = []
-        else:
+        if self.has_low_rank:
             self.energy = float(config.get("energy", 0.999))
             self.rate_rank = float(config.get("rate_rank", 0.15))
-            self.rate_sparsity = float(config.get("rate_sparsity", 0.05))
             if not 0.0 < self.energy <= 1.0:
                 raise ValueError(f"energy must be in (0, 1], got {self.energy}")
-            for name, value in (
-                ("rate_rank", self.rate_rank),
-                ("rate_sparsity", self.rate_sparsity),
-            ):
-                if not 0.0 <= value <= 1.0:
-                    raise ValueError(f"{name} must be in [0, 1], got {value}")
-
+            if not 0.0 <= self.rate_rank <= 1.0:
+                raise ValueError(
+                    f"rate_rank must be in [0, 1], got {self.rate_rank}"
+                )
             self.low_rank = torch.zeros_like(initial)
-            self.sparse = torch.zeros_like(initial)
             self.ranks = [0] * self.num_loops
             self.alpha_controllers = [
                 _make_integral_controller(config, "alpha_dict", self.rate_rank)
                 for _ in range(self.num_loops)
             ]
+        else:
+            self.energy = None
+            self.rate_rank = None
+            self.low_rank = None
+            self.ranks = []
+            self.alpha_controllers = []
+
+        if self.has_sparse:
+            self.rate_sparsity = float(config.get("rate_sparsity", 0.05))
+            if not 0.0 <= self.rate_sparsity <= 1.0:
+                raise ValueError(
+                    "rate_sparsity must be in [0, 1], got "
+                    f"{self.rate_sparsity}"
+                )
+            self.sparse = torch.zeros_like(initial)
             self.beta_controllers = [
-                _make_integral_controller(config, "beta_dict", self.rate_sparsity)
+                _make_integral_controller(
+                    config, "beta_dict", self.rate_sparsity
+                )
                 for _ in range(self.num_loops)
             ]
+        else:
+            self.rate_sparsity = None
+            self.sparse = None
+            self.beta_controllers = []
 
     @property
     def num_loops(self) -> int:
@@ -194,8 +205,10 @@ class ConsensusADMM:
     def residual(self, *, detach: bool = True) -> torch.Tensor:
         weight = self.effective_weight.detach() if detach else self.effective_weight
         residual = weight.float() - self.shared.unsqueeze(0)
-        if not self.shared_only:
-            residual = residual - self.low_rank - self.sparse
+        if self.has_low_rank:
+            residual = residual - self.low_rank
+        if self.has_sparse:
+            residual = residual - self.sparse
         return residual
 
     def penalty(self) -> torch.Tensor:
@@ -212,68 +225,67 @@ class ConsensusADMM:
 
     @torch.no_grad()
     def step(self) -> None:
-        """Run one consensus, low-rank, sparse, and scaled-dual update."""
+        """Run one update for the configured consensus components."""
         effective = self.effective_weight.detach().float()
 
-        if self.shared_only:
-            self.shared.copy_((effective + self.scaled_dual).mean(dim=0))
-            self.scaled_dual.add_(self.residual())
-            return
+        shared_value = effective + self.scaled_dual
+        if self.has_low_rank:
+            shared_value = shared_value - self.low_rank
+        if self.has_sparse:
+            shared_value = shared_value - self.sparse
+        self.shared.copy_(shared_value.mean(dim=0))
 
-        self.shared.copy_(
-            (
-                effective
-                - self.low_rank
-                - self.sparse
-                + self.scaled_dual
-            ).mean(dim=0)
-        )
-
-        for loop_index in range(self.num_loops):
-            value = (
-                effective[loop_index]
-                - self.shared
-                - self.sparse[loop_index]
-                + self.scaled_dual[loop_index]
-            )
-            alpha_controller = self.alpha_controllers[loop_index]
-            low_rank, singular_values = _shrink_singular_values(
-                value, alpha_controller.value / self.rho
-            )
-            self.low_rank[loop_index].copy_(low_rank)
-            self.ranks[loop_index] = get_energy_quantile(
-                singular_values, quantile=self.energy
-            )
-            rank_rate = self.ranks[loop_index] / min(value.shape)
-            self._update_controller(alpha_controller, rank_rate)
-
-        sparse_value = (
-            effective
-            - self.shared.unsqueeze(0)
-            - self.low_rank
-            + self.scaled_dual
-        )
-        elements_per_loop = self.sparse[0].numel()
-        for loop_index in range(self.num_loops):
-            beta_controller = self.beta_controllers[loop_index]
-            self.sparse[loop_index].copy_(
-                soft_threshold(
-                    sparse_value[loop_index], beta_controller.value / self.rho
+        if self.has_low_rank:
+            for loop_index in range(self.num_loops):
+                value = (
+                    effective[loop_index]
+                    - self.shared
+                    + self.scaled_dual[loop_index]
                 )
+                if self.has_sparse:
+                    value = value - self.sparse[loop_index]
+                alpha_controller = self.alpha_controllers[loop_index]
+                low_rank, singular_values = _shrink_singular_values(
+                    value, alpha_controller.value / self.rho
+                )
+                self.low_rank[loop_index].copy_(low_rank)
+                self.ranks[loop_index] = get_energy_quantile(
+                    singular_values, quantile=self.energy
+                )
+                rank_rate = self.ranks[loop_index] / min(value.shape)
+                self._update_controller(alpha_controller, rank_rate)
+
+        if self.has_sparse:
+            sparse_value = (
+                effective - self.shared.unsqueeze(0) + self.scaled_dual
             )
-            nonzero_rate = (
-                int(torch.count_nonzero(self.sparse[loop_index]).item())
-                / elements_per_loop
-            )
-            self._update_controller(beta_controller, nonzero_rate)
+            if self.has_low_rank:
+                sparse_value = sparse_value - self.low_rank
+            elements_per_loop = self.sparse[0].numel()
+            for loop_index in range(self.num_loops):
+                beta_controller = self.beta_controllers[loop_index]
+                self.sparse[loop_index].copy_(
+                    soft_threshold(
+                        sparse_value[loop_index],
+                        beta_controller.value / self.rho,
+                    )
+                )
+                nonzero_rate = (
+                    int(torch.count_nonzero(self.sparse[loop_index]).item())
+                    / elements_per_loop
+                )
+                self._update_controller(beta_controller, nonzero_rate)
 
         self.scaled_dual.add_(self.residual())
 
     @torch.no_grad()
     def reconstruction(self) -> torch.Tensor:
-        if self.shared_only:
-            return self.shared.unsqueeze(0).expand_as(self.effective_weight)
-        return self.shared.unsqueeze(0) + self.low_rank + self.sparse
+        result = self.shared.unsqueeze(0).expand_as(self.effective_weight).clone()
+        if self.has_low_rank:
+            result.add_(self.low_rank)
+        if self.has_sparse:
+            result.add_(self.sparse)
+        return result
 
     @torch.no_grad()
     def stats(self) -> Dict[str, Union[float, int]]:
@@ -295,29 +307,34 @@ class ConsensusADMM:
             "dbeta": 0.0,
             "rate_decay_alpha": 0.0,
             "rate_decay_beta": 0.0,
+            "has_low_rank": self.has_low_rank,
+            "has_sparse": self.has_sparse,
         }
-        if not self.shared_only:
+        if self.has_low_rank:
             result.update({
                 "rank": sum(self.ranks),
                 "total_rank": self.num_loops * min(
                     self.effective_weight.shape[-2:]
                 ),
-                "nonzero": int(torch.count_nonzero(self.sparse).item()),
-                "total_elements": self.sparse.numel(),
                 "alpha": _mean_controller_value(
                     self.alpha_controllers, "value"
-                ),
-                "beta": _mean_controller_value(
-                    self.beta_controllers, "value"
                 ),
                 "dalpha": _mean_controller_value(
                     self.alpha_controllers, "dvalue"
                 ),
-                "dbeta": _mean_controller_value(
-                    self.beta_controllers, "dvalue"
-                ),
                 "rate_decay_alpha": _mean_controller_value(
                     self.alpha_controllers, "rate_decay"
+                ),
+            })
+        if self.has_sparse:
+            result.update({
+                "nonzero": int(torch.count_nonzero(self.sparse).item()),
+                "total_elements": self.sparse.numel(),
+                "beta": _mean_controller_value(
+                    self.beta_controllers, "value"
+                ),
+                "dbeta": _mean_controller_value(
+                    self.beta_controllers, "dvalue"
                 ),
                 "rate_decay_beta": _mean_controller_value(
                     self.beta_controllers, "rate_decay"
@@ -334,21 +351,24 @@ class ConsensusADMM:
             "shared": self.shared.detach().cpu(),
             "scaled_dual": self.scaled_dual.detach().cpu(),
         }
-        if not self.shared_only:
+        if self.has_low_rank:
             state.update({
                 "energy": self.energy,
                 "rate_rank": self.rate_rank,
-                "rate_sparsity": self.rate_sparsity,
                 "ranks": list(self.ranks),
                 "alpha_controllers": [
                     _controller_state(controller)
                     for controller in self.alpha_controllers
                 ],
+                "low_rank": self.low_rank.detach().cpu(),
+            })
+        if self.has_sparse:
+            state.update({
+                "rate_sparsity": self.rate_sparsity,
                 "beta_controllers": [
                     _controller_state(controller)
                     for controller in self.beta_controllers
                 ],
-                "low_rank": self.low_rank.detach().cpu(),
                 "sparse": self.sparse.detach().cpu(),
             })
         return state
@@ -371,19 +391,19 @@ class ConsensusADMM:
             )
         if "rho" in state:
             self.rho = float(state["rho"])
-        scalar_names = (
-            ()
-            if self.shared_only
-            else ("energy", "rate_rank", "rate_sparsity")
-        )
+        scalar_names = []
+        if self.has_low_rank:
+            scalar_names.extend(("energy", "rate_rank"))
+        if self.has_sparse:
+            scalar_names.append("rate_sparsity")
         for name in scalar_names:
             if name in state:
                 setattr(self, name, float(state[name]))
-        tensor_names = (
-            ("shared",)
-            if self.shared_only
-            else ("shared", "low_rank", "sparse")
-        )
+        tensor_names = ["shared"]
+        if self.has_low_rank:
+            tensor_names.append("low_rank")
+        if self.has_sparse:
+            tensor_names.append("sparse")
         for name in tensor_names:
             source = state[name]
             target = getattr(self, name)
@@ -413,15 +433,18 @@ class ConsensusADMM:
             )
         )
         ranks = state.get("ranks")
-        if not self.shared_only and ranks is not None:
+        if self.has_low_rank and ranks is not None:
             if len(ranks) != self.num_loops:
                 raise ValueError("ranks must contain one value per logical loop")
             self.ranks = [int(rank) for rank in ranks]
 
-        controller_groups = () if self.shared_only else (
-            ("alpha_controllers", self.alpha_controllers),
-            ("beta_controllers", self.beta_controllers),
-        )
+        controller_groups = []
+        if self.has_low_rank:
+            controller_groups.append(
+                ("alpha_controllers", self.alpha_controllers)
+            )
+        if self.has_sparse:
+            controller_groups.append(("beta_controllers", self.beta_controllers))
         for name, controllers in controller_groups:
             saved_controllers = state.get(name)
             if saved_controllers is None:
@@ -463,7 +486,20 @@ def compose_decomposition(
         )
 
     shared = state["shared"]
-    if available == ("shared",):
+    loop_specific = None
+    for component in ("low_rank", "sparse"):
+        if component not in available:
+            continue
+        value = state[component]
+        if loop_specific is None:
+            loop_specific = value
+        elif value.shape != loop_specific.shape:
+            raise ValueError(
+                "loop-specific component shapes differ: "
+                f"{tuple(loop_specific.shape)} != {tuple(value.shape)}"
+            )
+
+    if loop_specific is None:
         num_loops = state.get("num_loops")
         if num_loops is None and isinstance(state.get("scaled_dual"), torch.Tensor):
             num_loops = state["scaled_dual"].shape[0]
@@ -475,28 +511,31 @@ def compose_decomposition(
             raise ValueError(
                 "a shared-only consensus state requires a positive num_loops"
             )
-        return shared.unsqueeze(0).expand(num_loops, *shared.shape).clone()
-
-    low_rank = state["low_rank"]
-    sparse = state["sparse"]
-    if low_rank.shape != sparse.shape:
-        raise ValueError(
-            "low_rank and sparse shapes differ: "
-            f"{tuple(low_rank.shape)} != {tuple(sparse.shape)}"
+        result = torch.zeros(
+            (num_loops, *shared.shape),
+            dtype=shared.dtype,
+            device=shared.device,
         )
-    if shared.shape != low_rank.shape[1:]:
+    else:
+        if shared.shape != loop_specific.shape[1:]:
+            raise ValueError(
+                "shared shape does not match loop-specific matrices: "
+                f"{tuple(shared.shape)} != {tuple(loop_specific.shape[1:])}"
+            )
+        result = torch.zeros_like(loop_specific)
+
+    if shared.ndim + 1 != result.ndim:
         raise ValueError(
             "shared shape does not match loop-specific matrices: "
-            f"{tuple(shared.shape)} != {tuple(low_rank.shape[1:])}"
+            f"{tuple(shared.shape)} != {tuple(result.shape[1:])}"
         )
 
-    result = torch.zeros_like(low_rank)
     if "shared" in selected:
         result.add_(shared.unsqueeze(0))
     if "low_rank" in selected:
-        result.add_(low_rank)
+        result.add_(state["low_rank"])
     if "sparse" in selected:
-        result.add_(sparse)
+        result.add_(state["sparse"])
     return result
 
 

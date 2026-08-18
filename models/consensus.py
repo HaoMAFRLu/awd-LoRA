@@ -8,6 +8,7 @@ from typing import Mapping, Optional, Tuple
 
 _FULL_CONSENSUS_COMPONENTS = ("shared", "low_rank", "sparse")
 _SHARED_ONLY_COMPONENTS = ("shared",)
+_SPARSE_ONLY_COMPONENTS = ("shared", "sparse")
 
 
 def get_consensus_components(config: Mapping) -> Tuple[str, ...]:
@@ -15,8 +16,9 @@ def get_consensus_components(config: Mapping) -> Tuple[str, ...]:
 
     Omitting ``components`` preserves the original ``X_hat + L_i + S_i``
     parameterization. ``[shared]`` keeps the loop-specific optimization
-    variables ``X_i`` but constrains them directly to ``X_hat`` without
-    allocating low-rank or sparse residual components.
+    variables ``X_i`` but constrains them directly to ``X_hat``.  The
+    ``[shared, sparse]`` mode uses ``X_i = X_hat + S_i`` without allocating
+    low-rank residuals or running singular-value decompositions.
     """
     components = config.get("components", _FULL_CONSENSUS_COMPONENTS)
     if not isinstance(components, (list, tuple)) or not components:
@@ -29,11 +31,13 @@ def get_consensus_components(config: Mapping) -> Tuple[str, ...]:
     selected = frozenset(components)
     if selected == frozenset(_SHARED_ONLY_COMPONENTS):
         return _SHARED_ONLY_COMPONENTS
+    if selected == frozenset(_SPARSE_ONLY_COMPONENTS):
+        return _SPARSE_ONLY_COMPONENTS
     if selected == frozenset(_FULL_CONSENSUS_COMPONENTS):
         return _FULL_CONSENSUS_COMPONENTS
     raise ValueError(
-        "consensus_salaad.components must be either ['shared'] or "
-        "['shared', 'low_rank', 'sparse']"
+        "consensus_salaad.components must be ['shared'], "
+        "['shared', 'sparse'], or ['shared', 'low_rank', 'sparse']"
     )
 
 
