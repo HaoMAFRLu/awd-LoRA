@@ -1,6 +1,6 @@
 """Consensus ADMM updates for loop-specific low-rank plus sparse weights."""
 
-from typing import Any, Dict, Mapping, Union
+from typing import Any, Dict, Iterable, Mapping, Union
 
 import torch
 from torch import nn
@@ -19,6 +19,7 @@ _CONTROLLER_FLOAT_FIELDS = (
     "pre_rate",
 )
 _CONTROLLER_INT_FIELDS = ("nr_updates", "start_epoch")
+_DECOMPOSITION_COMPONENTS = frozenset({"shared", "low_rank", "sparse"})
 
 
 def _make_integral_controller(
@@ -357,14 +358,53 @@ class ConsensusADMM:
                 _load_controller_state(controller, controller_state)
 
 
+def compose_decomposition(
+    state: Mapping[str, Any],
+    components: Iterable[str] = ("shared", "low_rank", "sparse"),
+) -> torch.Tensor:
+    """Compose selected consensus components into loop-specific weights."""
+    if isinstance(components, str):
+        raise TypeError("components must be an iterable of component names")
+    selected = frozenset(components)
+    if not selected:
+        raise ValueError("at least one decomposition component is required")
+    unknown = selected - _DECOMPOSITION_COMPONENTS
+    if unknown:
+        raise ValueError(f"unknown decomposition components: {sorted(unknown)}")
+
+    low_rank = state["low_rank"]
+    sparse = state["sparse"]
+    shared = state["shared"]
+    if low_rank.shape != sparse.shape:
+        raise ValueError(
+            "low_rank and sparse shapes differ: "
+            f"{tuple(low_rank.shape)} != {tuple(sparse.shape)}"
+        )
+    if shared.shape != low_rank.shape[1:]:
+        raise ValueError(
+            "shared shape does not match loop-specific matrices: "
+            f"{tuple(shared.shape)} != {tuple(low_rank.shape[1:])}"
+        )
+
+    result = torch.zeros_like(low_rank)
+    if "shared" in selected:
+        result.add_(shared.unsqueeze(0))
+    if "low_rank" in selected:
+        result.add_(low_rank)
+    if "sparse" in selected:
+        result.add_(sparse)
+    return result
+
+
 @torch.no_grad()
 def apply_decomposition(
     model: nn.Module,
     states: Mapping[str, Mapping[str, Any]],
     *,
+    components: Iterable[str] = ("shared", "low_rank", "sparse"),
     strict: bool = True,
 ) -> None:
-    """Materialize ``X + L_i + S_i`` into a model's effective weights.
+    """Materialize selected consensus components into effective weights.
 
     States from different DDP owners can be merged with normal dictionary
     updates before this function is called.
@@ -389,7 +429,7 @@ def apply_decomposition(
             if strict:
                 raise KeyError(f"model has no ConsensusLinear named {name!r}")
             continue
-        reconstructed = state["shared"].unsqueeze(0) + state["low_rank"] + state["sparse"]
+        reconstructed = compose_decomposition(state, components)
         if reconstructed.shape != module.weight.shape:
             raise ValueError(
                 f"{name} shape mismatch: {tuple(reconstructed.shape)} != "

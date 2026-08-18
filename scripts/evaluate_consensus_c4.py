@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from salad.register import get_data, get_model, get_preprocessed_dataset, get_tokenizer
-from salad.consensus import apply_decomposition
+from salad.consensus import apply_decomposition, compose_decomposition
 from models.consensus import ConsensusLinear
 from salad.utils import hf_login_once, set_seed
 
@@ -100,6 +100,8 @@ def _load_consensus_states(directory: Path) -> Dict[str, Dict[str, Any]]:
 def _apply_reconstruction(
     model: torch.nn.Module,
     states: Dict[str, Dict[str, Any]],
+    reference_weights: Dict[str, torch.Tensor],
+    components: Tuple[str, ...],
 ) -> float:
     modules = dict(model.named_modules())
     squared_error = torch.zeros((), dtype=torch.float64, device=next(model.parameters()).device)
@@ -108,18 +110,81 @@ def _apply_reconstruction(
         module = modules.get(name)
         if not isinstance(module, ConsensusLinear):
             raise KeyError(f"model has no ConsensusLinear named {name!r}")
-        reconstructed = (
-            state["shared"].unsqueeze(0) + state["low_rank"] + state["sparse"]
-        ).to(device=module.weight.device, dtype=torch.float32)
-        original = module.weight.detach().to(dtype=torch.float32)
+        reconstructed = compose_decomposition(state, components).to(
+            device=module.weight.device,
+            dtype=torch.float32,
+        )
+        original = reference_weights[name]
         squared_error += (original - reconstructed).square().sum(dtype=torch.float64)
         squared_weight += original.square().sum(dtype=torch.float64)
 
     relative_error = torch.sqrt(
         squared_error / squared_weight.clamp_min(1.0e-24)
     ).item()
-    apply_decomposition(model, states, strict=True)
+    apply_decomposition(model, states, components=components, strict=True)
     return relative_error
+
+
+@torch.no_grad()
+def _copy_consensus_weights(
+    model: torch.nn.Module,
+    states: Dict[str, Dict[str, Any]],
+) -> Dict[str, torch.Tensor]:
+    modules = dict(model.named_modules())
+    weights: Dict[str, torch.Tensor] = {}
+    for name in states:
+        module = modules.get(name)
+        if not isinstance(module, ConsensusLinear):
+            raise KeyError(f"model has no ConsensusLinear named {name!r}")
+        weights[name] = module.weight.detach().to(dtype=torch.float32).clone()
+    return weights
+
+
+def _get_decomposition_variants(
+    specification: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    variants = specification.get("decomposition_variants")
+    if variants is None:
+        return [
+            {
+                "name": "reconstructed",
+                "components": ("shared", "low_rank", "sparse"),
+            }
+        ]
+    if not isinstance(variants, list) or not variants:
+        raise ValueError("decomposition_variants must be a non-empty list")
+
+    normalized: List[Dict[str, Any]] = []
+    seen_names = set()
+    for variant in variants:
+        if not isinstance(variant, dict):
+            raise TypeError("each decomposition variant must be a dictionary")
+        name = variant.get("name")
+        components = variant.get("components")
+        if not isinstance(name, str) or not name:
+            raise ValueError("each decomposition variant requires a name")
+        if name in seen_names:
+            raise ValueError(f"duplicate decomposition variant name: {name!r}")
+        if (
+            not isinstance(components, list)
+            or not components
+            or not all(isinstance(component, str) for component in components)
+        ):
+            raise ValueError(
+                f"decomposition variant {name!r} requires a non-empty "
+                "component list"
+            )
+        # Validate component names and state-independent behavior immediately.
+        allowed = {"shared", "low_rank", "sparse"}
+        unknown = set(components) - allowed
+        if unknown:
+            raise ValueError(
+                f"decomposition variant {name!r} has unknown components: "
+                f"{sorted(unknown)}"
+            )
+        seen_names.add(name)
+        normalized.append({"name": name, "components": tuple(components)})
+    return normalized
 
 
 def _build_model(
@@ -357,54 +422,66 @@ def main() -> None:
             print(f"\nEvaluating {specification['name']}...")
         model = _build_model(specification, device, precision)
         decoder = model.model
-        metrics = _evaluate_model(model, batches, device)
         has_reconstruction = "consensus_state_directory" in specification
-        raw_condition = (
-            f"{specification['name']}_raw"
-            if has_reconstruction
-            else specification["name"]
-        )
-        result = {
-            "condition": raw_condition,
-            "weight_source": "raw",
-            "num_loops": decoder.num_loops,
-            "blocks_per_loop": len(decoder.loop_layers),
-            "physical_depth": len(decoder.layers),
-            "logical_depth": decoder.logical_num_layers,
-            "reconstruction_relative_frobenius": None,
-            **metrics,
-        }
-        results.append(result)
-        if rank == 0:
-            print(
-                f"{specification['name']}: loss={metrics['loss']:.6f}, "
-                f"ppl={metrics['perplexity']:.4f}"
+        if specification.get("evaluate_raw", True):
+            metrics = _evaluate_model(model, batches, device)
+            raw_condition = (
+                f"{specification['name']}_raw"
+                if has_reconstruction
+                else specification["name"]
             )
+            result = {
+                "condition": raw_condition,
+                "weight_source": "raw",
+                "decomposition_components": None,
+                "num_loops": decoder.num_loops,
+                "blocks_per_loop": len(decoder.loop_layers),
+                "physical_depth": len(decoder.layers),
+                "logical_depth": decoder.logical_num_layers,
+                "reconstruction_relative_frobenius": None,
+                **metrics,
+            }
+            results.append(result)
+            if rank == 0:
+                print(
+                    f"{specification['name']}: loss={metrics['loss']:.6f}, "
+                    f"ppl={metrics['perplexity']:.4f}"
+                )
 
         if has_reconstruction:
             states = _load_consensus_states(
                 _resolve_path(specification["consensus_state_directory"])
             )
-            relative_error = _apply_reconstruction(model, states)
-            reconstructed_metrics = _evaluate_model(model, batches, device)
-            reconstructed_result = {
-                "condition": f"{specification['name']}_reconstructed",
-                "weight_source": "reconstructed",
-                "num_loops": decoder.num_loops,
-                "blocks_per_loop": len(decoder.loop_layers),
-                "physical_depth": len(decoder.layers),
-                "logical_depth": decoder.logical_num_layers,
-                "reconstruction_relative_frobenius": relative_error,
-                **reconstructed_metrics,
-            }
-            results.append(reconstructed_result)
-            if rank == 0:
-                print(
-                    f"{specification['name']} reconstructed: "
-                    f"loss={reconstructed_metrics['loss']:.6f}, "
-                    f"ppl={reconstructed_metrics['perplexity']:.4f}, "
-                    f"relative_frobenius={relative_error:.6f}"
+            reference_weights = _copy_consensus_weights(model, states)
+            for variant in _get_decomposition_variants(specification):
+                components = variant["components"]
+                relative_error = _apply_reconstruction(
+                    model,
+                    states,
+                    reference_weights,
+                    components,
                 )
+                reconstructed_metrics = _evaluate_model(model, batches, device)
+                reconstructed_result = {
+                    "condition": f"{specification['name']}_{variant['name']}",
+                    "weight_source": variant["name"],
+                    "decomposition_components": list(components),
+                    "num_loops": decoder.num_loops,
+                    "blocks_per_loop": len(decoder.loop_layers),
+                    "physical_depth": len(decoder.layers),
+                    "logical_depth": decoder.logical_num_layers,
+                    "reconstruction_relative_frobenius": relative_error,
+                    **reconstructed_metrics,
+                }
+                results.append(reconstructed_result)
+                if rank == 0:
+                    print(
+                        f"{specification['name']} {variant['name']}: "
+                        f"loss={reconstructed_metrics['loss']:.6f}, "
+                        f"ppl={reconstructed_metrics['perplexity']:.4f}, "
+                        f"relative_frobenius={relative_error:.6f}"
+                    )
+            del reference_weights, states
         del model
         torch.cuda.empty_cache()
 

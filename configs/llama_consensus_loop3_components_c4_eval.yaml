@@ -1,0 +1,47 @@
+seed: 43
+seed_for_shuffle: 43
+
+tokenizer_name: t5-base
+max_length: 256
+precision: bfloat16
+
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: validation
+  streaming: true
+
+# Reuse the exact protocol from the structure evaluation.
+batch_size: 512
+num_eval_batches: 250
+num_workers: 0
+
+checkpoints:
+  - name: vanilla_reference
+    model_config: configs/llama_60m_model.json
+    checkpoint: data/looped_transformer/llama_vanilla_60m/20260813_184120/model.pth
+    physical_depth: 8
+    logical_depth: 8
+    num_loops: 1
+    blocks_per_loop: 0
+
+  - name: loop3_block2
+    model_config: configs/llama_consensus_60m_loop3_block2_model.json
+    checkpoint: data/consensus_salaad_loop3_block2/llama_consensus_60m_loop3_block2/20260817_174014/model.pth
+    consensus_state_directory: data/consensus_salaad_loop3_block2/llama_consensus_60m_loop3_block2/20260817_174014
+    physical_depth: 4
+    logical_depth: 8
+    num_loops: 3
+    blocks_per_loop: 2
+    decomposition_variants:
+      - name: xhat
+        components: [shared]
+      - name: xhat_plus_l
+        components: [shared, low_rank]
+      - name: xhat_plus_s
+        components: [shared, sparse]
+      - name: reconstructed
+        components: [shared, low_rank, sparse]
+
+output_directory: data/consensus_salaad_evaluation/loop3_component_ablation_c4_seed43

@@ -252,6 +252,31 @@ class ConsensusSALAADTests(unittest.TestCase):
             torch.tensor([[[2.0, 5.0]], [[5.0, 3.0]]]),
         )
 
+    def test_selected_decomposition_components_can_be_materialized(self):
+        model = nn.Sequential(ConsensusLinear(2, 1, num_loops=2, bias=False))
+        states = {
+            "0": {
+                "shared": torch.tensor([[1.0, 2.0]]),
+                "low_rank": torch.tensor([[[1.0, 0.0]], [[0.0, 1.0]]]),
+                "sparse": torch.tensor([[[0.0, 3.0]], [[4.0, 0.0]]]),
+            }
+        }
+        cases = (
+            (("shared",), torch.tensor([[[1.0, 2.0]], [[1.0, 2.0]]])),
+            (
+                ("shared", "low_rank"),
+                torch.tensor([[[2.0, 2.0]], [[1.0, 3.0]]]),
+            ),
+            (
+                ("shared", "sparse"),
+                torch.tensor([[[1.0, 5.0]], [[5.0, 2.0]]]),
+            ),
+        )
+
+        for components, expected in cases:
+            apply_decomposition(model, states, components=components)
+            torch.testing.assert_close(model[0].weight, expected)
+
     def test_llama_routes_recurrent_passes_to_their_weight_slices(self):
         torch.manual_seed(0)
         model = LlamaForCausalLM(tiny_config())
