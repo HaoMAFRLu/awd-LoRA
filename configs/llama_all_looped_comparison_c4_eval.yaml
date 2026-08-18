@@ -1,0 +1,78 @@
+seed: 43
+seed_for_shuffle: 43
+
+tokenizer_name: t5-base
+max_length: 256
+precision: bfloat16
+
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: validation
+  streaming: true
+
+batch_size: 512
+num_eval_batches: 250
+num_workers: 0
+
+checkpoints:
+  - name: vanilla_reference
+    model_config: configs/llama_60m_model.json
+    checkpoint: data/looped_transformer/llama_vanilla_60m/20260813_184120/model.pth
+    physical_depth: 8
+    logical_depth: 8
+    num_loops: 1
+    blocks_per_loop: 0
+
+  - name: consensus_only_loop2_block3
+    model_config: data/consensus_only_loop2_block3/llama_consensus_only_60m_loop2_block3/20260818_124156/llama_consensus_60m_loop2_block3_model.json
+    checkpoint: data/consensus_only_loop2_block3/llama_consensus_only_60m_loop2_block3/20260818_124156/model.pth
+    consensus_state_directory: data/consensus_only_loop2_block3/llama_consensus_only_60m_loop2_block3/20260818_124156
+    evaluate_raw: true
+    decomposition_variants:
+      - name: xhat
+        components: [shared]
+    physical_depth: 5
+    logical_depth: 8
+    num_loops: 2
+    blocks_per_loop: 3
+
+  - name: consensus_only_loop3_block2
+    model_config: data/consensus_only_loop3_block2/llama_consensus_only_60m_loop3_block2/20260818_124157/llama_consensus_60m_loop3_block2_model.json
+    checkpoint: data/consensus_only_loop3_block2/llama_consensus_only_60m_loop3_block2/20260818_124157/model.pth
+    consensus_state_directory: data/consensus_only_loop3_block2/llama_consensus_only_60m_loop3_block2/20260818_124157
+    evaluate_raw: true
+    decomposition_variants:
+      - name: xhat
+        components: [shared]
+    physical_depth: 4
+    logical_depth: 8
+    num_loops: 3
+    blocks_per_loop: 2
+
+  - name: vanilla_looped_loop2_block3
+    model_config: data/vanilla_looped_transformer_loop2_block3/llama_vanilla_looped_60m_loop2_block3/20260818_145201/llama_60m_model.json
+    checkpoint: data/vanilla_looped_transformer_loop2_block3/llama_vanilla_looped_60m_loop2_block3/20260818_145201/model.pth
+    physical_depth: 5
+    logical_depth: 8
+    num_loops: 2
+    blocks_per_loop: 3
+
+  - name: vanilla_looped_loop3_block2
+    model_config: data/vanilla_looped_transformer_loop3_block2/llama_vanilla_looped_60m_loop3_block2/20260818_145201/llama_60m_model.json
+    checkpoint: data/vanilla_looped_transformer_loop3_block2/llama_vanilla_looped_60m_loop3_block2/20260818_145201/model.pth
+    physical_depth: 4
+    logical_depth: 8
+    num_loops: 3
+    blocks_per_loop: 2
+
+  - name: vanilla_looped_loop6_block1
+    model_config: data/vanilla_looped_transformer_loop6_block1/llama_vanilla_looped_60m_loop6_block1/20260818_145204/llama_60m_model.json
+    checkpoint: data/vanilla_looped_transformer_loop6_block1/llama_vanilla_looped_60m_loop6_block1/20260818_145204/model.pth
+    physical_depth: 3
+    logical_depth: 8
+    num_loops: 6
+    blocks_per_loop: 1
+
+output_directory: data/consensus_salaad_evaluation/all_looped_comparison_c4_seed43
