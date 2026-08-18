@@ -58,9 +58,10 @@ class SALADTrainer():
             raise ValueError("save_interval must be a positive integer")
 
         self.training_mode = config.get('training_mode', 'salad')
-        if self.training_mode not in {'salad', 'vanilla', 'consensus'}:
+        if self.training_mode not in {'salad', 'vanilla', 'loop', 'consensus'}:
             raise ValueError(
-                "training_mode must be 'salad', 'vanilla', or 'consensus'; "
+                "training_mode must be 'salad', 'vanilla', 'loop', or "
+                "'consensus'; "
                 f"got {self.training_mode!r}"
             )
         # self.rank, self.world_size = self._init_distributed()
@@ -121,6 +122,9 @@ class SALADTrainer():
         # get specified layers in the config
         if self.training_mode == 'salad':
             self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
+        elif self.training_mode == 'loop':
+            self.cfg_layers = []
+            self._configure_plain_loop()
         elif self.training_mode == 'consensus':
             loop_model = getattr(self.model, 'model', None)
             self.consensus_components = tuple(
@@ -271,7 +275,7 @@ class SALADTrainer():
         self.layer_info['avg_loss_penalty'] = []
         self.layer_info['avg_diff'] = []
         self.layer_info['num_tokens'] = []
-        if self.training_mode == 'consensus':
+        if self.training_mode in {'loop', 'consensus'}:
             self.layer_info['num_loops'] = []
     @staticmethod    
     def canon(name: str) -> str:
@@ -338,6 +342,40 @@ class SALADTrainer():
                 "training_mode='consensus' requires ConsensusLinear modules in the model"
             )
         return layers
+
+    def _configure_plain_loop(self) -> None:
+        """Validate an exactly weight-tied, fixed-depth looped model."""
+        loop_model = getattr(self.model, 'model', None)
+        if loop_model is None or not getattr(loop_model, 'loop_layers', ()):
+            raise ValueError("training_mode='loop' requires a looped model")
+        if any(isinstance(module, ConsensusLinear) for module in self.model.modules()):
+            raise ValueError(
+                "training_mode='loop' uses shared nn.Linear weights and cannot "
+                "contain ConsensusLinear modules"
+            )
+
+        loop_config = self.config.get('loop')
+        if not isinstance(loop_config, dict):
+            raise ValueError("training_mode='loop' requires a loop section")
+
+        expected = {
+            'num_entry_blocks': len(loop_model.entry_layers),
+            'num_blocks_per_loop': len(loop_model.loop_layers),
+            'num_exit_blocks': len(loop_model.exit_layers),
+            'num_loops': loop_model.num_loops,
+        }
+        for name, actual in expected.items():
+            configured = loop_config.get(
+                name,
+                1 if name in {'num_entry_blocks', 'num_exit_blocks'} else None,
+            )
+            if configured != actual:
+                raise ValueError(
+                    f"training loop setting {name}={configured!r} does not "
+                    f"match the effective model value {actual}"
+                )
+
+        self.current_num_loops = loop_model.num_loops
 
     def _configure_loop_sampling(self) -> None:
         loop_model = getattr(self.model, 'model', None)
@@ -563,7 +601,7 @@ class SALADTrainer():
             # broadcast the avg_diff
             # global_avg_diff = self.get_global_loss(avg_diff.detach())
             return global_avg_loss, global_avg_loss_penalty, global_avg_diff
-        elif self.training_mode == 'vanilla':
+        elif self.training_mode in {'vanilla', 'loop'}:
             # reset the gradient
             self.optimizer.zero_grad(set_to_none=True)
             # calculate the loss of the neural network
@@ -635,21 +673,22 @@ class SALADTrainer():
     def generate_empty_layer_info(self):
         """Empty layer info for vanilla training."""
         if self.rank == 0:
-            info = self.layer_info['layers.0.self_attn.q_proj']
-            info['alpha_mode'].append('N/A')
-            info['beta_mode'].append('N/A')
-            info['alpha'].append(0.0)
-            info['beta'].append(0.0)
-            info['dalpha'].append(0.0)
-            info['dbeta'].append(0.0)
-            info['rho'].append(0.0)
-            info['rate_decay_alpha'].append(0.0)
-            info['rate_decay_beta'].append(0.0)
-            info['loss'].append(0.0)
-            info['rank'].append(1)
-            info['nonzero'].append(1)
-            info['total_rank'].append(1)
-            info['total_elements'].append(1)
+            for entry in self.cfg_layers:
+                info = self.layer_info[entry['name']]
+                info['alpha_mode'].append('N/A')
+                info['beta_mode'].append('N/A')
+                info['alpha'].append(0.0)
+                info['beta'].append(0.0)
+                info['dalpha'].append(0.0)
+                info['dbeta'].append(0.0)
+                info['rho'].append(0.0)
+                info['rate_decay_alpha'].append(0.0)
+                info['rate_decay_beta'].append(0.0)
+                info['loss'].append(0.0)
+                info['rank'].append(1)
+                info['nonzero'].append(1)
+                info['total_rank'].append(1)
+                info['total_elements'].append(1)
     
 
     def gather_layer_info(self, T):
@@ -975,7 +1014,7 @@ class SALADTrainer():
         losses = {'avg_loss': loss,
                   'avg_loss_penalty': loss_penalty,
                   'avg_diff': loss_diff}
-        if self.training_mode == 'consensus':
+        if self.training_mode in {'loop', 'consensus'}:
             losses['num_loops'] = self.current_num_loops
         
         layer_stats = [{'name': entry['name'],
@@ -1064,7 +1103,7 @@ class SALADTrainer():
             self.layer_info['avg_loss_penalty'].append(avg_loss_penalty)
             self.layer_info['avg_diff'].append(avg_diff)
             self.layer_info['num_tokens'].append(num_tokens)
-            if self.training_mode == 'consensus':
+            if self.training_mode in {'loop', 'consensus'}:
                 self.layer_info['num_loops'].append(self.current_num_loops)
             
             ep_loss += avg_loss

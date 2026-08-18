@@ -35,7 +35,8 @@ def _write_effective_model_config(
     with open(source_path, "r", encoding="utf-8") as file:
         model_config = json.load(file)
 
-    if training_config.get("training_mode") == "consensus":
+    training_mode = training_config.get("training_mode")
+    if training_mode == "consensus":
         consensus_config = training_config.get("consensus_salaad")
         if not isinstance(consensus_config, dict):
             raise ValueError(
@@ -50,6 +51,39 @@ def _write_effective_model_config(
                     "when training config selects consensus components"
                 )
             model_consensus["components"] = components
+    elif training_mode == "loop":
+        loop_config = training_config.get("loop")
+        if not isinstance(loop_config, dict):
+            raise ValueError("training_mode='loop' requires a loop section")
+
+        counts = {
+            "num_entry_blocks": loop_config.get("num_entry_blocks", 1),
+            "num_blocks_per_loop": loop_config.get("num_blocks_per_loop"),
+            "num_exit_blocks": loop_config.get("num_exit_blocks", 1),
+            "num_loops": loop_config.get("num_loops"),
+        }
+        for name, value in counts.items():
+            minimum = 1 if name in {"num_blocks_per_loop", "num_loops"} else 0
+            if (
+                not isinstance(value, int)
+                or isinstance(value, bool)
+                or value < minimum
+            ):
+                raise ValueError(
+                    f"loop.{name} must be an integer >= {minimum}, got {value!r}"
+                )
+
+        # A plain loop reuses the exact same physical blocks on every pass.
+        # It therefore must not inherit loop-specific ConsensusLinear weights
+        # from a consensus model config.
+        model_config.pop("consensus_salaad", None)
+        model_config["loop"] = counts
+        model_config["num_hidden_layers"] = (
+            counts["num_entry_blocks"]
+            + counts["num_blocks_per_loop"]
+            + counts["num_exit_blocks"]
+        )
+        model_config["use_cache"] = False
 
     with open(destination_path, "w", encoding="utf-8") as file:
         json.dump(model_config, file, indent=4)

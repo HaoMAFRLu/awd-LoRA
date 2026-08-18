@@ -1,0 +1,46 @@
+seed: 42
+name: llama_vanilla_looped_60m_loop2_block3
+model_config: llama_60m_model.json
+training_mode: loop
+output_folder: vanilla_looped_transformer_loop2_block3
+wandb_project: CONSENSUS_SALAAD
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 20
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+batch_size: 512
+num_workers: 0
+
+# Logical depth: 1 + 2 * 3 + 1 = 8.
+loop:
+  num_entry_blocks: 1
+  num_blocks_per_loop: 3
+  num_exit_blocks: 1
+  num_loops: 2
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas: [0.9, 0.95]
+    eps: 1.0e-8
+    weight_decay: 0.0
