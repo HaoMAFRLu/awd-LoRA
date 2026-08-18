@@ -3,7 +3,38 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
-from typing import Optional
+from typing import Mapping, Optional, Tuple
+
+
+_FULL_CONSENSUS_COMPONENTS = ("shared", "low_rank", "sparse")
+_SHARED_ONLY_COMPONENTS = ("shared",)
+
+
+def get_consensus_components(config: Mapping) -> Tuple[str, ...]:
+    """Return the configured consensus parameterization.
+
+    Omitting ``components`` preserves the original ``X_hat + L_i + S_i``
+    parameterization. ``[shared]`` keeps the loop-specific optimization
+    variables ``X_i`` but constrains them directly to ``X_hat`` without
+    allocating low-rank or sparse residual components.
+    """
+    components = config.get("components", _FULL_CONSENSUS_COMPONENTS)
+    if not isinstance(components, (list, tuple)) or not components:
+        raise TypeError("consensus_salaad.components must be a non-empty list")
+    if not all(isinstance(component, str) for component in components):
+        raise TypeError("consensus_salaad.components must contain strings")
+    if len(set(components)) != len(components):
+        raise ValueError("consensus_salaad.components must not contain duplicates")
+
+    selected = frozenset(components)
+    if selected == frozenset(_SHARED_ONLY_COMPONENTS):
+        return _SHARED_ONLY_COMPONENTS
+    if selected == frozenset(_FULL_CONSENSUS_COMPONENTS):
+        return _FULL_CONSENSUS_COMPONENTS
+    raise ValueError(
+        "consensus_salaad.components must be either ['shared'] or "
+        "['shared', 'low_rank', 'sparse']"
+    )
 
 
 class ConsensusLinear(nn.Module):

@@ -10,7 +10,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "1800")
 os.environ.setdefault("HF_HUB_ETAG_TIMEOUT", "120")
@@ -142,13 +142,25 @@ def _copy_consensus_weights(
 
 def _get_decomposition_variants(
     specification: Dict[str, Any],
+    states: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     variants = specification.get("decomposition_variants")
     if variants is None:
+        components = ("shared", "low_rank", "sparse")
+        if states:
+            saved_components = {
+                tuple(state.get("components", components))
+                for state in states.values()
+            }
+            if len(saved_components) != 1:
+                raise ValueError(
+                    "all consensus states must use the same components"
+                )
+            components = next(iter(saved_components))
         return [
             {
                 "name": "reconstructed",
-                "components": ("shared", "low_rank", "sparse"),
+                "components": components,
             }
         ]
     if not isinstance(variants, list) or not variants:
@@ -453,7 +465,7 @@ def main() -> None:
                 _resolve_path(specification["consensus_state_directory"])
             )
             reference_weights = _copy_consensus_weights(model, states)
-            for variant in _get_decomposition_variants(specification):
+            for variant in _get_decomposition_variants(specification, states):
                 components = variant["components"]
                 relative_error = _apply_reconstruction(
                     model,

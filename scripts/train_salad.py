@@ -5,6 +5,7 @@ import os, sys
 os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "1800")
 os.environ.setdefault("HF_HUB_ETAG_TIMEOUT", "120")
 
+import json
 import yaml
 from datetime import datetime
 import shutil
@@ -23,6 +24,36 @@ torch.backends.cuda.enable_mem_efficient_sdp(False)
 torch.backends.cuda.enable_flash_sdp(False)
 
 root = get_parent_path(lvl=1)
+
+
+def _write_effective_model_config(
+    source_path: str,
+    destination_path: str,
+    training_config: dict,
+) -> None:
+    """Write the exact architecture config used for this training run."""
+    with open(source_path, "r", encoding="utf-8") as file:
+        model_config = json.load(file)
+
+    if training_config.get("training_mode") == "consensus":
+        consensus_config = training_config.get("consensus_salaad")
+        if not isinstance(consensus_config, dict):
+            raise ValueError(
+                "training_mode='consensus' requires a consensus_salaad section"
+            )
+        components = consensus_config.get("components")
+        if components is not None:
+            model_consensus = model_config.get("consensus_salaad")
+            if not isinstance(model_consensus, dict):
+                raise ValueError(
+                    "the model config requires a consensus_salaad section "
+                    "when training config selects consensus components"
+                )
+            model_consensus["components"] = components
+
+    with open(destination_path, "w", encoding="utf-8") as file:
+        json.dump(model_config, file, indent=4)
+        file.write("\n")
 
 def _init_distributed():
     """Initialize distributed environment"""
@@ -115,7 +146,11 @@ def main(cfg_version: str,
         output_path = os.path.join(path_folder, cfg_version+'.yaml')
         with open(output_path, 'w', encoding='utf-8') as f:
             yaml.safe_dump(cfg, f, sort_keys=False, allow_unicode=True)
-        shutil.copy(path_cfg_model, path_folder)
+        _write_effective_model_config(
+            path_cfg_model,
+            os.path.join(path_folder, os.path.basename(path_cfg_model)),
+            cfg,
+        )
     else:
         folder_name = None
     
@@ -124,8 +159,13 @@ def main(cfg_version: str,
     dist.broadcast_object_list(path_folder_list, src=0)
     path_folder = path_folder_list[0]
 
-    # get the data loader
-    model = get_model(path_cfg_model)
+    # Every rank loads the effective config saved with this run. This keeps
+    # model construction and future checkpoint evaluation consistent when a
+    # training config overrides the consensus components.
+    effective_model_config = os.path.join(
+        path_folder, os.path.basename(path_cfg_model)
+    )
+    model = get_model(effective_model_config)
 
     # time.sleep(2.0 * rank)  # 3s per rank is a good starting point
     data = get_data(cfg)

@@ -121,33 +121,28 @@ def print_wandb(
         if not name:
             continue
 
-        # Ratios
-        nz = int(s.get("non_zero", 0))
-        tot = int(s.get("total_elements", 0))
-        non_zero_ratio = float(nz / tot) if tot else 0.0
-
-        rnk = int(s.get("rank", 0))
-        trk = int(s.get("total_rank", 0))
-        rank_ratio = float(rnk / trk) if trk else 0.0
-
-        # Scalars for params
         layer_diff = float(s.get("loss", float("nan")))
-        alpha  = float(s.get("alpha",  float("nan")))
-        dalpha = float(s.get("dalpha", float("nan")))
-        beta   = float(s.get("beta",   float("nan")))
-        dbeta  = float(s.get("dbeta",  float("nan")))
         rho    = float(s.get("rho",    float("nan")))
 
         # Grouped metric names (easy to pick in W&B UI)
         prefix = f"layer/{name}"
         payload.update({
-            f"{prefix}/diff": layer_diff,                                 
-            f"{prefix}/non_zero_ratio": non_zero_ratio,          
-            f"{prefix}/rank_ratio": rank_ratio,                   
-            f"{prefix}/alpha": alpha,                              
-            f"{prefix}/beta": beta,                             
-            f"{prefix}/rho": rho,                           
+            f"{prefix}/diff": layer_diff,
+            f"{prefix}/rho": rho,
         })
+        if s.get("has_decomposition", True):
+            nz = int(s.get("non_zero", 0))
+            tot = int(s.get("total_elements", 0))
+            non_zero_ratio = float(nz / tot) if tot else 0.0
+            rnk = int(s.get("rank", 0))
+            trk = int(s.get("total_rank", 0))
+            rank_ratio = float(rnk / trk) if trk else 0.0
+            payload.update({
+                f"{prefix}/non_zero_ratio": non_zero_ratio,
+                f"{prefix}/rank_ratio": rank_ratio,
+                f"{prefix}/alpha": float(s.get("alpha", float("nan"))),
+                f"{prefix}/beta": float(s.get("beta", float("nan"))),
+            })
 
     # Single log call per epoch
     wandb.log(payload, step=epoch)
@@ -170,6 +165,17 @@ def print_epoch(epoch: int,
     if "num_loops" in losses:
         header += f" | Loops: {int(losses['num_loops'])}"
     print(header)
+
+    if not layer_stats:
+        return
+
+    if all(not s.get("has_decomposition", True) for s in layer_stats):
+        rows = [
+            [s["name"], f"{s['loss']:.6f}", f"{s['rho']:.12f}"]
+            for s in layer_stats
+        ]
+        print(tabulate(rows, headers=["name", "layer diff", "rho"], tablefmt="grid"))
+        return
 
     headers = ["name", "layer diff", "non-zero", "rank", 
                "mode", "alpha", "dalpha", "decay", 

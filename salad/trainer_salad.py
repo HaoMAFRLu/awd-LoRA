@@ -7,7 +7,7 @@ import datasets
 import datasets.distributed
 from loguru import logger
 
-from models.consensus import ConsensusLinear
+from models.consensus import ConsensusLinear, get_consensus_components
 from salad.consensus import ConsensusADMM
 from salad.loop import LoopSampler
 from salad.salad_solver import SALAD
@@ -116,10 +116,37 @@ class SALADTrainer():
         self.model.cuda()
         # get all the names of the model layers
         self.names_model_layers = get_linear_layers_name(self.model)
+        self.consensus_components = ()
+        self.consensus_shared_only = False
         # get specified layers in the config
         if self.training_mode == 'salad':
             self.cfg_layers = self.get_cfg_layers(self.config, self.names_model_layers)
         elif self.training_mode == 'consensus':
+            loop_model = getattr(self.model, 'model', None)
+            self.consensus_components = tuple(
+                getattr(loop_model, 'consensus_components', ())
+            )
+            if not self.consensus_components:
+                raise ValueError(
+                    "training_mode='consensus' requires consensus_salaad in "
+                    "the model config"
+                )
+            training_consensus_config = self.config.get('consensus_salaad')
+            if not isinstance(training_consensus_config, dict):
+                raise ValueError(
+                    "training_mode='consensus' requires a consensus_salaad section"
+                )
+            configured_components = training_consensus_config.get('components')
+            if configured_components is not None:
+                expected_components = get_consensus_components(
+                    {'components': configured_components}
+                )
+                if self.consensus_components != expected_components:
+                    raise ValueError(
+                        "training and model consensus components disagree: "
+                        f"{expected_components} != {self.consensus_components}"
+                    )
+            self.consensus_shared_only = self.consensus_components == ('shared',)
             self.cfg_layers = self.get_consensus_layers(self.model)
             self._configure_loop_sampling()
         else:
@@ -208,11 +235,11 @@ class SALADTrainer():
                     "training_mode='consensus' requires a consensus_salaad section"
                 )
 
+            self.consensus_solvers = []
             self.assigned_layers, self.owner_map = self.assign_layers(
                 self.cfg_layers, self.rank, self.world_size
             )
             modules = dict(self.ddp_model.module.named_modules())
-            self.consensus_solvers = []
             for entry in self.cfg_layers:
                 name = entry['name']
                 if name in self.assigned_layers:
@@ -424,6 +451,8 @@ class SALADTrainer():
 
     @torch.no_grad()
     def get_consensus_diff(self) -> float:
+        if not self.cfg_layers:
+            return 0.0
         difference = torch.zeros((), device=self.device, dtype=torch.float32)
         for solver in self.consensus_solvers:
             residual_norm = torch.linalg.vector_norm(solver.residual())
@@ -441,6 +470,8 @@ class SALADTrainer():
 
     @torch.no_grad()
     def sync_consensus_info(self) -> None:
+        if not self.cfg_layers:
+            return
         rows = torch.zeros(
             len(self.cfg_layers), 12, device=self.device, dtype=torch.float32
         )
@@ -744,10 +775,11 @@ class SALADTrainer():
                 solver.name: solver.state_dict()
                 for solver in self.consensus_solvers
             }
-            atomic_torch_save(
-                state,
-                os.path.join(path_folder, f'consensus_rank{self.rank}.pth'),
-            )
+            if state:
+                atomic_torch_save(
+                    state,
+                    os.path.join(path_folder, f'consensus_rank{self.rank}.pth'),
+                )
 
     # def get_local_single_weight(self,
     #                             target: str='L'):
@@ -947,6 +979,7 @@ class SALADTrainer():
             losses['num_loops'] = self.current_num_loops
         
         layer_stats = [{'name': entry['name'],
+                        'has_decomposition': not self.consensus_shared_only,
                         'loss': layer_info[entry['name']]['loss'][-1],
                         'alpha_mode': layer_info[entry['name']]['alpha_mode'][-1],
                         'beta_mode': layer_info[entry['name']]['beta_mode'][-1],

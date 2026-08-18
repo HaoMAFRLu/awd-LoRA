@@ -32,7 +32,7 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
 from transformers.models.llama.configuration_llama import LlamaConfig
 
-from models.consensus import ConsensusLinear, apply_linear
+from models.consensus import ConsensusLinear, apply_linear, get_consensus_components
 logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "LlamaConfig"
@@ -458,6 +458,7 @@ class LlamaModel(LlamaPreTrainedModel):
         self.gradient_checkpointing = False
         # Initialize weights and apply final processing
         self.post_init()
+        self.consensus_components = ()
         self.max_num_loops, self.consensus_target_modules = self._install_consensus_layers(config)
 
     @staticmethod
@@ -583,6 +584,7 @@ class LlamaModel(LlamaPreTrainedModel):
             raise ValueError("consensus_salaad requires a looped model")
         if not isinstance(consensus, dict):
             raise TypeError("model config 'consensus_salaad' must be a dictionary")
+        self.consensus_components = get_consensus_components(consensus)
 
         loop_config = getattr(config, "loop", {})
         configured_max = loop_config.get("max_num_loops")
@@ -635,6 +637,7 @@ class LlamaModel(LlamaPreTrainedModel):
                         f"layers.{layer_index}.{module_name} must be nn.Linear, "
                         f"got {type(linear).__name__}"
                     )
+
                 parent_name, _, child_name = module_name.rpartition(".")
                 parent = decoder_layer.get_submodule(parent_name) if parent_name else decoder_layer
                 setattr(parent, child_name, ConsensusLinear.from_linear(linear, num_loop_weights))

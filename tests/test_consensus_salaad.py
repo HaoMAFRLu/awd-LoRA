@@ -9,6 +9,7 @@ from models.consensus import ConsensusLinear
 from salad.consensus import (
     ConsensusADMM,
     apply_decomposition,
+    compose_decomposition,
     singular_value_threshold,
     soft_threshold,
 )
@@ -42,6 +43,7 @@ def tiny_config(num_loop_weights=3):
 
 def consensus_solver_config(
     *,
+    components=None,
     rho=1.0,
     energy=0.999,
     rate_rank=0.15,
@@ -51,7 +53,7 @@ def consensus_solver_config(
     alpha_rate_decay=0.0,
     beta_rate_decay=0.0,
 ):
-    return {
+    config = {
         "rho": rho,
         "energy": energy,
         "rate_rank": rate_rank,
@@ -71,6 +73,9 @@ def consensus_solver_config(
             "start_epoch": 1500,
         },
     }
+    if components is not None:
+        config["components"] = components
+    return config
 
 
 class ConsensusSALAADTests(unittest.TestCase):
@@ -235,6 +240,22 @@ class ConsensusSALAADTests(unittest.TestCase):
         self.assertIsNotNone(effective.grad)
         self.assertEqual(effective.grad[1, 0, 0].item(), 2.0)
 
+    def test_shared_only_penalty_backpropagates_to_each_loop_weight(self):
+        effective = nn.Parameter(torch.tensor([[[0.0]], [[1.0]]]))
+        solver = ConsensusADMM(
+            "matrix",
+            effective,
+            {"components": ["shared"], "rho": 0.5},
+        )
+
+        solver.penalty().backward()
+
+        self.assertIsNotNone(effective.grad)
+        torch.testing.assert_close(
+            effective.grad,
+            torch.tensor([[[-0.25]], [[0.25]]]),
+        )
+
     def test_saved_decomposition_can_be_materialized_for_evaluation(self):
         model = nn.Sequential(ConsensusLinear(2, 1, num_loops=2, bias=False))
         states = {
@@ -310,6 +331,75 @@ class ConsensusSALAADTests(unittest.TestCase):
 
         loop_model.set_num_loops(3)
         self.assertEqual(len(loop_model.execution_plan), 11)
+
+    def test_shared_only_keeps_loop_weights_and_uses_consensus_admm(self):
+        torch.manual_seed(0)
+        config = tiny_config()
+        config.consensus_salaad["components"] = ["shared"]
+        model = LlamaForCausalLM(config)
+        loop_model = model.model
+        q_proj = loop_model.layers[1].self_attn.q_proj
+
+        self.assertIsInstance(q_proj, ConsensusLinear)
+        self.assertEqual(q_proj.weight.shape, (3, 8, 8))
+        self.assertEqual(loop_model.consensus_components, ("shared",))
+        self.assertEqual(loop_model.max_num_loops, 3)
+
+        solver = ConsensusADMM(
+            "q_proj",
+            q_proj.weight,
+            {"components": ["shared"], "rho": 0.5},
+        )
+        self.assertIsNone(solver.low_rank)
+        self.assertIsNone(solver.sparse)
+        self.assertEqual(solver.alpha_controllers, [])
+        self.assertEqual(solver.beta_controllers, [])
+
+        with torch.no_grad():
+            q_proj.weight[0].add_(1.0)
+            q_proj.weight[1].sub_(0.5)
+            solver.scaled_dual[2].add_(0.25)
+        expected_shared = (
+            q_proj.weight.detach().float() + solver.scaled_dual
+        ).mean(dim=0)
+        solver.step()
+        torch.testing.assert_close(solver.shared, expected_shared)
+        torch.testing.assert_close(
+            solver.reconstruction(),
+            solver.shared.unsqueeze(0).expand_as(q_proj.weight),
+        )
+        state = solver.state_dict()
+        self.assertNotIn("low_rank", state)
+        self.assertNotIn("sparse", state)
+        self.assertEqual(state["components"], ["shared"])
+        torch.testing.assert_close(
+            compose_decomposition(state),
+            solver.shared.unsqueeze(0).expand_as(q_proj.weight),
+        )
+        restored = ConsensusADMM(
+            "q_proj",
+            q_proj.weight,
+            {"components": ["shared"], "rho": 0.5},
+        )
+        restored.load_state_dict(state)
+        torch.testing.assert_close(restored.shared, solver.shared)
+        torch.testing.assert_close(restored.scaled_dual, solver.scaled_dual)
+
+        input_ids = torch.randint(1, 32, (2, 6))
+        model(input_ids=input_ids, labels=input_ids).loss.backward()
+        self.assertGreater(int(torch.count_nonzero(q_proj.weight.grad[0])), 0)
+        self.assertGreater(int(torch.count_nonzero(q_proj.weight.grad[1])), 0)
+
+        loop_model.set_num_loops(3)
+        self.assertEqual(len(loop_model.execution_plan), 11)
+        with self.assertRaisesRegex(ValueError, "available loop-specific weights"):
+            loop_model.set_num_loops(4)
+
+    def test_consensus_components_reject_partial_residual_modes(self):
+        config = tiny_config()
+        config.consensus_salaad["components"] = ["shared", "low_rank"]
+        with self.assertRaisesRegex(ValueError, "must be either"):
+            LlamaForCausalLM(config)
 
     def test_model_rejects_depth_without_a_loop_specific_weight(self):
         model = LlamaForCausalLM(tiny_config(num_loop_weights=2))
