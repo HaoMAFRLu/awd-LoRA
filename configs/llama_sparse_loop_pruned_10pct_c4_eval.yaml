@@ -1,0 +1,57 @@
+seed: 43
+seed_for_shuffle: 43
+
+tokenizer_name: t5-base
+max_length: 256
+precision: bfloat16
+
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: validation
+  streaming: true
+
+# Identical to every previous Looped/Consensus C4 evaluation.
+batch_size: 512
+num_eval_batches: 250
+num_workers: 0
+
+checkpoints:
+  - name: vanilla_reference
+    model_config: configs/llama_60m_model.json
+    checkpoint: data/looped_transformer/llama_vanilla_60m/20260813_184120/model.pth
+    physical_depth: 8
+    logical_depth: 8
+    num_loops: 1
+    blocks_per_loop: 0
+
+  - name: sparse_loop_loop2_block3
+    model_config: data/sparse_loop_loop2_block3/llama_sparse_loop_60m_loop2_block3/20260819_160135/llama_60m_model.json
+    checkpoint: data/sparse_loop_loop2_block3/llama_sparse_loop_60m_loop2_block3/20260819_160135/model.pth
+    sparse_loop_state_directory: data/sparse_loop_loop2_block3/llama_sparse_loop_60m_loop2_block3/20260819_160135
+    evaluate_raw: false
+    sparse_loop_variants:
+      - name: x_plus_s
+      - name: x_plus_s_pruned_10pct
+        sparse_density: 0.10
+    physical_depth: 5
+    logical_depth: 8
+    num_loops: 2
+    blocks_per_loop: 3
+
+  - name: sparse_loop_loop3_block2
+    model_config: data/sparse_loop_loop3_block2/llama_sparse_loop_60m_loop3_block2/20260819_160108/llama_60m_model.json
+    checkpoint: data/sparse_loop_loop3_block2/llama_sparse_loop_60m_loop3_block2/20260819_160108/model.pth
+    sparse_loop_state_directory: data/sparse_loop_loop3_block2/llama_sparse_loop_60m_loop3_block2/20260819_160108
+    evaluate_raw: false
+    sparse_loop_variants:
+      - name: x_plus_s
+      - name: x_plus_s_pruned_10pct
+        sparse_density: 0.10
+    physical_depth: 4
+    logical_depth: 8
+    num_loops: 3
+    blocks_per_loop: 2
+
+output_directory: data/consensus_salaad_evaluation/sparse_loop_pruned_10pct_c4_seed43

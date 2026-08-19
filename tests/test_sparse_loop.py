@@ -223,6 +223,28 @@ class SparseLoopTests(unittest.TestCase):
             states["0"]["sparse"],
         )
 
+        dense_states = {
+            "0": {
+                "sparse": torch.tensor([[[1.0, 4.0]], [[3.0, 2.0]]]),
+                "rate_sparsity": 0.25,
+            }
+        }
+        relative_error, actual_density, target_density = (
+            _apply_sparse_loop_reconstruction(
+                model,
+                dense_states,
+                reference,
+                sparse_density=0.5,
+            )
+        )
+        self.assertGreater(relative_error, 0.0)
+        self.assertEqual(actual_density, 0.5)
+        self.assertEqual(target_density, 0.5)
+        torch.testing.assert_close(
+            model[0].specific_weight,
+            torch.tensor([[[0.0, 4.0]], [[3.0, 0.0]]]),
+        )
+
     def test_training_yaml_builds_effective_sparse_loop_model_config(self):
         source = {
             "model_type": "llama",

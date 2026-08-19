@@ -243,6 +243,7 @@ def _apply_sparse_loop_reconstruction(
     model: torch.nn.Module,
     states: Dict[str, Dict[str, Any]],
     reference_weights: Dict[str, torch.Tensor],
+    sparse_density: Optional[float] = None,
 ) -> Tuple[float, float, Optional[float]]:
     modules = dict(model.named_modules())
     squared_error = torch.zeros(
@@ -254,6 +255,7 @@ def _apply_sparse_loop_reconstruction(
     sparse_nonzero = 0
     sparse_elements = 0
     target_rates = set()
+    materialized_states: Dict[str, Dict[str, Any]] = {}
 
     for name, state in states.items():
         module = modules.get(name)
@@ -268,6 +270,11 @@ def _apply_sparse_loop_reconstruction(
                 f"{tuple(module.specific_weight.shape)}"
             )
 
+        if sparse_density is not None:
+            sparse = magnitude_prune_sparse(sparse, sparse_density)
+        materialized_state = dict(state)
+        materialized_state["sparse"] = sparse
+        materialized_states[name] = materialized_state
         sparse = sparse.to(device=module.weight.device, dtype=torch.float32)
         reconstructed = module.weight.detach().float().unsqueeze(0) + sparse
         original = reference_weights[name]
@@ -283,13 +290,61 @@ def _apply_sparse_loop_reconstruction(
             "saved sparse-loop states disagree on rate_sparsity: "
             f"{sorted(target_rates)}"
         )
-    apply_sparse_residuals(model, states, strict=True)
+    apply_sparse_residuals(model, materialized_states, strict=True)
     relative_error = torch.sqrt(
         squared_error / squared_weight.clamp_min(1.0e-24)
     ).item()
     actual_density = sparse_nonzero / sparse_elements
-    target_density = next(iter(target_rates)) if target_rates else None
+    target_density = (
+        sparse_density
+        if sparse_density is not None
+        else next(iter(target_rates)) if target_rates else None
+    )
     return relative_error, actual_density, target_density
+
+
+def _get_sparse_loop_variants(
+    specification: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    variants = specification.get("sparse_loop_variants")
+    if variants is None:
+        return [{"name": "x_plus_s", "sparse_density": None}]
+    if not isinstance(variants, list) or not variants:
+        raise ValueError("sparse_loop_variants must be a non-empty list")
+
+    normalized: List[Dict[str, Any]] = []
+    seen_names = set()
+    for variant in variants:
+        if not isinstance(variant, dict):
+            raise TypeError(
+                "each sparse-loop reconstruction variant must be a dictionary"
+            )
+        name = variant.get("name")
+        sparse_density = variant.get("sparse_density")
+        if not isinstance(name, str) or not name:
+            raise ValueError("each sparse-loop variant requires a name")
+        if name in seen_names:
+            raise ValueError(f"duplicate sparse-loop variant name: {name!r}")
+        if sparse_density is not None:
+            if isinstance(sparse_density, bool) or not isinstance(
+                sparse_density, (int, float)
+            ):
+                raise TypeError(
+                    f"sparse-loop variant {name!r} sparse_density must be "
+                    "a real number"
+                )
+            sparse_density = float(sparse_density)
+            if not 0.0 <= sparse_density <= 1.0:
+                raise ValueError(
+                    f"sparse-loop variant {name!r} sparse_density must be "
+                    f"in [0, 1], got {sparse_density}"
+                )
+        seen_names.add(name)
+        normalized.append({
+            "name": name,
+            "sparse_density": sparse_density,
+        })
+    return normalized
 
 
 def _get_decomposition_variants(
@@ -707,42 +762,46 @@ def main() -> None:
                 model,
                 states,
             )
-            (
-                relative_error,
-                actual_sparse_density,
-                target_sparse_density,
-            ) = _apply_sparse_loop_reconstruction(
-                model,
-                states,
-                reference_weights,
-            )
-            reconstructed_metrics = _evaluate_model(model, batches, device)
-            reconstructed_result = {
-                "condition": f"{specification['name']}_x_plus_s",
-                "weight_source": "x_plus_s",
-                "decomposition_components": [
-                    "shared_weight",
-                    "sparse_residual",
-                ],
-                "num_loops": decoder.num_loops,
-                "blocks_per_loop": len(decoder.loop_layers),
-                "physical_depth": len(decoder.layers),
-                "logical_depth": decoder.logical_num_layers,
-                "reconstruction_relative_frobenius": relative_error,
-                "sparse_density_target": target_sparse_density,
-                "sparse_density_actual": actual_sparse_density,
-                **reconstructed_metrics,
-            }
-            results.append(reconstructed_result)
-            if rank == 0:
-                print(
-                    f"{specification['name']} x_plus_s: "
-                    f"loss={reconstructed_metrics['loss']:.6f}, "
-                    f"ppl={reconstructed_metrics['perplexity']:.4f}, "
-                    f"relative_frobenius={relative_error:.6f}, "
-                    f"sparse_density="
-                    f"{_format_density(actual_sparse_density)}"
+            for variant in _get_sparse_loop_variants(specification):
+                (
+                    relative_error,
+                    actual_sparse_density,
+                    target_sparse_density,
+                ) = _apply_sparse_loop_reconstruction(
+                    model,
+                    states,
+                    reference_weights,
+                    variant["sparse_density"],
                 )
+                reconstructed_metrics = _evaluate_model(model, batches, device)
+                reconstructed_result = {
+                    "condition": (
+                        f"{specification['name']}_{variant['name']}"
+                    ),
+                    "weight_source": variant["name"],
+                    "decomposition_components": [
+                        "shared_weight",
+                        "sparse_residual",
+                    ],
+                    "num_loops": decoder.num_loops,
+                    "blocks_per_loop": len(decoder.loop_layers),
+                    "physical_depth": len(decoder.layers),
+                    "logical_depth": decoder.logical_num_layers,
+                    "reconstruction_relative_frobenius": relative_error,
+                    "sparse_density_target": target_sparse_density,
+                    "sparse_density_actual": actual_sparse_density,
+                    **reconstructed_metrics,
+                }
+                results.append(reconstructed_result)
+                if rank == 0:
+                    print(
+                        f"{specification['name']} {variant['name']}: "
+                        f"loss={reconstructed_metrics['loss']:.6f}, "
+                        f"ppl={reconstructed_metrics['perplexity']:.4f}, "
+                        f"relative_frobenius={relative_error:.6f}, "
+                        f"sparse_density="
+                        f"{_format_density(actual_sparse_density)}"
+                    )
             del reference_weights, states
         del model
         torch.cuda.empty_cache()
