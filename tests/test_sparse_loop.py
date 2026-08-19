@@ -10,6 +10,10 @@ from transformers.models.llama.configuration_llama import LlamaConfig
 from models.Llama import LlamaForCausalLM
 from models.sparse_loop import SparseLoopLinear
 from salad.sparse_loop import SparseLoopADMM, apply_sparse_residuals
+from scripts.evaluate_consensus_c4 import (
+    _apply_sparse_loop_reconstruction,
+    _copy_sparse_loop_effective_weights,
+)
 from scripts.train_salad import _write_effective_model_config
 
 
@@ -191,6 +195,33 @@ class SparseLoopTests(unittest.TestCase):
 
         apply_sparse_residuals(model, {"0": state})
         torch.testing.assert_close(model[0].specific_weight, solver.sparse)
+
+    def test_evaluator_compares_dense_and_sparse_effective_weights(self):
+        model = nn.Sequential(SparseLoopLinear(2, 1, num_loops=2, bias=False))
+        with torch.no_grad():
+            model[0].weight.copy_(torch.tensor([[1.0, 2.0]]))
+            model[0].specific_weight.copy_(
+                torch.tensor([[[1.0, 0.0]], [[0.0, 2.0]]])
+            )
+        states = {
+            "0": {
+                "sparse": torch.tensor([[[0.0, 1.0]], [[2.0, 0.0]]]),
+                "rate_sparsity": 0.25,
+            }
+        }
+
+        reference = _copy_sparse_loop_effective_weights(model, states)
+        relative_error, actual_density, target_density = (
+            _apply_sparse_loop_reconstruction(model, states, reference)
+        )
+
+        self.assertAlmostEqual(relative_error, (10.0 / 25.0) ** 0.5)
+        self.assertEqual(actual_density, 0.5)
+        self.assertEqual(target_density, 0.25)
+        torch.testing.assert_close(
+            model[0].specific_weight,
+            states["0"]["sparse"],
+        )
 
     def test_training_yaml_builds_effective_sparse_loop_model_config(self):
         source = {

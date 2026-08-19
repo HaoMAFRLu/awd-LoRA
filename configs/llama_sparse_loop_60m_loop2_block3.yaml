@@ -3,7 +3,7 @@ name: llama_sparse_loop_60m_loop2_block3
 model_config: llama_60m_model.json
 training_mode: sparse_loop
 output_folder: sparse_loop_loop2_block3
-wandb_project: LOOP_SPECIFIC_SPARSITY
+wandb_project: CONSENSUS_SALAAD
 
 tokenizer_name: t5-base
 data:

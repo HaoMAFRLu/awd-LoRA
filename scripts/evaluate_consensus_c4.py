@@ -26,6 +26,8 @@ sys.path.insert(0, str(ROOT))
 from salad.register import get_data, get_model, get_preprocessed_dataset, get_tokenizer
 from salad.consensus import compose_decomposition, magnitude_prune_sparse
 from models.consensus import ConsensusLinear
+from models.sparse_loop import SparseLoopLinear
+from salad.sparse_loop import apply_sparse_residuals
 from salad.utils import hf_login_once, set_seed
 
 
@@ -91,6 +93,35 @@ def _load_consensus_states(directory: Path) -> Dict[str, Dict[str, Any]]:
         if duplicate_names:
             raise KeyError(
                 f"duplicate consensus states in {path}: {sorted(duplicate_names)}"
+            )
+        states.update(rank_states)
+    return states
+
+
+def _load_sparse_loop_states(directory: Path) -> Dict[str, Dict[str, Any]]:
+    if not directory.is_dir():
+        raise FileNotFoundError(
+            f"sparse-loop state directory does not exist: {directory}"
+        )
+    paths = sorted(directory.glob("sparse_loop_rank*.pth"))
+    if not paths:
+        raise FileNotFoundError(
+            f"no sparse_loop_rank*.pth files found in {directory}"
+        )
+
+    states: Dict[str, Dict[str, Any]] = {}
+    for path in paths:
+        try:
+            rank_states = torch.load(path, map_location="cpu", weights_only=True)
+        except TypeError:
+            rank_states = torch.load(path, map_location="cpu")
+        if not isinstance(rank_states, dict):
+            raise TypeError(f"sparse-loop state file is not a dictionary: {path}")
+        duplicate_names = set(states).intersection(rank_states)
+        if duplicate_names:
+            raise KeyError(
+                f"duplicate sparse-loop states in {path}: "
+                f"{sorted(duplicate_names)}"
             )
         states.update(rank_states)
     return states
@@ -177,6 +208,88 @@ def _copy_consensus_weights(
             raise KeyError(f"model has no ConsensusLinear named {name!r}")
         weights[name] = module.weight.detach().to(dtype=torch.float32).clone()
     return weights
+
+
+@torch.no_grad()
+def _copy_sparse_loop_effective_weights(
+    model: torch.nn.Module,
+    states: Dict[str, Dict[str, Any]],
+) -> Dict[str, torch.Tensor]:
+    modules = dict(model.named_modules())
+    expected = {
+        name
+        for name, module in modules.items()
+        if isinstance(module, SparseLoopLinear)
+    }
+    provided = set(states)
+    if provided != expected:
+        raise KeyError(
+            "specific sparsity state mismatch; "
+            f"missing={sorted(expected - provided)}, "
+            f"unexpected={sorted(provided - expected)}"
+        )
+
+    return {
+        name: (
+            modules[name].weight.detach().float().unsqueeze(0)
+            + modules[name].specific_weight.detach().float()
+        ).clone()
+        for name in states
+    }
+
+
+@torch.no_grad()
+def _apply_sparse_loop_reconstruction(
+    model: torch.nn.Module,
+    states: Dict[str, Dict[str, Any]],
+    reference_weights: Dict[str, torch.Tensor],
+) -> Tuple[float, float, Optional[float]]:
+    modules = dict(model.named_modules())
+    squared_error = torch.zeros(
+        (),
+        dtype=torch.float64,
+        device=next(model.parameters()).device,
+    )
+    squared_weight = torch.zeros_like(squared_error)
+    sparse_nonzero = 0
+    sparse_elements = 0
+    target_rates = set()
+
+    for name, state in states.items():
+        module = modules.get(name)
+        if not isinstance(module, SparseLoopLinear):
+            raise KeyError(f"model has no SparseLoopLinear named {name!r}")
+        sparse = state.get("sparse")
+        if not isinstance(sparse, torch.Tensor):
+            raise TypeError(f"saved sparse residual for {name!r} must be a tensor")
+        if sparse.shape != module.specific_weight.shape:
+            raise ValueError(
+                f"{name} shape mismatch: {tuple(sparse.shape)} != "
+                f"{tuple(module.specific_weight.shape)}"
+            )
+
+        sparse = sparse.to(device=module.weight.device, dtype=torch.float32)
+        reconstructed = module.weight.detach().float().unsqueeze(0) + sparse
+        original = reference_weights[name]
+        squared_error += (original - reconstructed).square().sum(dtype=torch.float64)
+        squared_weight += original.square().sum(dtype=torch.float64)
+        sparse_nonzero += int(torch.count_nonzero(sparse).item())
+        sparse_elements += sparse.numel()
+        if "rate_sparsity" in state:
+            target_rates.add(float(state["rate_sparsity"]))
+
+    if len(target_rates) > 1:
+        raise ValueError(
+            "saved sparse-loop states disagree on rate_sparsity: "
+            f"{sorted(target_rates)}"
+        )
+    apply_sparse_residuals(model, states, strict=True)
+    relative_error = torch.sqrt(
+        squared_error / squared_weight.clamp_min(1.0e-24)
+    ).item()
+    actual_density = sparse_nonzero / sparse_elements
+    target_density = next(iter(target_rates)) if target_rates else None
+    return relative_error, actual_density, target_density
 
 
 def _get_decomposition_variants(
@@ -505,7 +618,20 @@ def main() -> None:
             print(f"\nEvaluating {specification['name']}...")
         model = _build_model(specification, device, precision)
         decoder = model.model
-        has_reconstruction = "consensus_state_directory" in specification
+        has_consensus_reconstruction = (
+            "consensus_state_directory" in specification
+        )
+        has_sparse_loop_reconstruction = (
+            "sparse_loop_state_directory" in specification
+        )
+        if has_consensus_reconstruction and has_sparse_loop_reconstruction:
+            raise ValueError(
+                f"{specification['name']} cannot select both consensus and "
+                "sparse-loop state directories"
+            )
+        has_reconstruction = (
+            has_consensus_reconstruction or has_sparse_loop_reconstruction
+        )
         if specification.get("evaluate_raw", True):
             metrics = _evaluate_model(model, batches, device)
             raw_condition = (
@@ -533,7 +659,7 @@ def main() -> None:
                     f"ppl={metrics['perplexity']:.4f}"
                 )
 
-        if has_reconstruction:
+        if has_consensus_reconstruction:
             states = _load_consensus_states(
                 _resolve_path(specification["consensus_state_directory"])
             )
@@ -572,6 +698,51 @@ def main() -> None:
                         f"sparse_density="
                         f"{_format_density(actual_sparse_density)}"
                     )
+            del reference_weights, states
+        elif has_sparse_loop_reconstruction:
+            states = _load_sparse_loop_states(
+                _resolve_path(specification["sparse_loop_state_directory"])
+            )
+            reference_weights = _copy_sparse_loop_effective_weights(
+                model,
+                states,
+            )
+            (
+                relative_error,
+                actual_sparse_density,
+                target_sparse_density,
+            ) = _apply_sparse_loop_reconstruction(
+                model,
+                states,
+                reference_weights,
+            )
+            reconstructed_metrics = _evaluate_model(model, batches, device)
+            reconstructed_result = {
+                "condition": f"{specification['name']}_x_plus_s",
+                "weight_source": "x_plus_s",
+                "decomposition_components": [
+                    "shared_weight",
+                    "sparse_residual",
+                ],
+                "num_loops": decoder.num_loops,
+                "blocks_per_loop": len(decoder.loop_layers),
+                "physical_depth": len(decoder.layers),
+                "logical_depth": decoder.logical_num_layers,
+                "reconstruction_relative_frobenius": relative_error,
+                "sparse_density_target": target_sparse_density,
+                "sparse_density_actual": actual_sparse_density,
+                **reconstructed_metrics,
+            }
+            results.append(reconstructed_result)
+            if rank == 0:
+                print(
+                    f"{specification['name']} x_plus_s: "
+                    f"loss={reconstructed_metrics['loss']:.6f}, "
+                    f"ppl={reconstructed_metrics['perplexity']:.4f}, "
+                    f"relative_frobenius={relative_error:.6f}, "
+                    f"sparse_density="
+                    f"{_format_density(actual_sparse_density)}"
+                )
             del reference_weights, states
         del model
         torch.cuda.empty_cache()
