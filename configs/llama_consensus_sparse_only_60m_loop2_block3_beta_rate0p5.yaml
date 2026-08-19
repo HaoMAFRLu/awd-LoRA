@@ -1,0 +1,56 @@
+seed: 42
+name: llama_consensus_sparse_only_60m_loop2_block3_beta_rate0p5
+model_config: llama_consensus_sparse_only_60m_loop2_block3_model.json
+training_mode: consensus
+output_folder: consensus_sparse_only_loop2_block3_beta_rate0p5
+wandb_project: CONSENSUS_SALAAD
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 20
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+# Global batch size: 128 samples per GPU with four DDP ranks.
+batch_size: 512
+num_workers: 0
+
+# One entry block, a three-block recurrent body executed twice, and one exit
+# block (physical depth 5, logical depth 8).
+
+# Each targeted loop-specific matrix is constrained as X_i = X_hat + S_i.
+# rate_sparsity is the target non-zero rate, so 0.10 means 10% density.
+consensus_salaad:
+  components: [shared, sparse]
+  rho: 1.0e-6
+  rate_sparsity: 0.10
+  beta_dict:
+    init: 0.0
+    mode: adaptive
+    rate_decay: 0.5
+    drate: 0.01
+    start_epoch: 1500
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas: [0.9, 0.95]
+    eps: 1.0e-8
+    weight_decay: 0.0
