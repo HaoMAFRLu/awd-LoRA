@@ -1,0 +1,69 @@
+seed: 42
+name: llama_sparse_loop_60m_loop3_block2
+model_config: llama_60m_model.json
+training_mode: sparse_loop
+output_folder: sparse_loop_loop3_block2
+wandb_project: LOOP_SPECIFIC_SPARSITY
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 11000
+num_freq: 20
+is_wandb: true
+is_monitor: true
+save_interval: 1000
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+
+# Global batch size: 128 samples per GPU with four DDP ranks.
+batch_size: 512
+num_workers: 0
+
+# One entry block, a two-block recurrent body executed three times, and one
+# exit block (physical depth 4, logical depth 8).
+loop:
+  num_entry_blocks: 1
+  num_blocks_per_loop: 2
+  num_exit_blocks: 1
+  num_loops: 3
+
+# Forward: X + R_i. ADMM constrains R_i = S_i without a consensus variable.
+# rate_sparsity is the target non-zero rate, so 0.10 means 10% density.
+specific_sparsity:
+  rho: 1.0
+  rate_sparsity: 0.10
+  beta_dict:
+    init: 0.0
+    mode: adaptive
+    rate_decay: 0.002
+    drate: 0.01
+    start_epoch: 1500
+  target_modules:
+    - self_attn.q_proj
+    - self_attn.k_proj
+    - self_attn.v_proj
+    - self_attn.o_proj
+    - mlp.gate_proj
+    - mlp.up_proj
+    - mlp.down_proj
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2200
+    min_lr_ratio: 0.1
+
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas: [0.9, 0.95]
+    eps: 1.0e-8
+    weight_decay: 0.0

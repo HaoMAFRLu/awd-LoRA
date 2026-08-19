@@ -37,6 +37,7 @@ def _write_effective_model_config(
 
     training_mode = training_config.get("training_mode")
     if training_mode == "consensus":
+        model_config.pop("specific_sparsity", None)
         consensus_config = training_config.get("consensus_salaad")
         if not isinstance(consensus_config, dict):
             raise ValueError(
@@ -51,10 +52,12 @@ def _write_effective_model_config(
                     "when training config selects consensus components"
                 )
             model_consensus["components"] = components
-    elif training_mode == "loop":
+    elif training_mode in {"loop", "sparse_loop"}:
         loop_config = training_config.get("loop")
         if not isinstance(loop_config, dict):
-            raise ValueError("training_mode='loop' requires a loop section")
+            raise ValueError(
+                f"training_mode={training_mode!r} requires a loop section"
+            )
 
         counts = {
             "num_entry_blocks": loop_config.get("num_entry_blocks", 1),
@@ -73,10 +76,66 @@ def _write_effective_model_config(
                     f"loop.{name} must be an integer >= {minimum}, got {value!r}"
                 )
 
-        # A plain loop reuses the exact same physical blocks on every pass.
-        # It therefore must not inherit loop-specific ConsensusLinear weights
-        # from a consensus model config.
+        # These modes start from ordinary recurrent weights and must not
+        # inherit a different loop-specific parameterization.
         model_config.pop("consensus_salaad", None)
+        model_config.pop("specific_sparsity", None)
+
+        if training_mode == "sparse_loop":
+            sparsity_config = training_config.get("specific_sparsity")
+            if not isinstance(sparsity_config, dict):
+                raise ValueError(
+                    "training_mode='sparse_loop' requires a "
+                    "specific_sparsity section"
+                )
+            target_modules = sparsity_config.get("target_modules")
+            if (
+                not isinstance(target_modules, list)
+                or not target_modules
+                or not all(isinstance(name, str) and name for name in target_modules)
+                or len(set(target_modules)) != len(target_modules)
+            ):
+                raise ValueError(
+                    "specific_sparsity.target_modules must be a non-empty "
+                    "list of unique module names"
+                )
+
+            max_num_loops = loop_config.get("max_num_loops")
+            sampling = loop_config.get("sampling")
+            if max_num_loops is None and sampling is not None:
+                if not isinstance(sampling, dict):
+                    raise TypeError("loop.sampling must be a dictionary")
+                values = sampling.get("values")
+                if (
+                    not isinstance(values, list)
+                    or not values
+                    or not all(
+                        isinstance(value, int)
+                        and not isinstance(value, bool)
+                        and value > 0
+                        for value in values
+                    )
+                ):
+                    raise ValueError(
+                        "loop.sampling.values must contain positive integers"
+                    )
+                max_num_loops = max(values)
+            if max_num_loops is None:
+                max_num_loops = counts["num_loops"]
+            if (
+                not isinstance(max_num_loops, int)
+                or isinstance(max_num_loops, bool)
+                or max_num_loops < counts["num_loops"]
+            ):
+                raise ValueError(
+                    "loop.max_num_loops must be an integer no smaller than "
+                    f"loop.num_loops ({counts['num_loops']})"
+                )
+            counts["max_num_loops"] = max_num_loops
+            model_config["specific_sparsity"] = {
+                "target_modules": target_modules
+            }
+
         model_config["loop"] = counts
         model_config["num_hidden_layers"] = (
             counts["num_entry_blocks"]

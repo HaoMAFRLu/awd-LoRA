@@ -8,9 +8,11 @@ import datasets.distributed
 from loguru import logger
 
 from models.consensus import ConsensusLinear, get_consensus_components
+from models.sparse_loop import SparseLoopLinear
 from salad.consensus import ConsensusADMM
 from salad.loop import LoopSampler
 from salad.salad_solver import SALAD
+from salad.sparse_loop import SparseLoopADMM
 from salad.utils import *
 from salad.register import *
 from salad.simple_timer import SimpleTimer
@@ -58,10 +60,12 @@ class SALADTrainer():
             raise ValueError("save_interval must be a positive integer")
 
         self.training_mode = config.get('training_mode', 'salad')
-        if self.training_mode not in {'salad', 'vanilla', 'loop', 'consensus'}:
+        if self.training_mode not in {
+            'salad', 'vanilla', 'loop', 'consensus', 'sparse_loop'
+        }:
             raise ValueError(
                 "training_mode must be 'salad', 'vanilla', 'loop', or "
-                "'consensus'; "
+                "'consensus', or 'sparse_loop'; "
                 f"got {self.training_mode!r}"
             )
         # self.rank, self.world_size = self._init_distributed()
@@ -156,6 +160,30 @@ class SALADTrainer():
             )
             self.consensus_has_sparse = 'sparse' in self.consensus_components
             self.cfg_layers = self.get_consensus_layers(self.model)
+            self._configure_loop_sampling()
+        elif self.training_mode == 'sparse_loop':
+            loop_model = getattr(self.model, 'model', None)
+            model_targets = tuple(
+                getattr(loop_model, 'specific_sparsity_target_modules', ())
+            )
+            if not model_targets:
+                raise ValueError(
+                    "training_mode='sparse_loop' requires specific_sparsity "
+                    "in the model config"
+                )
+            sparsity_config = self.config.get('specific_sparsity')
+            if not isinstance(sparsity_config, dict):
+                raise ValueError(
+                    "training_mode='sparse_loop' requires a "
+                    "specific_sparsity section"
+                )
+            configured_targets = sparsity_config.get('target_modules')
+            if configured_targets is not None and tuple(configured_targets) != model_targets:
+                raise ValueError(
+                    "training and model specific_sparsity targets disagree: "
+                    f"{tuple(configured_targets)} != {model_targets}"
+                )
+            self.cfg_layers = self.get_sparse_loop_layers(self.model)
             self._configure_loop_sampling()
         else:
             self.cfg_layers = [{'name': 'layers.0.self_attn.q_proj'}]  # dummy for vanilla training
@@ -259,6 +287,30 @@ class SALADTrainer():
                 entry['name']: index for index, entry in enumerate(self.cfg_layers)
             }
 
+        elif self.training_mode == 'sparse_loop':
+            sparsity_config = self.config.get('specific_sparsity')
+            if not isinstance(sparsity_config, dict):
+                raise ValueError(
+                    "training_mode='sparse_loop' requires a "
+                    "specific_sparsity section"
+                )
+
+            self.sparse_loop_solvers = []
+            self.assigned_layers, self.owner_map = self.assign_layers(
+                self.cfg_layers, self.rank, self.world_size
+            )
+            modules = dict(self.ddp_model.module.named_modules())
+            for entry in self.cfg_layers:
+                name = entry['name']
+                if name in self.assigned_layers:
+                    self.sparse_loop_solvers.append(
+                        SparseLoopADMM(name, modules[name], sparsity_config)
+                    )
+
+            self.name2idx = {
+                entry['name']: index for index, entry in enumerate(self.cfg_layers)
+            }
+
         self.layer_info = {entry['name']: {
             'loss': [],
             'rank': [],
@@ -279,7 +331,7 @@ class SALADTrainer():
         self.layer_info['avg_loss_penalty'] = []
         self.layer_info['avg_diff'] = []
         self.layer_info['num_tokens'] = []
-        if self.training_mode in {'loop', 'consensus'}:
+        if self.training_mode in {'loop', 'consensus', 'sparse_loop'}:
             self.layer_info['num_loops'] = []
     @staticmethod    
     def canon(name: str) -> str:
@@ -347,15 +399,33 @@ class SALADTrainer():
             )
         return layers
 
+    @staticmethod
+    def get_sparse_loop_layers(model: nn.Module) -> list:
+        layers = [
+            {'name': name}
+            for name, module in model.named_modules()
+            if isinstance(module, SparseLoopLinear)
+        ]
+        if not layers:
+            raise ValueError(
+                "training_mode='sparse_loop' requires SparseLoopLinear "
+                "modules in the model"
+            )
+        return layers
+
     def _configure_plain_loop(self) -> None:
         """Validate an exactly weight-tied, fixed-depth looped model."""
         loop_model = getattr(self.model, 'model', None)
         if loop_model is None or not getattr(loop_model, 'loop_layers', ()):
             raise ValueError("training_mode='loop' requires a looped model")
-        if any(isinstance(module, ConsensusLinear) for module in self.model.modules()):
+        loop_specific_types = (ConsensusLinear, SparseLoopLinear)
+        if any(
+            isinstance(module, loop_specific_types)
+            for module in self.model.modules()
+        ):
             raise ValueError(
                 "training_mode='loop' uses shared nn.Linear weights and cannot "
-                "contain ConsensusLinear modules"
+                "contain loop-specific linear modules"
             )
 
         loop_config = self.config.get('loop')
@@ -384,7 +454,9 @@ class SALADTrainer():
     def _configure_loop_sampling(self) -> None:
         loop_model = getattr(self.model, 'model', None)
         if loop_model is None or not getattr(loop_model, 'loop_layers', ()):
-            raise ValueError("consensus training requires a looped model")
+            raise ValueError(
+                f"{self.training_mode} training requires a looped model"
+            )
 
         self.current_num_loops = loop_model.num_loops
         self.loop_sampler = None
@@ -413,8 +485,10 @@ class SALADTrainer():
             self.loop_counts = {self.current_num_loops: 0}
 
     def sample_num_loops(self) -> int:
-        if self.training_mode != 'consensus':
-            raise RuntimeError("loop sampling is only used by consensus training")
+        if self.training_mode not in {'consensus', 'sparse_loop'}:
+            raise RuntimeError(
+                "loop sampling is only used by consensus or sparse_loop training"
+            )
         if self.loop_sampler is None:
             sampled = self.current_num_loops
         elif self.rank == 0:
@@ -559,6 +633,69 @@ class SALADTrainer():
             info['total_rank'].append(int(row[10].item()))
             info['total_elements'].append(int(row[11].item()))
 
+    def get_sparse_loop_penalty(self) -> torch.Tensor:
+        penalty = torch.zeros((), device=self.device, dtype=torch.float32)
+        for solver in self.sparse_loop_solvers:
+            penalty = penalty + solver.penalty()
+        # Each solver lives on one owner rank. Compensate for DDP's gradient
+        # averaging so the global gradient contains every sparse penalty once.
+        return penalty * self.world_size
+
+    @torch.no_grad()
+    def get_sparse_loop_diff(self) -> float:
+        if not self.cfg_layers:
+            return 0.0
+        difference = torch.zeros((), device=self.device, dtype=torch.float32)
+        for solver in self.sparse_loop_solvers:
+            difference += solver.stats()['relative_residual']
+        dist.all_reduce(difference, op=dist.ReduceOp.SUM)
+        return difference.item() / len(self.cfg_layers)
+
+    @torch.no_grad()
+    def update_sparse_loop(self) -> None:
+        for solver in self.sparse_loop_solvers:
+            solver.step()
+
+    @torch.no_grad()
+    def sync_sparse_loop_info(self) -> None:
+        if not self.cfg_layers:
+            return
+        rows = torch.zeros(
+            len(self.cfg_layers), 12, device=self.device, dtype=torch.float32
+        )
+        for solver in self.sparse_loop_solvers:
+            stats = solver.stats()
+            row = rows[self.name2idx[solver.name]]
+            row[1] = stats['beta']
+            row[3] = stats['dbeta']
+            row[4] = solver.rho
+            row[6] = stats['rate_decay_beta']
+            row[7] = stats['relative_residual']
+            row[9] = stats['nonzero']
+            row[11] = stats['total_elements']
+        dist.all_reduce(rows, op=dist.ReduceOp.SUM)
+        if self.rank == 0:
+            self.gather_sparse_loop_info(rows)
+
+    def gather_sparse_loop_info(self, rows: torch.Tensor) -> None:
+        for name, index in self.name2idx.items():
+            row = rows[index]
+            info = self.layer_info[name]
+            info['alpha_mode'].append('N/A')
+            info['beta_mode'].append('I-controller')
+            info['alpha'].append(0.0)
+            info['beta'].append(row[1].item())
+            info['dalpha'].append(0.0)
+            info['dbeta'].append(row[3].item())
+            info['rho'].append(row[4].item())
+            info['rate_decay_alpha'].append(0.0)
+            info['rate_decay_beta'].append(row[6].item())
+            info['loss'].append(row[7].item())
+            info['rank'].append(0)
+            info['nonzero'].append(int(row[9].item()))
+            info['total_rank'].append(0)
+            info['total_elements'].append(int(row[11].item()))
+
     def single_step_train(self, batch, labels, gradient: str='coupled'):
         if self.training_mode == 'salad':
             # reset the gradient
@@ -634,6 +771,26 @@ class SALADTrainer():
             task_loss = self.ddp_model(**batch, labels=labels).loss
             loss_penalty = self.get_consensus_penalty()
             global_avg_diff = self.get_consensus_diff()
+            (task_loss + loss_penalty).backward()
+
+            if self.is_clip > 0:
+                torch.nn.utils.clip_grad_norm_(
+                    self.ddp_model.parameters(), max_norm=self.is_clip
+                )
+
+            self.optimizer.step()
+            self.lr_scheduler.step()
+
+            global_avg_loss = self.get_global_loss(task_loss.detach())
+            global_avg_loss_penalty = self.get_global_loss(loss_penalty.detach())
+            return global_avg_loss, global_avg_loss_penalty, global_avg_diff
+        elif self.training_mode == 'sparse_loop':
+            self.optimizer.zero_grad(set_to_none=True)
+            self.sample_num_loops()
+
+            task_loss = self.ddp_model(**batch, labels=labels).loss
+            loss_penalty = self.get_sparse_loop_penalty()
+            global_avg_diff = self.get_sparse_loop_diff()
             (task_loss + loss_penalty).backward()
 
             if self.is_clip > 0:
@@ -826,6 +983,16 @@ class SALADTrainer():
                 atomic_torch_save(
                     state,
                     os.path.join(path_folder, f'consensus_rank{self.rank}.pth'),
+                )
+        elif self.training_mode == 'sparse_loop':
+            state = {
+                solver.name: solver.state_dict()
+                for solver in self.sparse_loop_solvers
+            }
+            if state:
+                atomic_torch_save(
+                    state,
+                    os.path.join(path_folder, f'sparse_loop_rank{self.rank}.pth'),
                 )
 
     # def get_local_single_weight(self,
@@ -1022,12 +1189,15 @@ class SALADTrainer():
         losses = {'avg_loss': loss,
                   'avg_loss_penalty': loss_penalty,
                   'avg_diff': loss_diff}
-        if self.training_mode in {'loop', 'consensus'}:
+        if self.training_mode in {'loop', 'consensus', 'sparse_loop'}:
             losses['num_loops'] = self.current_num_loops
 
         if self.training_mode == 'consensus':
             has_low_rank = self.consensus_has_low_rank
             has_sparse = self.consensus_has_sparse
+        elif self.training_mode == 'sparse_loop':
+            has_low_rank = False
+            has_sparse = True
         else:
             has_low_rank = True
             has_sparse = True
@@ -1120,7 +1290,7 @@ class SALADTrainer():
             self.layer_info['avg_loss_penalty'].append(avg_loss_penalty)
             self.layer_info['avg_diff'].append(avg_diff)
             self.layer_info['num_tokens'].append(num_tokens)
-            if self.training_mode in {'loop', 'consensus'}:
+            if self.training_mode in {'loop', 'consensus', 'sparse_loop'}:
                 self.layer_info['num_loops'].append(self.current_num_loops)
             
             ep_loss += avg_loss
@@ -1164,6 +1334,11 @@ class SALADTrainer():
                         self.update_consensus()
                     with self.timers['sync']:
                         self.sync_consensus_info()
+                elif self.training_mode == 'sparse_loop':
+                    with self.timers['S']:
+                        self.update_sparse_loop()
+                    with self.timers['sync']:
+                        self.sync_sparse_loop_info()
                 else:
                     self.generate_empty_layer_info()
 

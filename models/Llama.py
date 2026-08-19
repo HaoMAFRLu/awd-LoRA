@@ -32,7 +32,9 @@ from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
 from transformers.models.llama.configuration_llama import LlamaConfig
 
-from models.consensus import ConsensusLinear, apply_linear, get_consensus_components
+from models.consensus import ConsensusLinear, get_consensus_components
+from models.loop_linear import apply_linear
+from models.sparse_loop import SparseLoopLinear
 logger = logging.get_logger(__name__)
 
 _CONFIG_FOR_DOC = "LlamaConfig"
@@ -459,7 +461,25 @@ class LlamaModel(LlamaPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
         self.consensus_components = ()
-        self.max_num_loops, self.consensus_target_modules = self._install_consensus_layers(config)
+        self.consensus_target_modules = ()
+        self.specific_sparsity_target_modules = ()
+        if (
+            getattr(config, "consensus_salaad", None)
+            and getattr(config, "specific_sparsity", None)
+        ):
+            raise ValueError(
+                "consensus_salaad and specific_sparsity are mutually exclusive"
+            )
+        if getattr(config, "specific_sparsity", None):
+            (
+                self.max_num_loops,
+                self.specific_sparsity_target_modules,
+            ) = self._install_sparse_loop_layers(config)
+        else:
+            (
+                self.max_num_loops,
+                self.consensus_target_modules,
+            ) = self._install_consensus_layers(config)
 
     @staticmethod
     def _get_loop_counts(config: LlamaConfig) -> Optional[Tuple[int, int, int]]:
@@ -641,6 +661,71 @@ class LlamaModel(LlamaPreTrainedModel):
                 parent_name, _, child_name = module_name.rpartition(".")
                 parent = decoder_layer.get_submodule(parent_name) if parent_name else decoder_layer
                 setattr(parent, child_name, ConsensusLinear.from_linear(linear, num_loop_weights))
+
+        return num_loop_weights, tuple(target_modules)
+
+    def _install_sparse_loop_layers(
+        self, config: LlamaConfig
+    ) -> Tuple[int, Tuple[str, ...]]:
+        """Add one trainable residual per loop to recurrent linear layers."""
+        sparsity = getattr(config, "specific_sparsity", None)
+        if not sparsity:
+            return 0, ()
+        if not self.loop_layers:
+            raise ValueError("specific_sparsity requires a looped model")
+        if not isinstance(sparsity, dict):
+            raise TypeError("model config 'specific_sparsity' must be a dictionary")
+
+        loop_config = getattr(config, "loop", {})
+        num_loop_weights = loop_config.get("max_num_loops", self.num_loops)
+        if (
+            not isinstance(num_loop_weights, int)
+            or isinstance(num_loop_weights, bool)
+            or num_loop_weights < self.num_loops
+        ):
+            raise ValueError(
+                "loop.max_num_loops must be an integer no smaller "
+                f"than loop.num_loops ({self.num_loops}), got {num_loop_weights!r}"
+            )
+
+        target_modules = sparsity.get("target_modules")
+        if (
+            not isinstance(target_modules, list)
+            or not target_modules
+            or not all(isinstance(name, str) and name for name in target_modules)
+            or len(set(target_modules)) != len(target_modules)
+        ):
+            raise ValueError(
+                "specific_sparsity.target_modules must be a non-empty list of "
+                "unique module names"
+            )
+
+        for layer_index in self.loop_layers:
+            decoder_layer = self.layers[layer_index]
+            for module_name in target_modules:
+                try:
+                    linear = decoder_layer.get_submodule(module_name)
+                except AttributeError as error:
+                    raise KeyError(
+                        f"decoder layer {layer_index} has no module {module_name!r}"
+                    ) from error
+                if not isinstance(linear, nn.Linear):
+                    raise TypeError(
+                        f"layers.{layer_index}.{module_name} must be nn.Linear, "
+                        f"got {type(linear).__name__}"
+                    )
+
+                parent_name, _, child_name = module_name.rpartition(".")
+                parent = (
+                    decoder_layer.get_submodule(parent_name)
+                    if parent_name
+                    else decoder_layer
+                )
+                setattr(
+                    parent,
+                    child_name,
+                    SparseLoopLinear.from_linear(linear, num_loop_weights),
+                )
 
         return num_loop_weights, tuple(target_modules)
 

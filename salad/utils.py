@@ -20,6 +20,7 @@ import io
 
 from salad.register import *
 from models.consensus import ConsensusLinear
+from models.sparse_loop import SparseLoopLinear
 
 def mkdir(path: Path) -> None:
     """Check if the folder exists and create it if it does not."""
@@ -281,7 +282,7 @@ def get_linear_layers_name(model):
     ]
     linears = [
         name for name, module in model.named_modules()
-        if isinstance(module, (torch.nn.Linear, ConsensusLinear))
+        if isinstance(module, (torch.nn.Linear, ConsensusLinear, SparseLoopLinear))
     ]
     return embeddings + linears
 

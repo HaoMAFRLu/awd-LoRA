@@ -1,0 +1,68 @@
+seed: 42
+name: llama_sparse_loop_debug
+model_config: llama_60m_model.json
+training_mode: sparse_loop
+output_folder: sparse_loop_debug
+wandb_project: LOOP_SPECIFIC_SPARSITY
+
+tokenizer_name: t5-base
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: train
+  streaming: true
+
+num_total_iters: 10
+num_freq: 2
+is_wandb: false
+is_monitor: true
+save_interval: 10
+is_clip: 1.0
+max_length: 256
+seed_for_shuffle: 42
+batch_size: 2
+num_workers: 0
+
+# Local debug structure: one entry block, a two-block recurrent body executed
+# twice, and one exit block (physical depth 4, logical depth 6).
+loop:
+  num_entry_blocks: 1
+  num_blocks_per_loop: 2
+  num_exit_blocks: 1
+  num_loops: 2
+
+# Forward: X + R_i. ADMM constrains R_i = S_i independently for every
+# logical loop. As in SALAAD, an I-controller adjusts beta toward the target
+# non-zero rate; rate_sparsity=0.10 therefore means 10% density.
+specific_sparsity:
+  rho: 1.0
+  rate_sparsity: 0.10
+  beta_dict:
+    init: 0.0
+    mode: adaptive
+    rate_decay: 0.002
+    drate: 0.01
+    start_epoch: 1500
+  target_modules:
+    - self_attn.q_proj
+    - self_attn.k_proj
+    - self_attn.v_proj
+    - self_attn.o_proj
+    - mlp.gate_proj
+    - mlp.up_proj
+    - mlp.down_proj
+
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 2
+    min_lr_ratio: 0.1
+
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.003
+    betas: [0.9, 0.95]
+    eps: 1.0e-8
+    weight_decay: 0.0

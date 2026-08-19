@@ -9,6 +9,7 @@ from transformers.models.llama.configuration_llama import LlamaConfig
 
 from models.Llama import LlamaForCausalLM
 from models.consensus import ConsensusLinear
+from models.sparse_loop import SparseLoopLinear
 from scripts.train_salad import _write_effective_model_config
 
 
@@ -56,6 +57,9 @@ class PlainLoopTests(unittest.TestCase):
         self.assertIsInstance(decoder.layers[1].self_attn.q_proj, nn.Linear)
         self.assertFalse(
             any(isinstance(module, ConsensusLinear) for module in model.modules())
+        )
+        self.assertFalse(
+            any(isinstance(module, SparseLoopLinear) for module in model.modules())
         )
 
         input_ids = torch.randint(1, 32, (2, 6))
@@ -107,6 +111,7 @@ class PlainLoopTests(unittest.TestCase):
         self.assertEqual(effective["num_hidden_layers"], 5)
         self.assertFalse(effective["use_cache"])
         self.assertNotIn("consensus_salaad", effective)
+        self.assertNotIn("specific_sparsity", effective)
 
 
 if __name__ == "__main__":
