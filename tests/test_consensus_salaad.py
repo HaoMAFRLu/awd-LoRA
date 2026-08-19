@@ -10,6 +10,7 @@ from salad.consensus import (
     ConsensusADMM,
     apply_decomposition,
     compose_decomposition,
+    magnitude_prune_sparse,
     singular_value_threshold,
     soft_threshold,
 )
@@ -103,6 +104,24 @@ class ConsensusSALAADTests(unittest.TestCase):
             singular_value_threshold(matrix, 1.5),
             torch.diag(torch.tensor([1.5, 0.0])),
         )
+
+    def test_sparse_magnitude_pruning_is_independent_per_loop_matrix(self):
+        sparse = torch.tensor([
+            [[0.0, -1.0, 4.0], [2.0, 0.0, 3.0]],
+            [[-5.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        ])
+
+        pruned = magnitude_prune_sparse(sparse, target_density=0.5)
+
+        torch.testing.assert_close(
+            pruned[0],
+            torch.tensor([[0.0, 0.0, 4.0], [2.0, 0.0, 3.0]]),
+        )
+        # The second matrix is already below 50% density, so pruning must not
+        # create a third non-zero element.
+        torch.testing.assert_close(pruned[1], sparse[1])
+        self.assertEqual(torch.count_nonzero(pruned[0]).item(), 3)
+        self.assertEqual(torch.count_nonzero(pruned[1]).item(), 2)
 
     def test_consensus_step_uses_mean_and_reconstructs_effective_weights(self):
         effective = nn.Parameter(

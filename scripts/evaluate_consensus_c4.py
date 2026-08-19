@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from salad.register import get_data, get_model, get_preprocessed_dataset, get_tokenizer
-from salad.consensus import apply_decomposition, compose_decomposition
+from salad.consensus import compose_decomposition, magnitude_prune_sparse
 from models.consensus import ConsensusLinear
 from salad.utils import hf_login_once, set_seed
 
@@ -102,27 +102,66 @@ def _apply_reconstruction(
     states: Dict[str, Dict[str, Any]],
     reference_weights: Dict[str, torch.Tensor],
     components: Tuple[str, ...],
-) -> float:
+    sparse_density: Optional[float] = None,
+) -> Tuple[float, Optional[float]]:
     modules = dict(model.named_modules())
-    squared_error = torch.zeros((), dtype=torch.float64, device=next(model.parameters()).device)
+    expected = {
+        name
+        for name, module in modules.items()
+        if isinstance(module, ConsensusLinear)
+    }
+    provided = set(states)
+    if provided != expected:
+        raise KeyError(
+            "consensus state mismatch; "
+            f"missing={sorted(expected - provided)}, "
+            f"unexpected={sorted(provided - expected)}"
+        )
+
+    squared_error = torch.zeros(
+        (),
+        dtype=torch.float64,
+        device=next(model.parameters()).device,
+    )
     squared_weight = torch.zeros_like(squared_error)
+    sparse_nonzero = 0
+    sparse_elements = 0
     for name, state in states.items():
         module = modules.get(name)
         if not isinstance(module, ConsensusLinear):
             raise KeyError(f"model has no ConsensusLinear named {name!r}")
-        reconstructed = compose_decomposition(state, components).to(
+
+        state_for_composition = state
+        if sparse_density is not None:
+            state_for_composition = dict(state)
+            state_for_composition["sparse"] = magnitude_prune_sparse(
+                state["sparse"],
+                sparse_density,
+            )
+        if "sparse" in components:
+            sparse = state_for_composition["sparse"]
+            sparse_nonzero += int(torch.count_nonzero(sparse).item())
+            sparse_elements += sparse.numel()
+
+        reconstructed = compose_decomposition(
+            state_for_composition,
+            components,
+        ).to(
             device=module.weight.device,
             dtype=torch.float32,
         )
         original = reference_weights[name]
         squared_error += (original - reconstructed).square().sum(dtype=torch.float64)
         squared_weight += original.square().sum(dtype=torch.float64)
+        module.weight.copy_(reconstructed.to(dtype=module.weight.dtype))
 
     relative_error = torch.sqrt(
         squared_error / squared_weight.clamp_min(1.0e-24)
     ).item()
-    apply_decomposition(model, states, components=components, strict=True)
-    return relative_error
+    actual_sparse_density = (
+        sparse_nonzero / sparse_elements if sparse_elements else None
+    )
+    return relative_error, actual_sparse_density
 
 
 @torch.no_grad()
@@ -161,6 +200,7 @@ def _get_decomposition_variants(
             {
                 "name": "reconstructed",
                 "components": components,
+                "sparse_density": None,
             }
         ]
     if not isinstance(variants, list) or not variants:
@@ -173,6 +213,7 @@ def _get_decomposition_variants(
             raise TypeError("each decomposition variant must be a dictionary")
         name = variant.get("name")
         components = variant.get("components")
+        sparse_density = variant.get("sparse_density")
         if not isinstance(name, str) or not name:
             raise ValueError("each decomposition variant requires a name")
         if name in seen_names:
@@ -194,8 +235,31 @@ def _get_decomposition_variants(
                 f"decomposition variant {name!r} has unknown components: "
                 f"{sorted(unknown)}"
             )
+        if sparse_density is not None:
+            if isinstance(sparse_density, bool) or not isinstance(
+                sparse_density, (int, float)
+            ):
+                raise TypeError(
+                    f"decomposition variant {name!r} sparse_density must be "
+                    "a real number"
+                )
+            sparse_density = float(sparse_density)
+            if not 0.0 <= sparse_density <= 1.0:
+                raise ValueError(
+                    f"decomposition variant {name!r} sparse_density must be "
+                    f"in [0, 1], got {sparse_density}"
+                )
+            if "sparse" not in components:
+                raise ValueError(
+                    f"decomposition variant {name!r} specifies sparse_density "
+                    "without selecting the sparse component"
+                )
         seen_names.add(name)
-        normalized.append({"name": name, "components": tuple(components)})
+        normalized.append({
+            "name": name,
+            "components": tuple(components),
+            "sparse_density": sparse_density,
+        })
     return normalized
 
 
@@ -370,26 +434,33 @@ def _write_results(
         yaml.safe_dump(config, file, sort_keys=False)
 
 
+def _format_density(value: Optional[float]) -> str:
+    return "-" if value is None else f"{100.0 * value:.2f}%"
+
+
 def _print_results(results: List[Dict[str, Any]]) -> None:
     print("\nConsensus structure evaluation")
-    print("=" * 132)
+    print("=" * 178)
     print(
-        f"{'condition':<32} {'source':>13} {'loops':>5} {'blocks':>6} {'physical':>8} "
+        f"{'condition':<58} {'source':>28} {'loops':>5} {'blocks':>6} {'physical':>8} "
         f"{'logical':>7} {'loss':>10} {'delta':>10} {'ppl':>10} "
-        f"{'tokens':>12} {'tokens/s':>12}"
+        f"{'S target':>10} {'S actual':>10} {'tokens':>12} {'tokens/s':>12}"
     )
-    print("-" * 132)
+    print("-" * 178)
     for result in results:
         print(
-            f"{result['condition']:<32} {result['weight_source']:>13} "
+            f"{result['condition']:<58} {result['weight_source']:>28} "
             f"{result['num_loops']:>5d} "
             f"{result['blocks_per_loop']:>6d} {result['physical_depth']:>8d} "
             f"{result['logical_depth']:>7d} {result['loss']:>10.6f} "
             f"{result['loss_delta_vs_vanilla']:>10.6f} "
-            f"{result['perplexity']:>10.4f} {result['tokens']:>12d} "
+            f"{result['perplexity']:>10.4f} "
+            f"{_format_density(result['sparse_density_target']):>10} "
+            f"{_format_density(result['sparse_density_actual']):>10} "
+            f"{result['tokens']:>12d} "
             f"{result['tokens_per_second']:>12.0f}"
         )
-    print("=" * 132)
+    print("=" * 178)
 
 
 def main() -> None:
@@ -451,6 +522,8 @@ def main() -> None:
                 "physical_depth": len(decoder.layers),
                 "logical_depth": decoder.logical_num_layers,
                 "reconstruction_relative_frobenius": None,
+                "sparse_density_target": None,
+                "sparse_density_actual": None,
                 **metrics,
             }
             results.append(result)
@@ -467,11 +540,13 @@ def main() -> None:
             reference_weights = _copy_consensus_weights(model, states)
             for variant in _get_decomposition_variants(specification, states):
                 components = variant["components"]
-                relative_error = _apply_reconstruction(
+                sparse_density = variant["sparse_density"]
+                relative_error, actual_sparse_density = _apply_reconstruction(
                     model,
                     states,
                     reference_weights,
                     components,
+                    sparse_density,
                 )
                 reconstructed_metrics = _evaluate_model(model, batches, device)
                 reconstructed_result = {
@@ -483,6 +558,8 @@ def main() -> None:
                     "physical_depth": len(decoder.layers),
                     "logical_depth": decoder.logical_num_layers,
                     "reconstruction_relative_frobenius": relative_error,
+                    "sparse_density_target": sparse_density,
+                    "sparse_density_actual": actual_sparse_density,
                     **reconstructed_metrics,
                 }
                 results.append(reconstructed_result)
@@ -491,7 +568,9 @@ def main() -> None:
                         f"{specification['name']} {variant['name']}: "
                         f"loss={reconstructed_metrics['loss']:.6f}, "
                         f"ppl={reconstructed_metrics['perplexity']:.4f}, "
-                        f"relative_frobenius={relative_error:.6f}"
+                        f"relative_frobenius={relative_error:.6f}, "
+                        f"sparse_density="
+                        f"{_format_density(actual_sparse_density)}"
                     )
             del reference_weights, states
         del model

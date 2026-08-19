@@ -92,6 +92,57 @@ def soft_threshold(value: torch.Tensor, threshold: float) -> torch.Tensor:
     return value.sign() * (value.abs() - threshold).clamp_min(0.0)
 
 
+@torch.no_grad()
+def magnitude_prune_sparse(
+    value: torch.Tensor,
+    target_density: float,
+) -> torch.Tensor:
+    """Keep the largest-magnitude entries in each sparse matrix.
+
+    A 2-D input is treated as one matrix.  For a 3-D consensus tensor, each
+    loop slice is pruned independently so every loop-specific matrix has the
+    requested density.  Existing zero entries are never turned into non-zero
+    entries when the input is already sparser than the target.
+    """
+    if isinstance(target_density, bool) or not isinstance(
+        target_density, (int, float)
+    ):
+        raise TypeError("target_density must be a real number")
+    target_density = float(target_density)
+    if not 0.0 <= target_density <= 1.0:
+        raise ValueError(
+            f"target_density must be in [0, 1], got {target_density}"
+        )
+    if value.ndim not in (2, 3):
+        raise ValueError(
+            "value must be one matrix or a stack of loop-specific matrices, "
+            f"got shape {tuple(value.shape)}"
+        )
+
+    matrices = value.unsqueeze(0) if value.ndim == 2 else value
+    flattened = matrices.reshape(matrices.shape[0], -1)
+    pruned = torch.zeros_like(flattened)
+    target_nonzero = int(flattened.shape[1] * target_density)
+
+    if target_nonzero >= flattened.shape[1]:
+        return value.clone()
+    if target_nonzero > 0:
+        for matrix_index, matrix in enumerate(flattened):
+            keep = min(target_nonzero, int(torch.count_nonzero(matrix).item()))
+            if keep == 0:
+                continue
+            indices = torch.topk(
+                matrix.abs(),
+                keep,
+                largest=True,
+                sorted=False,
+            ).indices
+            pruned[matrix_index, indices] = matrix[indices]
+
+    result = pruned.reshape_as(matrices)
+    return result.squeeze(0) if value.ndim == 2 else result
+
+
 def singular_value_threshold(value: torch.Tensor, threshold: float) -> torch.Tensor:
     """Proximal operator for the nuclear norm of one matrix."""
     if value.ndim != 2:
