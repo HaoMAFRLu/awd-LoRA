@@ -1,0 +1,93 @@
+seed: 43
+seed_for_shuffle: 43
+
+tokenizer_name: t5-base
+max_length: 256
+precision: bfloat16
+
+data:
+  type: text
+  name: allenai/c4
+  subset: en
+  split: validation
+  streaming: true
+
+# Match every previous Consensus/Looped comparison exactly.
+batch_size: 512
+num_eval_batches: 250
+num_workers: 0
+
+checkpoints:
+  - name: vanilla_reference
+    model_config: configs/llama_60m_model.json
+    checkpoint: data/looped_transformer/llama_vanilla_60m/20260813_184120/model.pth
+    physical_depth: 8
+    logical_depth: 8
+    num_loops: 1
+    blocks_per_loop: 0
+
+  - name: sparse_only_rate0p1_loop2_block3
+    model_config: configs/llama_consensus_sparse_only_60m_loop2_block3_model.json
+    checkpoint: data/consensus_sparse_only_loop2_block3_beta_rate0p1/llama_consensus_sparse_only_60m_loop2_block3_beta_rate0p1/20260819_233837/model.pth
+    consensus_state_directory: data/consensus_sparse_only_loop2_block3_beta_rate0p1/llama_consensus_sparse_only_60m_loop2_block3_beta_rate0p1/20260819_233837
+    evaluate_raw: true
+    decomposition_variants:
+      - name: xhat_plus_s
+        components: [shared, sparse]
+      - name: xhat_plus_s_pruned_10pct
+        components: [shared, sparse]
+        sparse_density: 0.10
+    physical_depth: 5
+    logical_depth: 8
+    num_loops: 2
+    blocks_per_loop: 3
+
+  - name: sparse_only_rate0p1_loop3_block2
+    model_config: configs/llama_consensus_sparse_only_60m_loop3_block2_model.json
+    checkpoint: data/consensus_sparse_only_loop3_block2_beta_rate0p1/llama_consensus_sparse_only_60m_loop3_block2_beta_rate0p1/20260819_233837/model.pth
+    consensus_state_directory: data/consensus_sparse_only_loop3_block2_beta_rate0p1/llama_consensus_sparse_only_60m_loop3_block2_beta_rate0p1/20260819_233837
+    evaluate_raw: true
+    decomposition_variants:
+      - name: xhat_plus_s
+        components: [shared, sparse]
+      - name: xhat_plus_s_pruned_10pct
+        components: [shared, sparse]
+        sparse_density: 0.10
+    physical_depth: 4
+    logical_depth: 8
+    num_loops: 3
+    blocks_per_loop: 2
+
+  - name: sparse_only_rate0p5_loop2_block3
+    model_config: configs/llama_consensus_sparse_only_60m_loop2_block3_model.json
+    checkpoint: data/consensus_sparse_only_loop2_block3_beta_rate0p5/llama_consensus_sparse_only_60m_loop2_block3_beta_rate0p5/20260819_233837/model.pth
+    consensus_state_directory: data/consensus_sparse_only_loop2_block3_beta_rate0p5/llama_consensus_sparse_only_60m_loop2_block3_beta_rate0p5/20260819_233837
+    evaluate_raw: true
+    decomposition_variants:
+      - name: xhat_plus_s
+        components: [shared, sparse]
+      - name: xhat_plus_s_pruned_10pct
+        components: [shared, sparse]
+        sparse_density: 0.10
+    physical_depth: 5
+    logical_depth: 8
+    num_loops: 2
+    blocks_per_loop: 3
+
+  - name: sparse_only_rate0p5_loop3_block2
+    model_config: configs/llama_consensus_sparse_only_60m_loop3_block2_model.json
+    checkpoint: data/consensus_sparse_only_loop3_block2_beta_rate0p5/llama_consensus_sparse_only_60m_loop3_block2_beta_rate0p5/20260820_002806/model.pth
+    consensus_state_directory: data/consensus_sparse_only_loop3_block2_beta_rate0p5/llama_consensus_sparse_only_60m_loop3_block2_beta_rate0p5/20260820_002806
+    evaluate_raw: true
+    decomposition_variants:
+      - name: xhat_plus_s
+        components: [shared, sparse]
+      - name: xhat_plus_s_pruned_10pct
+        components: [shared, sparse]
+        sparse_density: 0.10
+    physical_depth: 4
+    logical_depth: 8
+    num_loops: 3
+    blocks_per_loop: 2
+
+output_directory: data/consensus_salaad_evaluation/sparse_only_beta_rate_sweep_pruned_c4_seed43
