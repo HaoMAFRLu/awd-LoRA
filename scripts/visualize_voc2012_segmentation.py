@@ -178,9 +178,15 @@ def _summarize_confusion(confusion: np.ndarray) -> dict[str, Any]:
         100.0 * true_positive[has_target] / target_count[has_target]
     )
     total = target_count.sum()
+    foreground_iou = class_iou[1:]
+    foreground_miou = (
+        float(np.nanmean(foreground_iou))
+        if np.isfinite(foreground_iou).any()
+        else float("nan")
+    )
     return {
         "miou": float(np.nanmean(class_iou)),
-        "foreground_miou": float(np.nanmean(class_iou[1:])),
+        "foreground_miou": foreground_miou,
         "pixel_accuracy": float(100.0 * true_positive.sum() / total),
         "mean_accuracy": float(np.nanmean(class_accuracy)),
         "class_iou": {
