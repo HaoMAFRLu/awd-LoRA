@@ -69,26 +69,52 @@ def add_vit_layers(
     layer_count,
     include_attention,
     include_mlp,
+    rho_by_suffix,
 ):
     """Add bare-student ViT Linear layers in deterministic block order."""
     for block_index in _select_indices(num_hidden_layers, layer_count):
         base = f"backbone.blocks.{block_index}"
         if include_attention:
             for key in ATTENTION_KEYS:
+                layer_params = copy.deepcopy(params[key])
+                if key in rho_by_suffix:
+                    layer_params["rho_dict"]["rho"] = rho_by_suffix[key]
                 layers.append(
                     {
                         "name": f"{base}.{key}",
-                        "params": copy.deepcopy(params[key]),
+                        "params": layer_params,
                     }
                 )
         if include_mlp:
             for key in MLP_KEYS:
+                layer_params = copy.deepcopy(params[key])
+                if key in rho_by_suffix:
+                    layer_params["rho_dict"]["rho"] = rho_by_suffix[key]
                 layers.append(
                     {
                         "name": f"{base}.{key}",
-                        "params": copy.deepcopy(params[key]),
+                        "params": layer_params,
                     }
                 )
+
+
+def _validate_rho_by_suffix(rho_by_suffix):
+    if rho_by_suffix is None:
+        return {}
+    if not isinstance(rho_by_suffix, dict):
+        raise TypeError("rho_by_suffix must be a dictionary or null")
+    valid_suffixes = set(ATTENTION_KEYS + MLP_KEYS)
+    unknown = set(rho_by_suffix) - valid_suffixes
+    if unknown:
+        raise ValueError(f"unknown rho override suffixes: {sorted(unknown)}")
+    normalized = {}
+    for suffix, rho in rho_by_suffix.items():
+        if isinstance(rho, bool) or not isinstance(rho, (int, float)):
+            raise TypeError(f"rho override for {suffix} must be a number")
+        if rho <= 0:
+            raise ValueError(f"rho override for {suffix} must be positive")
+        normalized[suffix] = float(rho)
+    return normalized
 
 
 def generate_vit_config(
@@ -144,6 +170,7 @@ def generate_vit_config(
     include_attention=True,
     include_mlp=True,
     vit_layers=1,
+    rho_by_suffix=None,
     output_path=None,
 ):
     """Generate one ViT task config selected through --cfg_version."""
@@ -153,6 +180,7 @@ def generate_vit_config(
             f"Expected dino_vitb8 model config, got {cfg_model.get('model_type')!r}"
         )
     num_hidden_layers = cfg_model["num_hidden_layers"]
+    rho_by_suffix = _validate_rho_by_suffix(rho_by_suffix)
 
     layers = []
     if training_mode == "salad":
@@ -163,6 +191,7 @@ def generate_vit_config(
             layer_count=vit_layers,
             include_attention=include_attention,
             include_mlp=include_mlp,
+            rho_by_suffix=rho_by_suffix,
         )
 
     data = {
@@ -307,6 +336,18 @@ if __name__ == "__main__":
         save_interval=400,
     )
 
+    cfg_vit_b8_mixed_rho = copy.deepcopy(cfg_vit_b8)
+    cfg_vit_b8_mixed_rho.update(
+        name="vit_b8_all_qkv_rho5e6_fc_rho5e8",
+        rho_by_suffix={
+            "attn.qkv": 5e-6,
+            "attn.proj": 5e-8,
+            "mlp.fc1": 5e-8,
+            "mlp.fc2": 5e-8,
+        },
+    )
+
     generate_vit_config(**cfg_vit_b8)
     generate_vit_config(**cfg_vit_b8_vanilla)
     generate_vit_config(**cfg_vit_b8_vanilla_throughput)
+    generate_vit_config(**cfg_vit_b8_mixed_rho)

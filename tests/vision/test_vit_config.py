@@ -18,6 +18,11 @@ VANILLA_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8_vanilla.yaml"
 THROUGHPUT_CONFIG_PATH = (
     REPOSITORY_ROOT / "configs" / "vit_b8_vanilla_throughput.yaml"
 )
+MIXED_RHO_CONFIG_PATH = (
+    REPOSITORY_ROOT
+    / "configs"
+    / "vit_b8_all_qkv_rho5e6_fc_rho5e8.yaml"
+)
 MODEL_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8_model.json"
 LOCAL_PARQUET_ROOT = (
     REPOSITORY_ROOT
@@ -46,6 +51,8 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             cls.vanilla_config = yaml.safe_load(config_file)
         with THROUGHPUT_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
             cls.throughput_config = yaml.safe_load(config_file)
+        with MIXED_RHO_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
+            cls.mixed_rho_config = yaml.safe_load(config_file)
         with MODEL_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
             cls.model_config = json.load(config_file)
 
@@ -295,6 +302,76 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             save_interval=400,
         )
         self.assertEqual(self.throughput_config, expected)
+
+    def test_mixed_rho_config_only_weakens_non_qkv_layers(self) -> None:
+        config = self.mixed_rho_config
+        self.assertEqual(
+            config["name"],
+            "vit_b8_all_qkv_rho5e6_fc_rho5e8",
+        )
+        self.assertEqual(
+            [entry["name"] for entry in config["layers"]],
+            [entry["name"] for entry in self.train_config["layers"]],
+        )
+
+        counts = {5e-6: 0, 5e-8: 0}
+        for entry in config["layers"]:
+            name = entry["name"]
+            rho = entry["params"]["rho_dict"]["rho"]
+            expected = 5e-6 if name.endswith("attn.qkv") else 5e-8
+            self.assertEqual(rho, expected, name)
+            counts[rho] += 1
+        self.assertEqual(counts, {5e-6: 12, 5e-8: 36})
+
+        for key, value in self.train_config.items():
+            if key not in {"name", "layers"}:
+                self.assertEqual(config[key], value, key)
+
+    def test_generator_reproduces_committed_mixed_rho_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            generated_path = Path(temporary_directory) / MIXED_RHO_CONFIG_PATH.name
+            generate_vit_config(
+                name="vit_b8_all_qkv_rho5e6_fc_rho5e8",
+                lr=1e-4,
+                num_total_iters=120_000,
+                num_freq=20,
+                save_interval=5_000,
+                batch_size=64,
+                warmup_steps=2_000,
+                scheduler_total_steps=120_000,
+                num_workers=2,
+                runtime="cluster",
+                data_location="cluster_snapshot",
+                data_root=str(CLUSTER_PARQUET_ROOT),
+                data_cache_dir=str(CLUSTER_CACHE_DIR),
+                data_split="train",
+                vit_layers=-1,
+                rho_by_suffix={
+                    "attn.qkv": 5e-6,
+                    "attn.proj": 5e-8,
+                    "mlp.fc1": 5e-8,
+                    "mlp.fc2": 5e-8,
+                },
+                output_path=str(generated_path),
+            )
+            with generated_path.open("r", encoding="utf-8") as config_file:
+                generated_config = yaml.safe_load(config_file)
+
+        self.assertEqual(generated_config, self.mixed_rho_config)
+
+    def test_generator_rejects_invalid_rho_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_path = str(Path(temporary_directory) / "invalid.yaml")
+            with self.assertRaisesRegex(ValueError, "unknown rho override"):
+                generate_vit_config(
+                    rho_by_suffix={"unknown": 5e-8},
+                    output_path=output_path,
+                )
+            with self.assertRaisesRegex(ValueError, "must be positive"):
+                generate_vit_config(
+                    rho_by_suffix={"mlp.fc1": 0.0},
+                    output_path=output_path,
+                )
 
 
 if __name__ == "__main__":
