@@ -22,6 +22,6 @@ requirements = ( \
 )
 
 getenv          = True
-environment     = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+environment     = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True VOC2012_ROOT=/lustre/fast/fast/hma2/data/voc2012"
 
 queue 1
