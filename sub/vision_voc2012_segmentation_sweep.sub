@@ -1,0 +1,35 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = \
+    -u scripts/train_vision.py \
+    --config $(config)
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/vision_voc2012_$(backbone)_$(Cluster)_$(Process).log
+error           = jobs/vision_voc2012_$(backbone)_$(Cluster)_$(Process).err
+output          = jobs/vision_voc2012_$(backbone)_$(Cluster)_$(Process).out
+
+request_cpus    = 12
+request_memory  = 48000
+request_gpus    = 1
+
+requirements = ( \
+    CUDACapability >= 8.0 && \
+    CUDAGlobalMemoryMb >= 40000 && \
+    !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
+    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) \
+)
+
+getenv          = True
+environment     = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+
+queue backbone, config from (
+    teacher                   configs/vision_voc2012_teacher_segmentation.yaml
+    vanilla                   configs/vision_voc2012_vanilla_segmentation.yaml
+    salaad_all                configs/vision_voc2012_salaad_all_segmentation.yaml
+    salaad_qkv                configs/vision_voc2012_salaad_qkv_segmentation.yaml
+    salaad_qkv_s50_alpha1     configs/vision_voc2012_salaad_qkv_s50_alpha1_segmentation.yaml
+    salaad_qkv_s50_alpha1p5   configs/vision_voc2012_salaad_qkv_s50_alpha1p5_segmentation.yaml
+    salaad_qkv_s50_alpha3     configs/vision_voc2012_salaad_qkv_s50_alpha3_segmentation.yaml
+)

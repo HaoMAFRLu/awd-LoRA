@@ -88,7 +88,9 @@ class VisionTrainer:
             raise ValueError(f"rank must be in [0, {world_size}), got {rank}")
         if self.distributed:
             if not dist.is_available() or not dist.is_initialized():
-                raise RuntimeError("world_size > 1 requires an initialized process group")
+                raise RuntimeError(
+                    "world_size > 1 requires an initialized process group"
+                )
             if dist.get_rank() != rank or dist.get_world_size() != world_size:
                 raise ValueError("rank/world_size do not match the process group")
 
@@ -206,10 +208,15 @@ class VisionTrainer:
 
     @staticmethod
     def _set_epoch(loader, epoch: int) -> None:
-        dataset = getattr(loader, "dataset", None)
-        set_epoch = getattr(dataset, "set_epoch", None)
-        if callable(set_epoch):
-            set_epoch(epoch)
+        # Iterable datasets (ImageNet streaming) own their epoch state, while
+        # map-style distributed datasets (VOC) expose it through the sampler.
+        for owner in (
+            getattr(loader, "dataset", None),
+            getattr(loader, "sampler", None),
+        ):
+            set_epoch = getattr(owner, "set_epoch", None)
+            if callable(set_epoch):
+                set_epoch(epoch)
 
     def _batch(self, batch: Mapping[str, Tensor]) -> tuple[Tensor, Tensor]:
         if not isinstance(batch, Mapping):
@@ -279,7 +286,9 @@ class VisionTrainer:
         dist.all_reduce(maximum_steps, op=dist.ReduceOp.MAX)
         return total_loss, total_weight, total_stats, int(maximum_steps.item())
 
-    def _epoch(self, loader, *, train: bool, max_steps: Optional[int]) -> Dict[str, float]:
+    def _epoch(
+        self, loader, *, train: bool, max_steps: Optional[int]
+    ) -> Dict[str, float]:
         self.model.train(train and not self.model_frozen)
         self.task_model.train(train)
         total_loss = 0.0
@@ -373,12 +382,18 @@ class VisionTrainer:
     ) -> None:
         train_metrics = result["train"]
         validation_metrics = result["validation"]
-        preferred = ["loss", "top1", "top5"]
+        preferred = [
+            "loss",
+            "top1",
+            "top5",
+            "miou",
+            "pixel_accuracy",
+            "mean_accuracy",
+            "boundary_f1",
+        ]
         available = set(train_metrics) | set(validation_metrics)
         metric_names = [name for name in preferred if name in available]
-        metric_names.extend(
-            sorted(available - set(metric_names) - {"steps"})
-        )
+        metric_names.extend(sorted(available - set(metric_names) - {"steps"}))
         if "steps" in available:
             metric_names.append("steps")
 
@@ -386,6 +401,10 @@ class VisionTrainer:
             "loss": "Loss",
             "top1": "Top-1 (%)",
             "top5": "Top-5 (%)",
+            "miou": "mIoU (%)",
+            "pixel_accuracy": "Pixel acc. (%)",
+            "mean_accuracy": "Mean acc. (%)",
+            "boundary_f1": "Boundary F1 (%)",
             "steps": "Steps",
         }
         widths = {

@@ -2,18 +2,23 @@
 
 from __future__ import annotations
 
+import os
+import re
 from pathlib import Path
 from typing import Any, Dict, Mapping
 
 import torch
-from torch import Tensor
+from torch import Tensor, nn
 
-from salaad_vision.data import build_imagenet_dataloader
+from salaad_vision.data import build_imagenet_dataloader, build_voc2012_dataloader
 from salaad_vision.models import DinoViTBase8, apply_salaad
 from salaad_vision.models.dino import DINO_VITB8_CHECKPOINT_SHA256
-from salaad_vision.tasks import ClassificationTask
+from salaad_vision.tasks import ClassificationTask, SegmentationTask
 
 _ROOT = Path(__file__).resolve().parents[1]
+_ENVIRONMENT_VARIABLE = re.compile(
+    r"\$(?:\{[A-Za-z_][A-Za-z0-9_]*\}|[A-Za-z_][A-Za-z0-9_]*)"
+)
 
 
 def _section(config: Mapping[str, Any], name: str) -> Mapping[str, Any]:
@@ -26,7 +31,13 @@ def _section(config: Mapping[str, Any], name: str) -> Mapping[str, Any]:
 def _path(value: Any, name: str) -> Path:
     if not isinstance(value, (str, Path)) or not str(value):
         raise ValueError(f"{name} must be a non-empty path")
-    path = Path(value).expanduser()
+    expanded = os.path.expandvars(str(value))
+    unresolved = _ENVIRONMENT_VARIABLE.findall(expanded)
+    if unresolved:
+        raise ValueError(
+            f"{name} contains unset environment variables: {', '.join(unresolved)}"
+        )
+    path = Path(expanded).expanduser()
     return path if path.is_absolute() else _ROOT / path
 
 
@@ -34,7 +45,10 @@ def _state(path: Path) -> Mapping[str, Tensor]:
     state = torch.load(path, map_location="cpu", weights_only=True)
     if not isinstance(state, Mapping):
         raise TypeError(f"checkpoint must contain a state dict: {path}")
-    if not all(isinstance(key, str) and isinstance(value, Tensor) for key, value in state.items()):
+    if not all(
+        isinstance(key, str) and isinstance(value, Tensor)
+        for key, value in state.items()
+    ):
         raise TypeError(f"checkpoint must map string keys to tensors: {path}")
     return state
 
@@ -112,19 +126,39 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
     return model
 
 
-def build_task(config: Mapping[str, Any]) -> ClassificationTask:
+def build_task(config: Mapping[str, Any]) -> nn.Module:
     """Build the downstream task selected by config."""
     task_config = _section(config, "task")
     name = task_config.get("name")
-    if name != "classification":
-        raise ValueError(f"unsupported vision task: {name!r}")
-    if task_config.get("head", "linear") != "linear":
-        raise ValueError("classification currently supports only head='linear'")
-
     num_classes = task_config.get("num_classes")
     if not isinstance(num_classes, int) or num_classes <= 0:
         raise ValueError("task.num_classes must be a positive integer")
-    return ClassificationTask(num_classes)
+
+    head = task_config.get("head", "linear")
+    if name == "classification":
+        if head != "linear":
+            raise ValueError("classification currently supports only head='linear'")
+        return ClassificationTask(num_classes)
+    if name == "semantic_segmentation":
+        if head not in {"linear", "linear_upsample"}:
+            raise ValueError(
+                "semantic_segmentation supports head='linear' or "
+                "head='linear_upsample'"
+            )
+        data_config = config.get("data", {})
+        if not isinstance(data_config, Mapping):
+            raise ValueError("config 'data' must be a mapping")
+        output_size = task_config.get(
+            "output_size",
+            data_config.get("image_size", 224),
+        )
+        return SegmentationTask(
+            num_classes,
+            output_size=output_size,
+            ignore_index=task_config.get("ignore_index", 255),
+            boundary_tolerance=task_config.get("boundary_tolerance", 1),
+        )
+    raise ValueError(f"unsupported vision task: {name!r}")
 
 
 def build_data(
@@ -139,8 +173,9 @@ def build_data(
         raise ValueError(f"phase must be 'train' or 'validation', got {phase!r}")
 
     data_config = _section(config, "data")
-    if data_config.get("name") != "imagenet":
-        raise ValueError(f"unsupported vision data: {data_config.get('name')!r}")
+    data_name = data_config.get("name")
+    if data_name not in {"imagenet", "voc2012"}:
+        raise ValueError(f"unsupported vision data: {data_name!r}")
     phase_config = data_config.get(phase)
     if not isinstance(phase_config, Mapping):
         raise ValueError(f"data requires a {phase!r} mapping")
@@ -161,9 +196,7 @@ def build_data(
 
     ignored = {"name", "train", "validation"}
     loader_data: Dict[str, Any] = {
-        key: value
-        for key, value in data_config.items()
-        if key not in ignored
+        key: value for key, value in data_config.items() if key not in ignored
     }
     loader_data.update(phase_config)
     for path_name in ("root", "cache_dir"):
@@ -182,7 +215,13 @@ def build_data(
         "num_workers": num_workers,
         "data": loader_data,
     }
-    return build_imagenet_dataloader(
+    if data_name == "imagenet":
+        return build_imagenet_dataloader(
+            loader_config,
+            rank=rank,
+            world_size=world_size,
+        )
+    return build_voc2012_dataloader(
         loader_config,
         rank=rank,
         world_size=world_size,

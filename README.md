@@ -122,6 +122,13 @@ Example HTCondor submit files are provided in `sub/`. They contain local cluster
 paths and hardware constraints from the original experiment environment, so they
 should be treated as templates rather than portable launch scripts.
 
+### SALAAD-Vision semantic segmentation
+
+The downstream vision framework now includes a frozen-backbone Pascal VOC 2012
+semantic-segmentation probe and configs for all seven current DINO/SALAAD
+backbones. See [docs/vision_segmentation.md](docs/vision_segmentation.md) for
+the dataset layout, metrics, single-backbone command, and cluster sweep.
+
 ## Outputs
 
 Training writes experiment artifacts under:
