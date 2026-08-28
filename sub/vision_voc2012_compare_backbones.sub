@@ -1,0 +1,33 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = \
+    -u scripts/visualize_voc2012_segmentation.py \
+    --voc-root /lustre/fast/fast/hma2/data/voc2012 \
+    --output-dir data/salaad_vision/downstream/voc2012_segmentation/comparison_4_backbones_20260828 \
+    --random-samples 6 \
+    --diagnostic-samples 6 \
+    --batch-size 64 \
+    --num-workers 4 \
+    --device cuda
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/vision_voc2012_compare_$(Cluster)_$(Process).log
+error           = jobs/vision_voc2012_compare_$(Cluster)_$(Process).err
+output          = jobs/vision_voc2012_compare_$(Cluster)_$(Process).out
+
+request_cpus    = 8
+request_memory  = 48000
+request_gpus    = 1
+
+requirements = ( \
+    CUDACapability >= 8.0 && \
+    CUDAGlobalMemoryMb >= 40000 && \
+    !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
+    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) \
+)
+
+getenv          = True
+environment     = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+
+queue 1
