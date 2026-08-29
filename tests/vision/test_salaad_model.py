@@ -430,6 +430,67 @@ class SalaadModelTest(unittest.TestCase):
                 sparse_zero_threshold=-1.0,
             )
 
+    def test_fc_s_int3_has_no_explicit_epsilon_mask(self) -> None:
+        source = _Model()
+        names = _layers("salaad_fc_s_int3")
+        proj_target = "backbone.blocks.0.attn.proj"
+        fc_target = "backbone.blocks.0.mlp.fc1"
+        low_rank = torch.tensor([[4.0, 0.0], [0.0, 0.02]])
+        sparse = torch.tensor([[3.0, 1.4], [9e-6, 2e-5]])
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            checkpoint = root / "model.pth"
+            torch.save(source.state_dict(), checkpoint)
+            _write_matrices(root, source, names)
+
+            remaining = {proj_target, fc_target}
+            for matrix_path in sorted(root.glob("matrix_rank*.pkl")):
+                with matrix_path.open("rb") as matrix_file:
+                    payload = pickle.load(matrix_file)
+                changed = False
+                for target in remaining & set(payload["LL"]):
+                    payload["LL"][target] = low_rank.clone()
+                    payload["SS"][target] = sparse.clone()
+                    changed = True
+                remaining -= set(payload["LL"])
+                if changed:
+                    with matrix_path.open("wb") as matrix_file:
+                        pickle.dump(payload, matrix_file)
+            self.assertFalse(remaining)
+
+            config = {
+                "model": {
+                    "name": "dino_vitb8",
+                    "variant": "salaad_fc_s_int3",
+                    "checkpoint": str(checkpoint),
+                    "checkpoint_kind": "student_model",
+                    "matrix_dir": str(root),
+                    "freeze": True,
+                }
+            }
+            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
+                model = build_model(config)
+
+        self.assertTrue(
+            torch.equal(
+                model.get_submodule(proj_target).weight,
+                low_rank + sparse,
+            )
+        )
+        expected_sparse = torch.tensor(
+            [[3.0, 1.0], [2e-5 / 3.0, 2e-5]],
+        )
+        self.assertTrue(
+            torch.allclose(
+                model.get_submodule(fc_target).weight,
+                low_rank + expected_sparse,
+            )
+        )
+        self.assertGreater(model.get_submodule(fc_target).weight[1, 0], 0.0)
+        self.assertTrue(
+            all(not parameter.requires_grad for parameter in model.parameters())
+        )
+
     def test_qkv_replaces_12_qkv_weights_and_keeps_other_x(self) -> None:
         model = _Model()
         qkv_names = _layers("salaad_qkv")

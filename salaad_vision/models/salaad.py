@@ -413,22 +413,13 @@ def apply_salaad_all_masked_int3(
 
 
 @torch.no_grad()
-def apply_salaad_fc_s_masked_int3(
+def _apply_salaad_fc_s_int3(
     model: nn.Module,
     matrix_dir: Path,
     *,
-    sparse_zero_threshold: float = 1e-5,
+    variant_name: str,
+    sparse_zero_threshold: float | None,
 ) -> Set[str]:
-    """Restore QKV/proj exactly and mask-then-INT3 only the FC sparse terms.
-
-    All 48 decomposed layers are restored. Attention QKV and projection use
-    exact FP32 ``L+S``. MLP FC1/FC2 keep L in FP32 and replace S with its
-    epsilon-masked, per-output-row signed INT3 fake-quantized value.
-    """
-    sparse_zero_threshold = _nonnegative(
-        sparse_zero_threshold,
-        "sparse_zero_threshold",
-    )
     expected = _expected(model, "salaad_all")
     seen: Set[str] = set()
 
@@ -439,8 +430,8 @@ def apply_salaad_fc_s_masked_int3(
                 raise ValueError(f"duplicate SALAAD layer: {layer_name}")
             if layer_name not in expected:
                 raise ValueError(
-                    "salaad_fc_s_masked_int3 contains an unexpected decomposed "
-                    f"layer: {layer_name}"
+                    f"{variant_name} contains an unexpected decomposed layer: "
+                    f"{layer_name}"
                 )
 
             layer = model.get_submodule(layer_name)
@@ -469,11 +460,12 @@ def apply_salaad_fc_s_masked_int3(
             low_rank_fp32 = low_rank_weight.float()
             sparse_fp32 = sparse_weight.float()
             if layer_name.endswith(_FC_SUFFIXES):
-                masked_sparse = sparse_fp32.masked_fill(
-                    sparse_fp32.abs() <= sparse_zero_threshold,
-                    0.0,
-                )
-                sparse_fp32 = _symmetric_int3_fake_quantize(masked_sparse)
+                if sparse_zero_threshold is not None:
+                    sparse_fp32 = sparse_fp32.masked_fill(
+                        sparse_fp32.abs() <= sparse_zero_threshold,
+                        0.0,
+                    )
+                sparse_fp32 = _symmetric_int3_fake_quantize(sparse_fp32)
             replacement = low_rank_fp32 + sparse_fp32
             layer.weight.copy_(
                 replacement.to(
@@ -486,10 +478,49 @@ def apply_salaad_fc_s_masked_int3(
     missing = expected - seen
     if missing:
         raise ValueError(
-            "salaad_fc_s_masked_int3 decomposition is incomplete; "
+            f"{variant_name} decomposition is incomplete; "
             f"missing={sorted(missing)}"
         )
     return seen
+
+
+@torch.no_grad()
+def apply_salaad_fc_s_masked_int3(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    sparse_zero_threshold: float = 1e-5,
+) -> Set[str]:
+    """Restore QKV/proj exactly and mask-then-INT3 only FC sparse terms."""
+    sparse_zero_threshold = _nonnegative(
+        sparse_zero_threshold,
+        "sparse_zero_threshold",
+    )
+    return _apply_salaad_fc_s_int3(
+        model,
+        matrix_dir,
+        variant_name="salaad_fc_s_masked_int3",
+        sparse_zero_threshold=sparse_zero_threshold,
+    )
+
+
+@torch.no_grad()
+def apply_salaad_fc_s_int3(
+    model: nn.Module,
+    matrix_dir: Path,
+) -> Set[str]:
+    """Restore QKV/proj exactly and directly INT3 fake-quantize FC sparse terms.
+
+    All 48 decomposed layers are restored. Attention QKV and projection use
+    exact FP32 ``L+S``. MLP FC1/FC2 keep L in FP32 and replace S with its
+    per-output-row signed INT3 fake-quantized value, without an epsilon mask.
+    """
+    return _apply_salaad_fc_s_int3(
+        model,
+        matrix_dir,
+        variant_name="salaad_fc_s_int3",
+        sparse_zero_threshold=None,
+    )
 
 
 @torch.no_grad()

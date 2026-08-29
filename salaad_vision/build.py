@@ -15,6 +15,7 @@ from salaad_vision.models import (
     DinoViTBase8,
     apply_salaad,
     apply_salaad_all_masked_int3,
+    apply_salaad_fc_s_int3,
     apply_salaad_fc_s_masked_int3,
 )
 from salaad_vision.models.dino import DINO_VITB8_CHECKPOINT_SHA256
@@ -71,6 +72,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
         "derived",
         "salaad_all",
         "salaad_all_masked_int3",
+        "salaad_fc_s_int3",
         "salaad_fc_s_masked_int3",
         "salaad_qkv",
     }
@@ -116,6 +118,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
     if variant in {
         "salaad_all",
         "salaad_all_masked_int3",
+        "salaad_fc_s_int3",
         "salaad_fc_s_masked_int3",
         "salaad_qkv",
     }:
@@ -148,6 +151,8 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
                     1e-5,
                 ),
             )
+        elif variant == "salaad_fc_s_int3":
+            apply_salaad_fc_s_int3(model, matrix_dir)
         else:
             apply_salaad(model, matrix_dir, variant)
     elif "matrix_dir" in model_config:
