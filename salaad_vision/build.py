@@ -11,7 +11,11 @@ import torch
 from torch import Tensor, nn
 
 from salaad_vision.data import build_imagenet_dataloader, build_voc2012_dataloader
-from salaad_vision.models import DinoViTBase8, apply_salaad
+from salaad_vision.models import (
+    DinoViTBase8,
+    apply_salaad,
+    apply_salaad_all_masked_int3,
+)
 from salaad_vision.models.dino import DINO_VITB8_CHECKPOINT_SHA256
 from salaad_vision.tasks import ClassificationTask, SegmentationTask
 
@@ -65,6 +69,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
         "vanilla",
         "derived",
         "salaad_all",
+        "salaad_all_masked_int3",
         "salaad_qkv",
     }
     if variant not in valid_variants:
@@ -106,7 +111,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
             f"'student_model', or 'derived_backbone', got {checkpoint_kind!r}"
         )
 
-    if variant in {"salaad_all", "salaad_qkv"}:
+    if variant in {"salaad_all", "salaad_all_masked_int3", "salaad_qkv"}:
         if checkpoint_kind != "student_model":
             raise ValueError(f"{variant} requires checkpoint_kind='student_model'")
         matrix_dir = _path(model_config.get("matrix_dir"), "model.matrix_dir")
@@ -114,7 +119,21 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
             raise ValueError(
                 f"{variant} checkpoint and matrix files must be in the same directory"
             )
-        apply_salaad(model, matrix_dir, variant)
+        if variant == "salaad_all_masked_int3":
+            apply_salaad_all_masked_int3(
+                model,
+                matrix_dir,
+                relative_sigma_threshold=model_config.get(
+                    "relative_sigma_threshold",
+                    1e-2,
+                ),
+                sparse_zero_threshold=model_config.get(
+                    "sparse_zero_threshold",
+                    1e-5,
+                ),
+            )
+        else:
+            apply_salaad(model, matrix_dir, variant)
     elif "matrix_dir" in model_config:
         raise ValueError(f"model.matrix_dir is not used by variant={variant!r}")
 

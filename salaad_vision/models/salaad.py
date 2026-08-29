@@ -1,4 +1,4 @@
-"""Restore trained SALAAD linear weights from rank-local L/S files."""
+"""Restore and transform SALAAD weights from rank-local L/S files."""
 
 from __future__ import annotations
 
@@ -125,6 +125,63 @@ def _top_magnitude_fraction(sparse: Tensor, fraction: float) -> Tensor:
     retained_flat = torch.zeros_like(flat)
     retained_flat[selected_indices] = flat[selected_indices]
     return retained_flat.reshape_as(sparse)
+
+
+def _nonnegative(value: float, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{name} must be a number")
+    value = float(value)
+    if not math.isfinite(value) or value < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return value
+
+
+def _symmetric_int3_fake_quantize(weight: Tensor) -> Tensor:
+    """Fake-quantize a matrix row-wise to signed INT3 codes in [-3, 3]."""
+    if weight.ndim != 2:
+        raise ValueError(f"expected a matrix, got shape {tuple(weight.shape)}")
+    absolute_maximum = weight.abs().amax(dim=1, keepdim=True)
+    scale = absolute_maximum / 3.0
+    safe_scale = torch.where(scale > 0.0, scale, torch.ones_like(scale))
+    codes = torch.round(weight / safe_scale).clamp(-3.0, 3.0)
+    dequantized = codes * safe_scale
+    return torch.where(
+        absolute_maximum > 0.0,
+        dequantized,
+        torch.zeros_like(dequantized),
+    )
+
+
+def _spectral_mask(low_rank: Tensor, relative_sigma_threshold: float) -> Tensor:
+    """Remove complete singular components below a relative threshold."""
+    u, singular_values, vh = torch.linalg.svd(
+        low_rank.float(),
+        full_matrices=False,
+    )
+    if singular_values[0].item() == 0.0:
+        return torch.zeros_like(low_rank, dtype=torch.float32)
+    retained = singular_values / singular_values[0] >= relative_sigma_threshold
+    return (u[:, retained] * singular_values[retained]) @ vh[retained]
+
+
+def _masked_int3_weight(
+    low_rank: Tensor,
+    sparse: Tensor,
+    *,
+    relative_sigma_threshold: float,
+    sparse_zero_threshold: float,
+) -> Tensor:
+    masked_low_rank = _spectral_mask(
+        low_rank,
+        relative_sigma_threshold,
+    )
+    masked_sparse = sparse.float().masked_fill(
+        sparse.float().abs() <= sparse_zero_threshold,
+        0.0,
+    )
+    return _symmetric_int3_fake_quantize(
+        masked_low_rank,
+    ) + _symmetric_int3_fake_quantize(masked_sparse)
 
 
 def _split_low_output_similarity(
@@ -264,6 +321,89 @@ def apply_salaad(model: nn.Module, matrix_dir: Path, variant: str) -> Set[str]:
     if missing:
         raise ValueError(
             f"{variant} decomposition is incomplete; missing={sorted(missing)}"
+        )
+    return seen
+
+
+@torch.no_grad()
+def apply_salaad_all_masked_int3(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    relative_sigma_threshold: float = 1e-2,
+    sparse_zero_threshold: float = 1e-5,
+) -> Set[str]:
+    """Restore all 48 layers with mask-then-INT3 fake-quantized L and S.
+
+    L is spectrally masked, while small entries in S are set to zero. Each
+    resulting matrix is independently fake-quantized per output row to the
+    signed narrow-range INT3 codes ``{-3, ..., 3}``, then their dequantized
+    values are summed and copied into the model.
+    """
+    relative_sigma_threshold = _fraction(
+        relative_sigma_threshold,
+        "relative_sigma_threshold",
+    )
+    sparse_zero_threshold = _nonnegative(
+        sparse_zero_threshold,
+        "sparse_zero_threshold",
+    )
+    expected = _expected(model, "salaad_all")
+    seen: Set[str] = set()
+
+    for matrix_file in _files(matrix_dir):
+        low_rank, sparse = _load(matrix_file)
+        for layer_name in sorted(low_rank):
+            if layer_name in seen:
+                raise ValueError(f"duplicate SALAAD layer: {layer_name}")
+            if layer_name not in expected:
+                raise ValueError(
+                    "salaad_all_masked_int3 contains an unexpected decomposed "
+                    f"layer: {layer_name}"
+                )
+
+            layer = model.get_submodule(layer_name)
+            low_rank_weight = low_rank[layer_name]
+            sparse_weight = sparse[layer_name]
+            if not isinstance(low_rank_weight, Tensor) or not isinstance(
+                sparse_weight,
+                Tensor,
+            ):
+                raise TypeError(f"SALAAD L and S must be tensors for {layer_name}")
+            if (
+                low_rank_weight.shape != layer.weight.shape
+                or sparse_weight.shape != layer.weight.shape
+            ):
+                raise ValueError(
+                    f"SALAAD shape mismatch for {layer_name}: "
+                    f"X={tuple(layer.weight.shape)}, "
+                    f"L={tuple(low_rank_weight.shape)}, "
+                    f"S={tuple(sparse_weight.shape)}"
+                )
+            if not torch.isfinite(low_rank_weight).all() or not torch.isfinite(
+                sparse_weight
+            ).all():
+                raise ValueError(f"SALAAD contains non-finite values for {layer_name}")
+
+            replacement = _masked_int3_weight(
+                low_rank_weight,
+                sparse_weight,
+                relative_sigma_threshold=relative_sigma_threshold,
+                sparse_zero_threshold=sparse_zero_threshold,
+            )
+            layer.weight.copy_(
+                replacement.to(
+                    device=layer.weight.device,
+                    dtype=layer.weight.dtype,
+                )
+            )
+            seen.add(layer_name)
+
+    missing = expected - seen
+    if missing:
+        raise ValueError(
+            "salaad_all_masked_int3 decomposition is incomplete; "
+            f"missing={sorted(missing)}"
         )
     return seen
 

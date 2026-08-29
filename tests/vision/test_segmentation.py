@@ -209,6 +209,7 @@ class SegmentationProbeTest(unittest.TestCase):
             "vanilla",
             "salaad_all",
             "mixed_rho_all_l_plus_s",
+            "mixed_rho_all_masked_int3",
             "salaad_qkv",
             "salaad_qkv_s50_alpha1",
             "salaad_qkv_s50_alpha1p5",

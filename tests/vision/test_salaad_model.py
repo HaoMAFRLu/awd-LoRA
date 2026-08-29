@@ -15,6 +15,7 @@ from salaad_vision.build import build_model
 from salaad_vision.models import (
     SplitQKAttention,
     apply_salaad,
+    apply_salaad_all_masked_int3,
     apply_salaad_qkv_s50,
     split_qk_attention,
 )
@@ -283,6 +284,77 @@ class SalaadModelTest(unittest.TestCase):
                     torch.full_like(model.get_submodule(name).weight, 3.0),
                 ),
                 name,
+            )
+
+    def test_all_masked_int3_masks_and_quantizes_all_48_weights(self) -> None:
+        source = _Model()
+        names = _layers("salaad_all_masked_int3")
+        target = "backbone.blocks.0.attn.proj"
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            checkpoint = root / "model.pth"
+            torch.save(source.state_dict(), checkpoint)
+            _write_matrices(root, source, names)
+
+            for matrix_path in sorted(root.glob("matrix_rank*.pkl")):
+                with matrix_path.open("rb") as matrix_file:
+                    payload = pickle.load(matrix_file)
+                if target not in payload["LL"]:
+                    continue
+                payload["LL"][target] = torch.tensor(
+                    [[4.0, 0.0], [0.0, 0.02]],
+                )
+                payload["SS"][target] = torch.tensor(
+                    [[3.0, 1.4], [1e-5, -3.0]],
+                )
+                with matrix_path.open("wb") as matrix_file:
+                    pickle.dump(payload, matrix_file)
+                break
+
+            config = {
+                "model": {
+                    "name": "dino_vitb8",
+                    "variant": "salaad_all_masked_int3",
+                    "checkpoint": str(checkpoint),
+                    "checkpoint_kind": "student_model",
+                    "matrix_dir": str(root),
+                    "relative_sigma_threshold": 1e-2,
+                    "sparse_zero_threshold": 1e-5,
+                    "freeze": True,
+                }
+            }
+            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
+                model = build_model(config)
+
+        self.assertTrue(
+            torch.equal(
+                model.get_submodule(target).weight,
+                torch.tensor([[7.0, 1.0], [0.0, -3.0]]),
+            )
+        )
+        self.assertTrue(
+            torch.equal(
+                model.backbone.blocks[11].mlp.fc2.weight,
+                torch.full((2, 2), 3.0),
+            )
+        )
+        self.assertTrue(
+            all(not parameter.requires_grad for parameter in model.parameters())
+        )
+
+    def test_all_masked_int3_rejects_invalid_thresholds(self) -> None:
+        model = _Model()
+        with self.assertRaisesRegex(ValueError, "relative_sigma_threshold"):
+            apply_salaad_all_masked_int3(
+                model,
+                Path("unused"),
+                relative_sigma_threshold=0.0,
+            )
+        with self.assertRaisesRegex(ValueError, "sparse_zero_threshold"):
+            apply_salaad_all_masked_int3(
+                model,
+                Path("unused"),
+                sparse_zero_threshold=float("nan"),
             )
 
     def test_qkv_replaces_12_qkv_weights_and_keeps_other_x(self) -> None:
