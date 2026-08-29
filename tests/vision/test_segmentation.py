@@ -208,6 +208,7 @@ class SegmentationProbeTest(unittest.TestCase):
             "teacher",
             "vanilla",
             "salaad_all",
+            "mixed_rho_all_l_plus_s",
             "salaad_qkv",
             "salaad_qkv_s50_alpha1",
             "salaad_qkv_s50_alpha1p5",
@@ -235,8 +236,17 @@ class SegmentationProbeTest(unittest.TestCase):
                 self.assertEqual(data["root"], "${VOC2012_ROOT}")
                 self.assertEqual(data["train"]["split"], "train")
                 self.assertEqual(data["validation"]["split"], "val")
-                checkpoint = ROOT / model["checkpoint"]
-                self.assertTrue(checkpoint.is_file(), checkpoint)
+                configured_checkpoint = Path(model["checkpoint"])
+                checkpoint = ROOT / configured_checkpoint
+                if model.get("checkpoint_location", "local") == "cluster":
+                    self.assertFalse(configured_checkpoint.is_absolute())
+                    self.assertEqual(configured_checkpoint.name, "model.pth")
+                    self.assertEqual(
+                        Path(model["matrix_dir"]),
+                        Path(model["checkpoint"]).parent,
+                    )
+                else:
+                    self.assertTrue(checkpoint.is_file(), checkpoint)
 
         self.assertEqual(observed, expected)
 

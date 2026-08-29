@@ -1,0 +1,35 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = \
+    -u -m torch.distributed.run \
+    --nproc_per_node=4 \
+    --nnodes=1 \
+    --rdzv_backend=c10d \
+    --rdzv_endpoint=127.0.0.1:29500 \
+    scripts/train_vision.py \
+    --config configs/vision_imagenet_mixed_rho_all_l_plus_s_h10080_b1024_bf16_sdpa_cluster.yaml
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/vision_imagenet_mixed_rho_all_l_plus_s_$(Cluster)_$(Process).log
+error           = jobs/vision_imagenet_mixed_rho_all_l_plus_s_$(Cluster)_$(Process).err
+output          = jobs/vision_imagenet_mixed_rho_all_l_plus_s_$(Cluster)_$(Process).out
+
+request_cpus    = 20
+request_memory  = 128000
+request_gpus    = 4
+
+requirements = ( \
+    CUDACapability >= 9.0 && \
+    CUDACapability < 9.1 && \
+    CUDAGlobalMemoryMb >= 80000 && \
+    !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
+    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) && \
+    !regexp("GPU-0e5a23fb", TARGET.DetectedGPUs) \
+)
+
+getenv          = True
+environment     = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+
+queue 1
+
