@@ -15,6 +15,7 @@ from salaad_vision.models import (
     DinoViTBase8,
     apply_salaad,
     apply_salaad_all_masked_int3,
+    apply_salaad_fc_s_masked_int3,
 )
 from salaad_vision.models.dino import DINO_VITB8_CHECKPOINT_SHA256
 from salaad_vision.tasks import ClassificationTask, SegmentationTask
@@ -70,6 +71,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
         "derived",
         "salaad_all",
         "salaad_all_masked_int3",
+        "salaad_fc_s_masked_int3",
         "salaad_qkv",
     }
     if variant not in valid_variants:
@@ -111,7 +113,12 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
             f"'student_model', or 'derived_backbone', got {checkpoint_kind!r}"
         )
 
-    if variant in {"salaad_all", "salaad_all_masked_int3", "salaad_qkv"}:
+    if variant in {
+        "salaad_all",
+        "salaad_all_masked_int3",
+        "salaad_fc_s_masked_int3",
+        "salaad_qkv",
+    }:
         if checkpoint_kind != "student_model":
             raise ValueError(f"{variant} requires checkpoint_kind='student_model'")
         matrix_dir = _path(model_config.get("matrix_dir"), "model.matrix_dir")
@@ -127,6 +134,15 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
                     "relative_sigma_threshold",
                     1e-2,
                 ),
+                sparse_zero_threshold=model_config.get(
+                    "sparse_zero_threshold",
+                    1e-5,
+                ),
+            )
+        elif variant == "salaad_fc_s_masked_int3":
+            apply_salaad_fc_s_masked_int3(
+                model,
+                matrix_dir,
                 sparse_zero_threshold=model_config.get(
                     "sparse_zero_threshold",
                     1e-5,
