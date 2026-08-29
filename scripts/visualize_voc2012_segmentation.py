@@ -1,4 +1,4 @@
-"""Compare four frozen vision backbones on Pascal VOC 2012 segmentation."""
+"""Compare frozen vision backbones on Pascal VOC 2012 segmentation."""
 
 from __future__ import annotations
 
@@ -56,6 +56,16 @@ SPECS = (
         "SALAAD-qkv L+S",
         "training-time L+S for all 12 qkv matrices; other matrices use dense X",
         ROOT / "configs/vision_voc2012_salaad_qkv_segmentation.yaml",
+    ),
+    ModelSpec(
+        "mixed_rho_all",
+        "Mixed-rho all L+S",
+        (
+            "training-time L+S for all 48 block matrices; qkv rho=5e-6 and "
+            "non-qkv rho=5e-8"
+        ),
+        ROOT
+        / "configs/vision_voc2012_mixed_rho_all_l_plus_s_segmentation.yaml",
     ),
 )
 
@@ -446,11 +456,26 @@ def _diagnostic_indices(
     }
     pairwise_mean = np.mean(np.stack(list(disagreement.values())), axis=0)
     criteria = (
-        ("largest Teacher - SALAAD-all gap", scores["teacher"] - scores["salaad_all"]),
-        ("largest SALAAD-qkv - SALAAD-all gap", scores["salaad_qkv"] - scores["salaad_all"]),
-        ("largest Teacher - Vanilla gap", scores["teacher"] - scores["vanilla"]),
-        ("largest Vanilla - Teacher gap", scores["vanilla"] - scores["teacher"]),
-        ("largest SALAAD-qkv - Vanilla gap", scores["salaad_qkv"] - scores["vanilla"]),
+        (
+            "largest Mixed-rho - old SALAAD-all gap",
+            scores["mixed_rho_all"] - scores["salaad_all"],
+        ),
+        (
+            "largest Mixed-rho - Teacher gap",
+            scores["mixed_rho_all"] - scores["teacher"],
+        ),
+        (
+            "largest Teacher - Mixed-rho gap",
+            scores["teacher"] - scores["mixed_rho_all"],
+        ),
+        (
+            "largest Mixed-rho - Vanilla gap",
+            scores["mixed_rho_all"] - scores["vanilla"],
+        ),
+        (
+            "largest Vanilla - Mixed-rho gap",
+            scores["vanilla"] - scores["mixed_rho_all"],
+        ),
         ("largest mean prediction disagreement", pairwise_mean),
     )
     selected = set(random_indices)
