@@ -524,6 +524,139 @@ def apply_salaad_fc_s_int3(
 
 
 @torch.no_grad()
+def _apply_salaad_qkv_component_masked_int3(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    variant_name: str,
+    component: str,
+    relative_sigma_threshold: float | None = None,
+    sparse_zero_threshold: float | None = None,
+) -> Set[str]:
+    expected = _expected(model, "salaad_all")
+    seen: Set[str] = set()
+
+    for matrix_file in _files(matrix_dir):
+        low_rank, sparse = _load(matrix_file)
+        for layer_name in sorted(low_rank):
+            if layer_name in seen:
+                raise ValueError(f"duplicate SALAAD layer: {layer_name}")
+            if layer_name not in expected:
+                raise ValueError(
+                    f"{variant_name} contains an unexpected decomposed layer: "
+                    f"{layer_name}"
+                )
+
+            layer = model.get_submodule(layer_name)
+            low_rank_weight = low_rank[layer_name]
+            sparse_weight = sparse[layer_name]
+            if not isinstance(low_rank_weight, Tensor) or not isinstance(
+                sparse_weight,
+                Tensor,
+            ):
+                raise TypeError(f"SALAAD L and S must be tensors for {layer_name}")
+            if (
+                low_rank_weight.shape != layer.weight.shape
+                or sparse_weight.shape != layer.weight.shape
+            ):
+                raise ValueError(
+                    f"SALAAD shape mismatch for {layer_name}: "
+                    f"X={tuple(layer.weight.shape)}, "
+                    f"L={tuple(low_rank_weight.shape)}, "
+                    f"S={tuple(sparse_weight.shape)}"
+                )
+            if not torch.isfinite(low_rank_weight).all() or not torch.isfinite(
+                sparse_weight
+            ).all():
+                raise ValueError(f"SALAAD contains non-finite values for {layer_name}")
+
+            low_rank_fp32 = low_rank_weight.float()
+            sparse_fp32 = sparse_weight.float()
+            if layer_name.endswith("attn.qkv"):
+                if component == "low_rank":
+                    if relative_sigma_threshold is None:
+                        raise ValueError(
+                            "QKV-L quantization requires a sigma threshold"
+                        )
+                    low_rank_fp32 = _symmetric_int3_fake_quantize(
+                        _spectral_mask(
+                            low_rank_fp32,
+                            relative_sigma_threshold,
+                        )
+                    )
+                elif component == "sparse":
+                    if sparse_zero_threshold is None:
+                        raise ValueError(
+                            "QKV-S quantization requires a zero threshold"
+                        )
+                    sparse_fp32 = sparse_fp32.masked_fill(
+                        sparse_fp32.abs() <= sparse_zero_threshold,
+                        0.0,
+                    )
+                    sparse_fp32 = _symmetric_int3_fake_quantize(sparse_fp32)
+                else:
+                    raise ValueError(f"unsupported QKV component: {component!r}")
+            replacement = low_rank_fp32 + sparse_fp32
+            layer.weight.copy_(
+                replacement.to(
+                    device=layer.weight.device,
+                    dtype=layer.weight.dtype,
+                )
+            )
+            seen.add(layer_name)
+
+    missing = expected - seen
+    if missing:
+        raise ValueError(
+            f"{variant_name} decomposition is incomplete; "
+            f"missing={sorted(missing)}"
+        )
+    return seen
+
+
+@torch.no_grad()
+def apply_salaad_qkv_l_masked_int3(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    relative_sigma_threshold: float = 1e-2,
+) -> Set[str]:
+    """Mask and INT3-quantize QKV-L; keep QKV-S and non-QKV L+S exact."""
+    relative_sigma_threshold = _fraction(
+        relative_sigma_threshold,
+        "relative_sigma_threshold",
+    )
+    return _apply_salaad_qkv_component_masked_int3(
+        model,
+        matrix_dir,
+        variant_name="salaad_qkv_l_masked_int3",
+        component="low_rank",
+        relative_sigma_threshold=relative_sigma_threshold,
+    )
+
+
+@torch.no_grad()
+def apply_salaad_qkv_s_masked_int3(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    sparse_zero_threshold: float = 1e-5,
+) -> Set[str]:
+    """Mask and INT3-quantize QKV-S; keep QKV-L and non-QKV L+S exact."""
+    sparse_zero_threshold = _nonnegative(
+        sparse_zero_threshold,
+        "sparse_zero_threshold",
+    )
+    return _apply_salaad_qkv_component_masked_int3(
+        model,
+        matrix_dir,
+        variant_name="salaad_qkv_s_masked_int3",
+        component="sparse",
+        sparse_zero_threshold=sparse_zero_threshold,
+    )
+
+
+@torch.no_grad()
 def apply_salaad_qkv_s50(
     model: nn.Module,
     matrix_dir: Path,

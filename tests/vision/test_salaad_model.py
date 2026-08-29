@@ -17,6 +17,8 @@ from salaad_vision.models import (
     apply_salaad,
     apply_salaad_all_masked_int3,
     apply_salaad_fc_s_masked_int3,
+    apply_salaad_qkv_l_masked_int3,
+    apply_salaad_qkv_s_masked_int3,
     apply_salaad_qkv_s50,
     split_qk_attention,
 )
@@ -490,6 +492,107 @@ class SalaadModelTest(unittest.TestCase):
         self.assertTrue(
             all(not parameter.requires_grad for parameter in model.parameters())
         )
+
+    def test_qkv_l_and_s_masked_int3_change_only_selected_component(self) -> None:
+        source = _Model()
+        names = _layers("salaad_qkv_l_masked_int3")
+        qkv_target = "backbone.blocks.0.attn.qkv"
+        low_rank = torch.zeros((6, 2))
+        low_rank[0, 0] = 4.0
+        low_rank[1, 1] = 0.02
+        sparse = torch.zeros((6, 2))
+        sparse[0] = torch.tensor([3.0, 1.4])
+        sparse[1] = torch.tensor([9e-6, 2e-5])
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            checkpoint = root / "model.pth"
+            torch.save(source.state_dict(), checkpoint)
+            _write_matrices(root, source, names)
+
+            for matrix_path in sorted(root.glob("matrix_rank*.pkl")):
+                with matrix_path.open("rb") as matrix_file:
+                    payload = pickle.load(matrix_file)
+                if qkv_target not in payload["LL"]:
+                    continue
+                payload["LL"][qkv_target] = low_rank.clone()
+                payload["SS"][qkv_target] = sparse.clone()
+                with matrix_path.open("wb") as matrix_file:
+                    pickle.dump(payload, matrix_file)
+                break
+
+            common = {
+                "name": "dino_vitb8",
+                "checkpoint": str(checkpoint),
+                "checkpoint_kind": "student_model",
+                "matrix_dir": str(root),
+                "freeze": True,
+            }
+            low_rank_config = {
+                "model": {
+                    **common,
+                    "variant": "salaad_qkv_l_masked_int3",
+                    "relative_sigma_threshold": 1e-2,
+                }
+            }
+            sparse_config = {
+                "model": {
+                    **common,
+                    "variant": "salaad_qkv_s_masked_int3",
+                    "sparse_zero_threshold": 1e-5,
+                }
+            }
+            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
+                low_rank_model = build_model(low_rank_config)
+            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
+                sparse_model = build_model(sparse_config)
+
+        expected_low_rank = torch.zeros_like(low_rank)
+        expected_low_rank[0, 0] = 4.0
+        self.assertTrue(
+            torch.allclose(
+                low_rank_model.get_submodule(qkv_target).weight,
+                expected_low_rank + sparse,
+            )
+        )
+        expected_sparse = torch.zeros_like(sparse)
+        expected_sparse[0] = torch.tensor([3.0, 1.0])
+        expected_sparse[1, 1] = 2e-5
+        self.assertTrue(
+            torch.allclose(
+                sparse_model.get_submodule(qkv_target).weight,
+                low_rank + expected_sparse,
+            )
+        )
+        for model in (low_rank_model, sparse_model):
+            self.assertTrue(
+                torch.equal(
+                    model.backbone.blocks[0].attn.proj.weight,
+                    torch.full((2, 2), 3.0),
+                )
+            )
+            self.assertTrue(
+                torch.equal(
+                    model.backbone.blocks[11].mlp.fc2.weight,
+                    torch.full((2, 2), 3.0),
+                )
+            )
+            self.assertTrue(
+                all(not parameter.requires_grad for parameter in model.parameters())
+            )
+
+    def test_qkv_component_masked_int3_rejects_invalid_thresholds(self) -> None:
+        with self.assertRaisesRegex(ValueError, "relative_sigma_threshold"):
+            apply_salaad_qkv_l_masked_int3(
+                _Model(),
+                Path("unused"),
+                relative_sigma_threshold=0.0,
+            )
+        with self.assertRaisesRegex(ValueError, "sparse_zero_threshold"):
+            apply_salaad_qkv_s_masked_int3(
+                _Model(),
+                Path("unused"),
+                sparse_zero_threshold=float("inf"),
+            )
 
     def test_qkv_replaces_12_qkv_weights_and_keeps_other_x(self) -> None:
         model = _Model()
