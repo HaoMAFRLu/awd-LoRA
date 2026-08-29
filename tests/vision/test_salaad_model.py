@@ -18,6 +18,7 @@ from salaad_vision.models import (
     apply_salaad_all_masked_int3,
     apply_salaad_fc_s_masked_int3,
     apply_salaad_qkv_l_masked_int3,
+    apply_salaad_qkv_l_s_masked_int3,
     apply_salaad_qkv_s_masked_int3,
     apply_salaad_qkv_s50,
     split_qk_attention,
@@ -541,10 +542,20 @@ class SalaadModelTest(unittest.TestCase):
                     "sparse_zero_threshold": 1e-5,
                 }
             }
+            combined_config = {
+                "model": {
+                    **common,
+                    "variant": "salaad_qkv_l_s_masked_int3",
+                    "relative_sigma_threshold": 1e-2,
+                    "sparse_zero_threshold": 1e-5,
+                }
+            }
             with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
                 low_rank_model = build_model(low_rank_config)
             with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
                 sparse_model = build_model(sparse_config)
+            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
+                combined_model = build_model(combined_config)
 
         expected_low_rank = torch.zeros_like(low_rank)
         expected_low_rank[0, 0] = 4.0
@@ -563,7 +574,13 @@ class SalaadModelTest(unittest.TestCase):
                 low_rank + expected_sparse,
             )
         )
-        for model in (low_rank_model, sparse_model):
+        self.assertTrue(
+            torch.allclose(
+                combined_model.get_submodule(qkv_target).weight,
+                expected_low_rank + expected_sparse,
+            )
+        )
+        for model in (low_rank_model, sparse_model, combined_model):
             self.assertTrue(
                 torch.equal(
                     model.backbone.blocks[0].attn.proj.weight,
@@ -592,6 +609,12 @@ class SalaadModelTest(unittest.TestCase):
                 _Model(),
                 Path("unused"),
                 sparse_zero_threshold=float("inf"),
+            )
+        with self.assertRaisesRegex(ValueError, "sparse_zero_threshold"):
+            apply_salaad_qkv_l_s_masked_int3(
+                _Model(),
+                Path("unused"),
+                sparse_zero_threshold=-1.0,
             )
 
     def test_qkv_replaces_12_qkv_weights_and_keeps_other_x(self) -> None:

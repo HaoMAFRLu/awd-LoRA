@@ -8,6 +8,7 @@ from .salaad import (
     apply_salaad_fc_s_int3,
     apply_salaad_fc_s_masked_int3,
     apply_salaad_qkv_l_masked_int3,
+    apply_salaad_qkv_l_s_masked_int3,
     apply_salaad_qkv_s_masked_int3,
     apply_salaad_qkv_s50,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "apply_salaad_fc_s_int3",
     "apply_salaad_fc_s_masked_int3",
     "apply_salaad_qkv_l_masked_int3",
+    "apply_salaad_qkv_l_s_masked_int3",
     "apply_salaad_qkv_s_masked_int3",
     "apply_salaad_qkv_s50",
     "split_qk_attention",
