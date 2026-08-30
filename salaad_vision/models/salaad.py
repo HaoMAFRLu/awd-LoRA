@@ -168,6 +168,86 @@ def _symmetric_fake_quantize(weight: Tensor, maximum_code: int) -> Tensor:
     )
 
 
+def _symmetric_activation_fake_quantize(
+    activation: Tensor,
+    maximum_code: int,
+) -> Tensor:
+    """Fake-quantize activations per token along the final feature axis."""
+    if activation.ndim < 1:
+        raise ValueError("activation must have at least one dimension")
+    if not activation.is_floating_point():
+        raise TypeError("activation must be floating point")
+    if isinstance(maximum_code, bool) or not isinstance(maximum_code, int):
+        raise TypeError("maximum_code must be an integer")
+    if maximum_code <= 0:
+        raise ValueError("maximum_code must be positive")
+
+    original_dtype = activation.dtype
+    activation_float = activation.float()
+    absolute_maximum = activation_float.abs().amax(dim=-1, keepdim=True)
+    scale = absolute_maximum / float(maximum_code)
+    safe_scale = torch.where(scale > 0.0, scale, torch.ones_like(scale))
+    codes = torch.round(activation_float / safe_scale).clamp(
+        -float(maximum_code),
+        float(maximum_code),
+    )
+    dequantized = codes * safe_scale
+    quantized = torch.where(
+        absolute_maximum > 0.0,
+        dequantized,
+        torch.zeros_like(dequantized),
+    )
+    return quantized.to(dtype=original_dtype)
+
+
+def _register_all_linear_activation_fake_quantization(
+    model: nn.Module,
+    *,
+    maximum_code: int,
+) -> Set[str]:
+    """Quantize the input and output of every decomposed backbone Linear."""
+    if isinstance(maximum_code, bool) or not isinstance(maximum_code, int):
+        raise TypeError("maximum_code must be an integer")
+    if maximum_code <= 0:
+        raise ValueError("maximum_code must be positive")
+
+    expected = _expected(model, "salaad_all")
+    for layer_name in expected:
+        layer = model.get_submodule(layer_name)
+        if not isinstance(layer, nn.Linear):
+            raise TypeError(f"expected nn.Linear for {layer_name}")
+        if hasattr(layer, "_salaad_activation_maximum_code"):
+            raise ValueError(
+                f"activation fake quantization is already registered for {layer_name}"
+            )
+
+    def quantize_input(
+        _module: nn.Module,
+        inputs: tuple[Tensor, ...],
+    ) -> tuple[Tensor, ...]:
+        if len(inputs) != 1 or not isinstance(inputs[0], Tensor):
+            raise TypeError("quantized Linear expects one Tensor input")
+        return (
+            _symmetric_activation_fake_quantize(inputs[0], maximum_code),
+        )
+
+    def quantize_output(
+        _module: nn.Module,
+        _inputs: tuple[Tensor, ...],
+        output: Tensor,
+    ) -> Tensor:
+        if not isinstance(output, Tensor):
+            raise TypeError("quantized Linear must return a Tensor")
+        return _symmetric_activation_fake_quantize(output, maximum_code)
+
+    for layer_name in sorted(expected):
+        layer = model.get_submodule(layer_name)
+        layer.register_forward_pre_hook(quantize_input)
+        layer.register_forward_hook(quantize_output)
+        layer._salaad_activation_maximum_code = maximum_code
+    return expected
+
+
 def _symmetric_int3_fake_quantize(weight: Tensor) -> Tensor:
     """Fake-quantize a matrix row-wise to signed INT3 codes in [-3, 3]."""
     return _symmetric_fake_quantize(weight, 3)
@@ -205,22 +285,6 @@ def _masked_symmetric_weight(
         masked_low_rank,
         maximum_code,
     ) + _symmetric_fake_quantize(masked_sparse, maximum_code)
-
-
-def _masked_int3_weight(
-    low_rank: Tensor,
-    sparse: Tensor,
-    *,
-    relative_sigma_threshold: float,
-    sparse_zero_threshold: float,
-) -> Tensor:
-    return _masked_symmetric_weight(
-        low_rank,
-        sparse,
-        relative_sigma_threshold=relative_sigma_threshold,
-        sparse_zero_threshold=sparse_zero_threshold,
-        maximum_code=3,
-    )
 
 
 def _split_low_output_similarity(
@@ -365,28 +429,16 @@ def apply_salaad(model: nn.Module, matrix_dir: Path, variant: str) -> Set[str]:
 
 
 @torch.no_grad()
-def apply_salaad_all_masked_int3(
+def _apply_salaad_all_masked_symmetric(
     model: nn.Module,
     matrix_dir: Path,
     *,
-    relative_sigma_threshold: float = 1e-2,
-    sparse_zero_threshold: float = 1e-5,
+    variant_name: str,
+    relative_sigma_threshold: float,
+    sparse_zero_threshold: float,
+    maximum_code: int,
 ) -> Set[str]:
-    """Restore all 48 layers with mask-then-INT3 fake-quantized L and S.
-
-    L is spectrally masked, while small entries in S are set to zero. Each
-    resulting matrix is independently fake-quantized per output row to the
-    signed narrow-range INT3 codes ``{-3, ..., 3}``, then their dequantized
-    values are summed and copied into the model.
-    """
-    relative_sigma_threshold = _fraction(
-        relative_sigma_threshold,
-        "relative_sigma_threshold",
-    )
-    sparse_zero_threshold = _nonnegative(
-        sparse_zero_threshold,
-        "sparse_zero_threshold",
-    )
+    """Restore all 48 L/S pairs with one signed symmetric precision."""
     expected = _expected(model, "salaad_all")
     seen: Set[str] = set()
 
@@ -397,8 +449,8 @@ def apply_salaad_all_masked_int3(
                 raise ValueError(f"duplicate SALAAD layer: {layer_name}")
             if layer_name not in expected:
                 raise ValueError(
-                    "salaad_all_masked_int3 contains an unexpected decomposed "
-                    f"layer: {layer_name}"
+                    f"{variant_name} contains an unexpected decomposed layer: "
+                    f"{layer_name}"
                 )
 
             layer = model.get_submodule(layer_name)
@@ -424,11 +476,12 @@ def apply_salaad_all_masked_int3(
             ).all():
                 raise ValueError(f"SALAAD contains non-finite values for {layer_name}")
 
-            replacement = _masked_int3_weight(
+            replacement = _masked_symmetric_weight(
                 low_rank_weight,
                 sparse_weight,
                 relative_sigma_threshold=relative_sigma_threshold,
                 sparse_zero_threshold=sparse_zero_threshold,
+                maximum_code=maximum_code,
             )
             layer.weight.copy_(
                 replacement.to(
@@ -441,9 +494,99 @@ def apply_salaad_all_masked_int3(
     missing = expected - seen
     if missing:
         raise ValueError(
-            "salaad_all_masked_int3 decomposition is incomplete; "
-            f"missing={sorted(missing)}"
+            f"{variant_name} decomposition is incomplete; missing={sorted(missing)}"
         )
+    return seen
+
+
+@torch.no_grad()
+def apply_salaad_all_masked_int3(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    relative_sigma_threshold: float = 1e-2,
+    sparse_zero_threshold: float = 1e-5,
+) -> Set[str]:
+    """Restore all 48 layers with mask-then-INT3 fake-quantized L and S.
+
+    L is spectrally masked, while small entries in S are set to zero. Each
+    resulting matrix is independently fake-quantized per output row to the
+    signed narrow-range INT3 codes ``{-3, ..., 3}``, then their dequantized
+    values are summed and copied into the model.
+    """
+    relative_sigma_threshold = _fraction(
+        relative_sigma_threshold,
+        "relative_sigma_threshold",
+    )
+    sparse_zero_threshold = _nonnegative(
+        sparse_zero_threshold,
+        "sparse_zero_threshold",
+    )
+    return _apply_salaad_all_masked_symmetric(
+        model,
+        matrix_dir,
+        variant_name="salaad_all_masked_int3",
+        relative_sigma_threshold=relative_sigma_threshold,
+        sparse_zero_threshold=sparse_zero_threshold,
+        maximum_code=3,
+    )
+
+
+@torch.no_grad()
+def apply_salaad_all_masked_w3a4(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    relative_sigma_threshold: float = 1e-2,
+    sparse_zero_threshold: float = 1e-5,
+) -> Set[str]:
+    """Apply masked W3 weights and per-token A4 at all Linear boundaries."""
+    seen = apply_salaad_all_masked_int3(
+        model,
+        matrix_dir,
+        relative_sigma_threshold=relative_sigma_threshold,
+        sparse_zero_threshold=sparse_zero_threshold,
+    )
+    hooked = _register_all_linear_activation_fake_quantization(
+        model,
+        maximum_code=7,
+    )
+    if seen != hooked:
+        raise RuntimeError("W3 and A4 target layers differ")
+    return seen
+
+
+@torch.no_grad()
+def apply_salaad_all_masked_w4a4(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    relative_sigma_threshold: float = 1e-2,
+    sparse_zero_threshold: float = 1e-5,
+) -> Set[str]:
+    """Apply masked W4 weights and per-token A4 at all Linear boundaries."""
+    relative_sigma_threshold = _fraction(
+        relative_sigma_threshold,
+        "relative_sigma_threshold",
+    )
+    sparse_zero_threshold = _nonnegative(
+        sparse_zero_threshold,
+        "sparse_zero_threshold",
+    )
+    seen = _apply_salaad_all_masked_symmetric(
+        model,
+        matrix_dir,
+        variant_name="salaad_all_masked_w4a4",
+        relative_sigma_threshold=relative_sigma_threshold,
+        sparse_zero_threshold=sparse_zero_threshold,
+        maximum_code=7,
+    )
+    hooked = _register_all_linear_activation_fake_quantization(
+        model,
+        maximum_code=7,
+    )
+    if seen != hooked:
+        raise RuntimeError("W4 and A4 target layers differ")
     return seen
 
 

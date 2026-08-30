@@ -16,6 +16,8 @@ from salaad_vision.models import (
     SplitQKAttention,
     apply_salaad,
     apply_salaad_all_masked_int3,
+    apply_salaad_all_masked_w3a4,
+    apply_salaad_all_masked_w4a4,
     apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4,
     apply_salaad_fc_s_masked_int3,
     apply_salaad_qkv_l_masked_int3,
@@ -362,6 +364,99 @@ class SalaadModelTest(unittest.TestCase):
                 Path("unused"),
                 sparse_zero_threshold=float("nan"),
             )
+
+    def test_w3a4_and_w4a4_quantize_weights_and_linear_activations(self) -> None:
+        names = _layers("salaad_all")
+        target = "backbone.blocks.0.mlp.fc1"
+        variants = {
+            "salaad_all_masked_w3a4": (
+                apply_salaad_all_masked_w3a4,
+                torch.tensor([[7.0, 7.0 / 3.0], [0.0, 0.0]]),
+            ),
+            "salaad_all_masked_w4a4": (
+                apply_salaad_all_masked_w4a4,
+                torch.tensor([[7.0, 3.0], [0.0, 0.0]]),
+            ),
+        }
+
+        for variant, (apply_variant, expected_weight) in variants.items():
+            with self.subTest(
+                variant=variant
+            ), tempfile.TemporaryDirectory() as root_value:
+                source = _Model()
+                root = Path(root_value)
+                checkpoint = root / "model.pth"
+                torch.save(source.state_dict(), checkpoint)
+                _write_matrices(root, source, names)
+
+                for matrix_path in sorted(root.glob("matrix_rank*.pkl")):
+                    with matrix_path.open("rb") as matrix_file:
+                        payload = pickle.load(matrix_file)
+                    if target not in payload["LL"]:
+                        continue
+                    payload["LL"][target] = torch.zeros((2, 2))
+                    payload["SS"][target] = torch.tensor(
+                        [[7.0, 2.6], [0.0, 0.0]]
+                    )
+                    with matrix_path.open("wb") as matrix_file:
+                        pickle.dump(payload, matrix_file)
+                    break
+
+                config = {
+                    "model": {
+                        "name": "dino_vitb8",
+                        "variant": variant,
+                        "checkpoint": str(checkpoint),
+                        "checkpoint_kind": "student_model",
+                        "matrix_dir": str(root),
+                        "relative_sigma_threshold": 1e-2,
+                        "sparse_zero_threshold": 1e-5,
+                        "freeze": True,
+                    }
+                }
+                with patch(
+                    "salaad_vision.build.DinoViTBase8",
+                    return_value=_Model(),
+                ):
+                    model = build_model(config)
+
+                self.assertTrue(
+                    torch.allclose(
+                        model.get_submodule(target).weight,
+                        expected_weight,
+                    )
+                )
+                for name in names:
+                    layer = model.get_submodule(name)
+                    self.assertEqual(layer._salaad_activation_maximum_code, 7)
+                    self.assertEqual(len(layer._forward_pre_hooks), 1)
+                    self.assertEqual(len(layer._forward_hooks), 1)
+
+                layer = model.get_submodule(target)
+                with torch.no_grad():
+                    layer.weight.copy_(torch.eye(2))
+                quantized_input = layer(
+                    torch.tensor([[7.0, 2.6], [1.0, 0.2]])
+                )
+                self.assertTrue(
+                    torch.allclose(
+                        quantized_input,
+                        torch.tensor([[7.0, 3.0], [1.0, 1.0 / 7.0]]),
+                    )
+                )
+
+                with torch.no_grad():
+                    layer.weight.copy_(torch.tensor([[7.0, 0.0], [2.6, 0.0]]))
+                quantized_output = layer(torch.tensor([[1.0, 0.0]]))
+                self.assertTrue(
+                    torch.equal(quantized_output, torch.tensor([[7.0, 3.0]]))
+                )
+                self.assertTrue(
+                    all(
+                        not parameter.requires_grad
+                        for parameter in model.parameters()
+                    )
+                )
 
     def test_attention_int3_fc_int4_uses_group_specific_precision(self) -> None:
         source = _Model()

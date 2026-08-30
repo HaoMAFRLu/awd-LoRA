@@ -15,6 +15,8 @@ from salaad_vision.models import (
     DinoViTBase8,
     apply_salaad,
     apply_salaad_all_masked_int3,
+    apply_salaad_all_masked_w3a4,
+    apply_salaad_all_masked_w4a4,
     apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4,
     apply_salaad_fc_s_int3,
     apply_salaad_fc_s_masked_int3,
@@ -77,6 +79,8 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
         "derived",
         "salaad_all",
         "salaad_all_masked_int3",
+        "salaad_all_masked_w3a4",
+        "salaad_all_masked_w4a4",
         "salaad_attn_l_s_masked_int3_fc_l_s_masked_int4",
         "salaad_fc_s_int3",
         "salaad_fc_s_masked_int3",
@@ -128,6 +132,8 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
     if variant in {
         "salaad_all",
         "salaad_all_masked_int3",
+        "salaad_all_masked_w3a4",
+        "salaad_all_masked_w4a4",
         "salaad_attn_l_s_masked_int3_fc_l_s_masked_int4",
         "salaad_fc_s_int3",
         "salaad_fc_s_masked_int3",
@@ -144,8 +150,17 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
             raise ValueError(
                 f"{variant} checkpoint and matrix files must be in the same directory"
             )
-        if variant == "salaad_all_masked_int3":
-            apply_salaad_all_masked_int3(
+        if variant in {
+            "salaad_all_masked_int3",
+            "salaad_all_masked_w3a4",
+            "salaad_all_masked_w4a4",
+        }:
+            apply_variant = {
+                "salaad_all_masked_int3": apply_salaad_all_masked_int3,
+                "salaad_all_masked_w3a4": apply_salaad_all_masked_w3a4,
+                "salaad_all_masked_w4a4": apply_salaad_all_masked_w4a4,
+            }[variant]
+            apply_variant(
                 model,
                 matrix_dir,
                 relative_sigma_threshold=model_config.get(
