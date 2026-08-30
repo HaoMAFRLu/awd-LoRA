@@ -15,6 +15,7 @@ from salaad_vision.models import (
     DinoViTBase8,
     apply_salaad,
     apply_salaad_all_masked_int3,
+    apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4,
     apply_salaad_fc_s_int3,
     apply_salaad_fc_s_masked_int3,
     apply_salaad_qkv_l_masked_int3,
@@ -76,6 +77,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
         "derived",
         "salaad_all",
         "salaad_all_masked_int3",
+        "salaad_attn_l_s_masked_int3_fc_l_s_masked_int4",
         "salaad_fc_s_int3",
         "salaad_fc_s_masked_int3",
         "salaad_qkv",
@@ -126,6 +128,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
     if variant in {
         "salaad_all",
         "salaad_all_masked_int3",
+        "salaad_attn_l_s_masked_int3_fc_l_s_masked_int4",
         "salaad_fc_s_int3",
         "salaad_fc_s_masked_int3",
         "salaad_qkv",
@@ -143,6 +146,19 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
             )
         if variant == "salaad_all_masked_int3":
             apply_salaad_all_masked_int3(
+                model,
+                matrix_dir,
+                relative_sigma_threshold=model_config.get(
+                    "relative_sigma_threshold",
+                    1e-2,
+                ),
+                sparse_zero_threshold=model_config.get(
+                    "sparse_zero_threshold",
+                    1e-5,
+                ),
+            )
+        elif variant == "salaad_attn_l_s_masked_int3_fc_l_s_masked_int4":
+            apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4(
                 model,
                 matrix_dir,
                 relative_sigma_threshold=model_config.get(

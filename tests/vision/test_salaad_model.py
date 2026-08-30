@@ -16,6 +16,7 @@ from salaad_vision.models import (
     SplitQKAttention,
     apply_salaad,
     apply_salaad_all_masked_int3,
+    apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4,
     apply_salaad_fc_s_masked_int3,
     apply_salaad_qkv_l_masked_int3,
     apply_salaad_qkv_l_s_masked_int3,
@@ -360,6 +361,103 @@ class SalaadModelTest(unittest.TestCase):
                 model,
                 Path("unused"),
                 sparse_zero_threshold=float("nan"),
+            )
+
+    def test_attention_int3_fc_int4_uses_group_specific_precision(self) -> None:
+        source = _Model()
+        names = _layers("salaad_all")
+        qkv_target = "backbone.blocks.0.attn.qkv"
+        proj_target = "backbone.blocks.0.attn.proj"
+        fc1_target = "backbone.blocks.0.mlp.fc1"
+        fc2_target = "backbone.blocks.0.mlp.fc2"
+        attention_low_rank = torch.tensor([[4.0, 0.0], [0.0, 0.02]])
+        attention_sparse = torch.tensor([[3.0, 1.4], [9e-6, 2e-5]])
+        qkv_low_rank = torch.zeros((6, 2))
+        qkv_low_rank[:2] = attention_low_rank
+        qkv_sparse = torch.zeros((6, 2))
+        qkv_sparse[:2] = attention_sparse
+        fc_low_rank = torch.tensor([[4.0, 0.0], [0.0, 0.02]])
+        fc_sparse = torch.tensor([[7.0, 2.6], [9e-6, 7e-5]])
+
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            checkpoint = root / "model.pth"
+            torch.save(source.state_dict(), checkpoint)
+            _write_matrices(root, source, names)
+
+            replacements = {
+                qkv_target: (qkv_low_rank, qkv_sparse),
+                proj_target: (attention_low_rank, attention_sparse),
+                fc1_target: (fc_low_rank, fc_sparse),
+                fc2_target: (fc_low_rank, fc_sparse),
+            }
+            remaining = set(replacements)
+            for matrix_path in sorted(root.glob("matrix_rank*.pkl")):
+                with matrix_path.open("rb") as matrix_file:
+                    payload = pickle.load(matrix_file)
+                changed = False
+                for target in remaining & set(payload["LL"]):
+                    low_rank, sparse = replacements[target]
+                    payload["LL"][target] = low_rank.clone()
+                    payload["SS"][target] = sparse.clone()
+                    changed = True
+                remaining -= set(payload["LL"])
+                if changed:
+                    with matrix_path.open("wb") as matrix_file:
+                        pickle.dump(payload, matrix_file)
+            self.assertFalse(remaining)
+
+            config = {
+                "model": {
+                    "name": "dino_vitb8",
+                    "variant": "salaad_attn_l_s_masked_int3_fc_l_s_masked_int4",
+                    "checkpoint": str(checkpoint),
+                    "checkpoint_kind": "student_model",
+                    "matrix_dir": str(root),
+                    "relative_sigma_threshold": 1e-2,
+                    "sparse_zero_threshold": 1e-5,
+                    "freeze": True,
+                }
+            }
+            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
+                model = build_model(config)
+
+        expected_qkv = torch.zeros_like(qkv_low_rank)
+        expected_qkv[0] = torch.tensor([7.0, 1.0])
+        expected_qkv[1, 1] = 2e-5
+        expected_attention = torch.tensor([[7.0, 1.0], [0.0, 2e-5]])
+        expected_fc = torch.tensor([[11.0, 3.0], [0.0, 7e-5]])
+        self.assertTrue(
+            torch.allclose(model.get_submodule(qkv_target).weight, expected_qkv)
+        )
+        self.assertTrue(
+            torch.allclose(
+                model.get_submodule(proj_target).weight,
+                expected_attention,
+            )
+        )
+        self.assertTrue(
+            torch.allclose(model.get_submodule(fc1_target).weight, expected_fc)
+        )
+        self.assertTrue(
+            torch.allclose(model.get_submodule(fc2_target).weight, expected_fc)
+        )
+        self.assertTrue(
+            all(not parameter.requires_grad for parameter in model.parameters())
+        )
+
+    def test_attention_int3_fc_int4_rejects_invalid_thresholds(self) -> None:
+        with self.assertRaisesRegex(ValueError, "relative_sigma_threshold"):
+            apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4(
+                _Model(),
+                Path("unused"),
+                relative_sigma_threshold=0.0,
+            )
+        with self.assertRaisesRegex(ValueError, "sparse_zero_threshold"):
+            apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4(
+                _Model(),
+                Path("unused"),
+                sparse_zero_threshold=float("inf"),
             )
 
     def test_fc_s_masked_int3_keeps_qkv_proj_and_fc_l_exact(self) -> None:

@@ -145,20 +145,32 @@ def _nonnegative(value: float, name: str) -> float:
     return value
 
 
-def _symmetric_int3_fake_quantize(weight: Tensor) -> Tensor:
-    """Fake-quantize a matrix row-wise to signed INT3 codes in [-3, 3]."""
+def _symmetric_fake_quantize(weight: Tensor, maximum_code: int) -> Tensor:
+    """Fake-quantize a matrix row-wise to a signed symmetric code range."""
     if weight.ndim != 2:
         raise ValueError(f"expected a matrix, got shape {tuple(weight.shape)}")
+    if isinstance(maximum_code, bool) or not isinstance(maximum_code, int):
+        raise TypeError("maximum_code must be an integer")
+    if maximum_code <= 0:
+        raise ValueError("maximum_code must be positive")
     absolute_maximum = weight.abs().amax(dim=1, keepdim=True)
-    scale = absolute_maximum / 3.0
+    scale = absolute_maximum / float(maximum_code)
     safe_scale = torch.where(scale > 0.0, scale, torch.ones_like(scale))
-    codes = torch.round(weight / safe_scale).clamp(-3.0, 3.0)
+    codes = torch.round(weight / safe_scale).clamp(
+        -float(maximum_code),
+        float(maximum_code),
+    )
     dequantized = codes * safe_scale
     return torch.where(
         absolute_maximum > 0.0,
         dequantized,
         torch.zeros_like(dequantized),
     )
+
+
+def _symmetric_int3_fake_quantize(weight: Tensor) -> Tensor:
+    """Fake-quantize a matrix row-wise to signed INT3 codes in [-3, 3]."""
+    return _symmetric_fake_quantize(weight, 3)
 
 
 def _spectral_mask(low_rank: Tensor, relative_sigma_threshold: float) -> Tensor:
@@ -173,12 +185,13 @@ def _spectral_mask(low_rank: Tensor, relative_sigma_threshold: float) -> Tensor:
     return (u[:, retained] * singular_values[retained]) @ vh[retained]
 
 
-def _masked_int3_weight(
+def _masked_symmetric_weight(
     low_rank: Tensor,
     sparse: Tensor,
     *,
     relative_sigma_threshold: float,
     sparse_zero_threshold: float,
+    maximum_code: int,
 ) -> Tensor:
     masked_low_rank = _spectral_mask(
         low_rank,
@@ -188,9 +201,26 @@ def _masked_int3_weight(
         sparse.float().abs() <= sparse_zero_threshold,
         0.0,
     )
-    return _symmetric_int3_fake_quantize(
+    return _symmetric_fake_quantize(
         masked_low_rank,
-    ) + _symmetric_int3_fake_quantize(masked_sparse)
+        maximum_code,
+    ) + _symmetric_fake_quantize(masked_sparse, maximum_code)
+
+
+def _masked_int3_weight(
+    low_rank: Tensor,
+    sparse: Tensor,
+    *,
+    relative_sigma_threshold: float,
+    sparse_zero_threshold: float,
+) -> Tensor:
+    return _masked_symmetric_weight(
+        low_rank,
+        sparse,
+        relative_sigma_threshold=relative_sigma_threshold,
+        sparse_zero_threshold=sparse_zero_threshold,
+        maximum_code=3,
+    )
 
 
 def _split_low_output_similarity(
@@ -720,6 +750,96 @@ def apply_salaad_qkv_proj_l_s_masked_int3(
         relative_sigma_threshold=relative_sigma_threshold,
         sparse_zero_threshold=sparse_zero_threshold,
     )
+
+
+@torch.no_grad()
+def apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    relative_sigma_threshold: float = 1e-2,
+    sparse_zero_threshold: float = 1e-5,
+) -> Set[str]:
+    """Quantize attention L/S with INT3 and FC L/S with INT4 after masks.
+
+    QKV and attention output projections use signed symmetric codes in
+    ``[-3, 3]``. MLP FC1/FC2 use signed symmetric codes in ``[-7, 7]``.
+    Each L matrix is spectrally masked and each S matrix is epsilon-masked
+    before independent per-output-row fake quantization.
+    """
+    relative_sigma_threshold = _fraction(
+        relative_sigma_threshold,
+        "relative_sigma_threshold",
+    )
+    sparse_zero_threshold = _nonnegative(
+        sparse_zero_threshold,
+        "sparse_zero_threshold",
+    )
+    expected = _expected(model, "salaad_all")
+    seen: Set[str] = set()
+
+    for matrix_file in _files(matrix_dir):
+        low_rank, sparse = _load(matrix_file)
+        for layer_name in sorted(low_rank):
+            if layer_name in seen:
+                raise ValueError(f"duplicate SALAAD layer: {layer_name}")
+            if layer_name not in expected:
+                raise ValueError(
+                    "salaad_attn_l_s_masked_int3_fc_l_s_masked_int4 contains "
+                    f"an unexpected decomposed layer: {layer_name}"
+                )
+
+            layer = model.get_submodule(layer_name)
+            low_rank_weight = low_rank[layer_name]
+            sparse_weight = sparse[layer_name]
+            if not isinstance(low_rank_weight, Tensor) or not isinstance(
+                sparse_weight,
+                Tensor,
+            ):
+                raise TypeError(f"SALAAD L and S must be tensors for {layer_name}")
+            if (
+                low_rank_weight.shape != layer.weight.shape
+                or sparse_weight.shape != layer.weight.shape
+            ):
+                raise ValueError(
+                    f"SALAAD shape mismatch for {layer_name}: "
+                    f"X={tuple(layer.weight.shape)}, "
+                    f"L={tuple(low_rank_weight.shape)}, "
+                    f"S={tuple(sparse_weight.shape)}"
+                )
+            if not torch.isfinite(low_rank_weight).all() or not torch.isfinite(
+                sparse_weight
+            ).all():
+                raise ValueError(f"SALAAD contains non-finite values for {layer_name}")
+
+            if layer_name.endswith(_ATTENTION_SUFFIXES):
+                maximum_code = 3
+            elif layer_name.endswith(_FC_SUFFIXES):
+                maximum_code = 7
+            else:
+                raise ValueError(f"unsupported decomposed layer: {layer_name}")
+            replacement = _masked_symmetric_weight(
+                low_rank_weight,
+                sparse_weight,
+                relative_sigma_threshold=relative_sigma_threshold,
+                sparse_zero_threshold=sparse_zero_threshold,
+                maximum_code=maximum_code,
+            )
+            layer.weight.copy_(
+                replacement.to(
+                    device=layer.weight.device,
+                    dtype=layer.weight.dtype,
+                )
+            )
+            seen.add(layer_name)
+
+    missing = expected - seen
+    if missing:
+        raise ValueError(
+            "salaad_attn_l_s_masked_int3_fc_l_s_masked_int4 decomposition "
+            f"is incomplete; missing={sorted(missing)}"
+        )
+    return seen
 
 
 @torch.no_grad()

@@ -5,6 +5,7 @@ from .linear_probe import DINO_LINEAR_INPUT_DIM, DinoLinearHead
 from .salaad import (
     apply_salaad,
     apply_salaad_all_masked_int3,
+    apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4,
     apply_salaad_fc_s_int3,
     apply_salaad_fc_s_masked_int3,
     apply_salaad_qkv_l_masked_int3,
@@ -26,6 +27,7 @@ __all__ = [
     "SplitQKAttention",
     "apply_salaad",
     "apply_salaad_all_masked_int3",
+    "apply_salaad_attn_l_s_masked_int3_fc_l_s_masked_int4",
     "apply_salaad_fc_s_int3",
     "apply_salaad_fc_s_masked_int3",
     "apply_salaad_qkv_l_masked_int3",

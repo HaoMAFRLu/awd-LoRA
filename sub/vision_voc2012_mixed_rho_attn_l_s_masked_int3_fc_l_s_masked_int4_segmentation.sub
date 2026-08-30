@@ -1,0 +1,27 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = \
+    -u scripts/train_vision.py \
+    --config configs/vision_voc2012_mixed_rho_attn_l_s_masked_int3_fc_l_s_masked_int4_segmentation.yaml
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/vision_voc2012_mixed_rho_attn_int3_fc_int4_$(Cluster)_$(Process).log
+error           = jobs/vision_voc2012_mixed_rho_attn_int3_fc_int4_$(Cluster)_$(Process).err
+output          = jobs/vision_voc2012_mixed_rho_attn_int3_fc_int4_$(Cluster)_$(Process).out
+
+request_cpus    = 12
+request_memory  = 48000
+request_gpus    = 1
+
+requirements = ( \
+    CUDACapability >= 8.0 && \
+    CUDAGlobalMemoryMb >= 40000 && \
+    !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
+    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) \
+)
+
+getenv          = True
+environment     = "PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True VOC2012_ROOT=/lustre/fast/fast/hma2/data/voc2012"
+
+queue 1
