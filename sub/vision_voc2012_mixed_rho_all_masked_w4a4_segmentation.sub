@@ -18,7 +18,8 @@ requirements = ( \
     CUDAGlobalMemoryMb >= 40000 && \
     !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
     !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
-    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) \
+    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) && \
+    !regexp("GPU-198c18b3", TARGET.DetectedGPUs) \
 )
 
 getenv          = True
