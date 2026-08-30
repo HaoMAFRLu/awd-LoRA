@@ -19,6 +19,7 @@ from salaad_vision.models import (
     apply_salaad_fc_s_masked_int3,
     apply_salaad_qkv_l_masked_int3,
     apply_salaad_qkv_l_s_masked_int3,
+    apply_salaad_qkv_proj_l_s_masked_int3,
     apply_salaad_qkv_s_masked_int3,
     apply_salaad_qkv_s50,
     split_qk_attention,
@@ -615,6 +616,95 @@ class SalaadModelTest(unittest.TestCase):
                 _Model(),
                 Path("unused"),
                 sparse_zero_threshold=-1.0,
+            )
+
+    def test_qkv_proj_l_s_masked_int3_quantizes_attention_and_keeps_fc_exact(
+        self,
+    ) -> None:
+        source = _Model()
+        names = _layers("salaad_all")
+        qkv_target = "backbone.blocks.0.attn.qkv"
+        proj_target = "backbone.blocks.0.attn.proj"
+        low_rank_qkv = torch.zeros((6, 2))
+        low_rank_qkv[0, 0] = 4.0
+        low_rank_qkv[1, 1] = 0.02
+        sparse_qkv = torch.zeros((6, 2))
+        sparse_qkv[0] = torch.tensor([3.0, 1.4])
+        sparse_qkv[1] = torch.tensor([9e-6, 2e-5])
+        low_rank_proj = torch.tensor([[4.0, 0.0], [0.0, 0.02]])
+        sparse_proj = torch.tensor([[3.0, 1.4], [9e-6, 2e-5]])
+
+        with tempfile.TemporaryDirectory() as temporary_root:
+            root = Path(temporary_root)
+            checkpoint = root / "model.pth"
+            torch.save(source.state_dict(), checkpoint)
+            _write_matrices(root, source, names)
+
+            remaining = {qkv_target, proj_target}
+            for matrix_path in sorted(root.glob("matrix_rank*.pkl")):
+                with matrix_path.open("rb") as matrix_file:
+                    payload = pickle.load(matrix_file)
+                if qkv_target in payload["LL"]:
+                    payload["LL"][qkv_target] = low_rank_qkv.clone()
+                    payload["SS"][qkv_target] = sparse_qkv.clone()
+                    remaining.remove(qkv_target)
+                if proj_target in payload["LL"]:
+                    payload["LL"][proj_target] = low_rank_proj.clone()
+                    payload["SS"][proj_target] = sparse_proj.clone()
+                    remaining.remove(proj_target)
+                with matrix_path.open("wb") as matrix_file:
+                    pickle.dump(payload, matrix_file)
+            self.assertFalse(remaining)
+
+            config = {
+                "model": {
+                    "name": "dino_vitb8",
+                    "variant": "salaad_qkv_proj_l_s_masked_int3",
+                    "checkpoint": str(checkpoint),
+                    "checkpoint_kind": "student_model",
+                    "matrix_dir": str(root),
+                    "relative_sigma_threshold": 1e-2,
+                    "sparse_zero_threshold": 1e-5,
+                    "freeze": True,
+                }
+            }
+            with patch("salaad_vision.build.DinoViTBase8", return_value=_Model()):
+                model = build_model(config)
+
+        expected_qkv = torch.zeros_like(low_rank_qkv)
+        expected_qkv[0] = torch.tensor([7.0, 1.0])
+        expected_qkv[1, 1] = 2e-5
+        expected_proj = torch.tensor([[7.0, 1.0], [0.0, 2e-5]])
+        self.assertTrue(
+            torch.allclose(
+                model.get_submodule(qkv_target).weight,
+                expected_qkv,
+            )
+        )
+        self.assertTrue(
+            torch.allclose(
+                model.get_submodule(proj_target).weight,
+                expected_proj,
+            )
+        )
+        for block in range(12):
+            for suffix in ("mlp.fc1", "mlp.fc2"):
+                name = f"backbone.blocks.{block}.{suffix}"
+                self.assertTrue(
+                    torch.equal(
+                        model.get_submodule(name).weight,
+                        torch.full_like(model.get_submodule(name).weight, 3.0),
+                    ),
+                    name,
+                )
+        self.assertTrue(
+            all(not parameter.requires_grad for parameter in model.parameters())
+        )
+        with self.assertRaisesRegex(ValueError, "relative_sigma_threshold"):
+            apply_salaad_qkv_proj_l_s_masked_int3(
+                _Model(),
+                Path("unused"),
+                relative_sigma_threshold=0.0,
             )
 
     def test_qkv_replaces_12_qkv_weights_and_keeps_other_x(self) -> None:

@@ -19,6 +19,7 @@ from salaad_vision.models import (
     apply_salaad_fc_s_masked_int3,
     apply_salaad_qkv_l_masked_int3,
     apply_salaad_qkv_l_s_masked_int3,
+    apply_salaad_qkv_proj_l_s_masked_int3,
     apply_salaad_qkv_s_masked_int3,
 )
 from salaad_vision.models.dino import DINO_VITB8_CHECKPOINT_SHA256
@@ -80,6 +81,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
         "salaad_qkv",
         "salaad_qkv_l_masked_int3",
         "salaad_qkv_l_s_masked_int3",
+        "salaad_qkv_proj_l_s_masked_int3",
         "salaad_qkv_s_masked_int3",
     }
     if variant not in valid_variants:
@@ -129,6 +131,7 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
         "salaad_qkv",
         "salaad_qkv_l_masked_int3",
         "salaad_qkv_l_s_masked_int3",
+        "salaad_qkv_proj_l_s_masked_int3",
         "salaad_qkv_s_masked_int3",
     }:
         if checkpoint_kind != "student_model":
@@ -182,6 +185,19 @@ def build_model(config: Mapping[str, Any]) -> DinoViTBase8:
             )
         elif variant == "salaad_qkv_l_s_masked_int3":
             apply_salaad_qkv_l_s_masked_int3(
+                model,
+                matrix_dir,
+                relative_sigma_threshold=model_config.get(
+                    "relative_sigma_threshold",
+                    1e-2,
+                ),
+                sparse_zero_threshold=model_config.get(
+                    "sparse_zero_threshold",
+                    1e-5,
+                ),
+            )
+        elif variant == "salaad_qkv_proj_l_s_masked_int3":
+            apply_salaad_qkv_proj_l_s_masked_int3(
                 model,
                 matrix_dir,
                 relative_sigma_threshold=model_config.get(

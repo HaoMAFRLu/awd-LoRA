@@ -1,0 +1,73 @@
+seed: 42
+
+task:
+  name: semantic_segmentation
+  head: linear_upsample
+  num_classes: 21
+  ignore_index: 255
+  boundary_tolerance: 1
+
+model:
+  name: dino_vitb8
+  variant: salaad_qkv_proj_l_s_masked_int3
+  label: mixed_rho_qkv_proj_l_s_masked_int3
+  checkpoint: data/salaad_vision/vit_b8_all_qkv_rho5e6_fc_rho5e8/20260828_154729/model.pth
+  checkpoint_kind: student_model
+  checkpoint_location: cluster
+  matrix_dir: data/salaad_vision/vit_b8_all_qkv_rho5e6_fc_rho5e8/20260828_154729
+  relative_sigma_threshold: 0.01
+  sparse_zero_threshold: 0.00001
+  attention_backend: sdpa
+  freeze: true
+
+data:
+  name: voc2012
+  dataset: Pascal VOC 2012
+  root: ${VOC2012_ROOT}
+  image_size: 224
+  resize_size: 256
+  crop_scale: [0.5, 1.0]
+  crop_ratio: [0.75, 1.3333333333333333]
+  horizontal_flip_probability: 0.5
+  pin_memory: true
+  train:
+    split: train
+    shuffle: true
+    drop_last: false
+  validation:
+    split: val
+    shuffle: false
+    num_workers: 4
+    drop_last: false
+
+training:
+  epochs: 100
+  batch_size: 64
+  num_workers: 8
+  precision: bfloat16
+
+optimizer:
+  name: sgd
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 0.0
+
+scheduler:
+  name: cosine
+  min_lr: 0.0
+
+wandb:
+  enabled: true
+  project: SALAAD_VISION_DOWNSTREAM
+  entity: hao-ma-eth-z-rich
+  group: voc2012_segmentation_mixed_rho_qkv_proj_l_s_masked_int3
+  job_type: segmentation_probe
+
+runtime:
+  device: cuda
+  distributed: auto
+  backend: nccl
+
+output:
+  save: true
+  dir: data/salaad_vision/downstream/voc2012_segmentation/mixed_rho_qkv_proj_l_s_masked_int3

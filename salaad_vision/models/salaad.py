@@ -22,6 +22,11 @@ _FC_SUFFIXES = (
     "mlp.fc1",
     "mlp.fc2",
 )
+_QKV_SUFFIXES = ("attn.qkv",)
+_ATTENTION_SUFFIXES = (
+    "attn.qkv",
+    "attn.proj",
+)
 
 
 def _rank(path: Path) -> int:
@@ -524,17 +529,20 @@ def apply_salaad_fc_s_int3(
 
 
 @torch.no_grad()
-def _apply_salaad_qkv_component_masked_int3(
+def _apply_salaad_target_component_masked_int3(
     model: nn.Module,
     matrix_dir: Path,
     *,
     variant_name: str,
+    target_suffixes: tuple[str, ...],
     component: str,
     relative_sigma_threshold: float | None = None,
     sparse_zero_threshold: float | None = None,
 ) -> Set[str]:
     if component not in {"low_rank", "sparse", "both"}:
-        raise ValueError(f"unsupported QKV component: {component!r}")
+        raise ValueError(f"unsupported SALAAD component: {component!r}")
+    if not target_suffixes or not set(target_suffixes).issubset(_ALL_SUFFIXES):
+        raise ValueError(f"unsupported SALAAD target suffixes: {target_suffixes!r}")
     expected = _expected(model, "salaad_all")
     seen: Set[str] = set()
 
@@ -574,11 +582,11 @@ def _apply_salaad_qkv_component_masked_int3(
 
             low_rank_fp32 = low_rank_weight.float()
             sparse_fp32 = sparse_weight.float()
-            if layer_name.endswith("attn.qkv"):
+            if layer_name.endswith(target_suffixes):
                 if component in {"low_rank", "both"}:
                     if relative_sigma_threshold is None:
                         raise ValueError(
-                            "QKV-L quantization requires a sigma threshold"
+                            "low-rank quantization requires a sigma threshold"
                         )
                     low_rank_fp32 = _symmetric_int3_fake_quantize(
                         _spectral_mask(
@@ -589,7 +597,7 @@ def _apply_salaad_qkv_component_masked_int3(
                 if component in {"sparse", "both"}:
                     if sparse_zero_threshold is None:
                         raise ValueError(
-                            "QKV-S quantization requires a zero threshold"
+                            "sparse quantization requires a zero threshold"
                         )
                     sparse_fp32 = sparse_fp32.masked_fill(
                         sparse_fp32.abs() <= sparse_zero_threshold,
@@ -626,10 +634,11 @@ def apply_salaad_qkv_l_masked_int3(
         relative_sigma_threshold,
         "relative_sigma_threshold",
     )
-    return _apply_salaad_qkv_component_masked_int3(
+    return _apply_salaad_target_component_masked_int3(
         model,
         matrix_dir,
         variant_name="salaad_qkv_l_masked_int3",
+        target_suffixes=_QKV_SUFFIXES,
         component="low_rank",
         relative_sigma_threshold=relative_sigma_threshold,
     )
@@ -647,10 +656,11 @@ def apply_salaad_qkv_s_masked_int3(
         sparse_zero_threshold,
         "sparse_zero_threshold",
     )
-    return _apply_salaad_qkv_component_masked_int3(
+    return _apply_salaad_target_component_masked_int3(
         model,
         matrix_dir,
         variant_name="salaad_qkv_s_masked_int3",
+        target_suffixes=_QKV_SUFFIXES,
         component="sparse",
         sparse_zero_threshold=sparse_zero_threshold,
     )
@@ -673,10 +683,39 @@ def apply_salaad_qkv_l_s_masked_int3(
         sparse_zero_threshold,
         "sparse_zero_threshold",
     )
-    return _apply_salaad_qkv_component_masked_int3(
+    return _apply_salaad_target_component_masked_int3(
         model,
         matrix_dir,
         variant_name="salaad_qkv_l_s_masked_int3",
+        target_suffixes=_QKV_SUFFIXES,
+        component="both",
+        relative_sigma_threshold=relative_sigma_threshold,
+        sparse_zero_threshold=sparse_zero_threshold,
+    )
+
+
+@torch.no_grad()
+def apply_salaad_qkv_proj_l_s_masked_int3(
+    model: nn.Module,
+    matrix_dir: Path,
+    *,
+    relative_sigma_threshold: float = 1e-2,
+    sparse_zero_threshold: float = 1e-5,
+) -> Set[str]:
+    """Mask and INT3-quantize attention QKV/proj L and S; keep FC exact."""
+    relative_sigma_threshold = _fraction(
+        relative_sigma_threshold,
+        "relative_sigma_threshold",
+    )
+    sparse_zero_threshold = _nonnegative(
+        sparse_zero_threshold,
+        "sparse_zero_threshold",
+    )
+    return _apply_salaad_target_component_masked_int3(
+        model,
+        matrix_dir,
+        variant_name="salaad_qkv_proj_l_s_masked_int3",
+        target_suffixes=_ATTENTION_SUFFIXES,
         component="both",
         relative_sigma_threshold=relative_sigma_threshold,
         sparse_zero_threshold=sparse_zero_threshold,
