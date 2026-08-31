@@ -1,10 +1,9 @@
 executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
 arguments       = \
     -u -m torch.distributed.run \
+    --standalone \
     --nproc_per_node=4 \
     --nnodes=1 \
-    --rdzv_backend=c10d \
-    --rdzv_endpoint=127.0.0.1:29500 \
     scripts/train_salad.py \
     --cfg_version vit_b8_bmixed \
     --folder salaad_vision
