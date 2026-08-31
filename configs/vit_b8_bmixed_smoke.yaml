@@ -1,0 +1,80 @@
+seed: 42
+name: vit_b8_bmixed_smoke
+model_config: vit_b8_model.json
+training_mode: salad
+model_type: dino_vitb8
+task: dino_feature_distillation
+runtime: local
+precision: bfloat16
+num_total_iters: 10
+num_freq: 2
+gradient: coupled
+is_asyn: false
+is_init: false
+is_wandb: false
+is_monitor: true
+save_interval: 2
+is_clip: !!float '1'
+seed_for_shuffle: 42
+batch_size: 1
+num_workers: 0
+data:
+  type: vision
+  dataset: ILSVRC/imagenet-1k
+  location: local_smoke
+  root: data/salaad_vision/smoke/imagenet_val64_parquet
+  cache_dir: data/salaad_vision/hf_cache_smoke/datasets
+  split: validation
+  streaming: true
+  shuffle: false
+  shuffle_buffer_size: 64
+distillation:
+  initialization: random_init
+  loss: mse
+  global_weight: !!float '1'
+  patch_weight: !!float '1'
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 1
+    min_lr_ratio: 0.1
+    total_steps: 10
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.00001
+    betas:
+    - 0.9
+    - 0.95
+    eps: 0.00000001
+    weight_decay: !!float '0'
+layers:
+- name: backbone.blocks.0.attn.qkv
+  params:
+    energy: 0.999
+    init_energy: 0.15
+    is_init: false
+    iter_max: 1
+    tol: 0.001
+    rate_rank: 0.15
+    rate_sparsity: 0.05
+    alpha_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.2
+      drate: 0.01
+    beta_dict:
+      init: !!float '0'
+      mode: adaptive
+      rate_decay: 0.003
+      drate: 0.01
+    rho_dict:
+      rho: 0.000005
+      mode: fixed
+      start_epoch: 2
+      coeff_rho: 0.1
+      coeff_rho_min: 0.01
+      coeff_rho_max: !!float '1500'
+      rho_rate: !!float '1'
+    block_p: 1
+    block_q: full

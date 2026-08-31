@@ -5,6 +5,87 @@ from salad.utils import *
 from salad.adaptive_rho import RHO
 from salad.adaptive_param import PARAM
 
+
+def _resolve_block_shape(
+    matrix_shape,
+    block_p=None,
+    block_q=None,
+):
+    """Resolve an optional sparse-group shape for a 2-D weight matrix.
+
+    ``block_p`` is the block height and ``block_q`` is the block width.  The
+    string ``"full"`` selects the corresponding matrix dimension, which makes
+    row-wise sparsity ``(1, "full")`` and column-wise sparsity
+    ``("full", 1)`` special cases of the same block proximal operator.
+    """
+    if block_p is None and block_q is None:
+        return None
+    if block_p is None or block_q is None:
+        raise ValueError("block_p and block_q must be configured together")
+    if len(matrix_shape) != 2:
+        raise ValueError(
+            "block sparsity requires a 2-D weight matrix, "
+            f"got shape {tuple(matrix_shape)}"
+        )
+
+    rows, cols = matrix_shape
+
+    def resolve_dimension(value, full_dimension, name):
+        if isinstance(value, str):
+            if value.lower() != "full":
+                raise ValueError(f"{name} must be a positive integer or 'full'")
+            return int(full_dimension)
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError(f"{name} must be a positive integer or 'full'")
+        if value <= 0:
+            raise ValueError(f"{name} must be positive")
+        return value
+
+    p = resolve_dimension(block_p, rows, "block_p")
+    q = resolve_dimension(block_q, cols, "block_q")
+    if rows % p or cols % q:
+        raise ValueError(
+            f"weight shape ({rows}, {cols}) is not divisible by block shape "
+            f"({p}, {q})"
+        )
+    return p, q
+
+
+def _block_norms(matrix: torch.Tensor, p: int, q: int) -> torch.Tensor:
+    """Return the Frobenius norm of every non-overlapping ``p x q`` block."""
+    rows, cols = matrix.shape
+    blocks = matrix.reshape(rows // p, p, cols // q, q).permute(0, 2, 1, 3)
+    return blocks.reshape(rows // p, cols // q, -1).norm(dim=2)
+
+
+def _block_soft_threshold(
+    matrix: torch.Tensor,
+    threshold,
+    p: int,
+    q: int,
+) -> torch.Tensor:
+    """Apply group soft-thresholding to non-overlapping matrix blocks.
+
+    For each block ``B`` this computes
+    ``max(1 - threshold / ||B||_F, 0) * B``.  Consequently a block is kept or
+    removed as one group instead of selecting its elements independently.
+    """
+    rows, cols = matrix.shape
+    row_blocks, col_blocks = rows // p, cols // q
+    blocks = matrix.reshape(row_blocks, p, col_blocks, q).permute(0, 2, 1, 3)
+    norms = blocks.reshape(row_blocks, col_blocks, -1).norm(dim=2)
+    scale = torch.clamp(
+        1.0 - threshold / norms.clamp(min=1e-12),
+        min=0.0,
+    )
+    thresholded = blocks * scale.unsqueeze(-1).unsqueeze(-1)
+    return (
+        thresholded.permute(0, 2, 1, 3)
+        .reshape(rows, cols)
+        .contiguous()
+    )
+
+
 class SALAD():
     """
     Base interface for per-layer SVD solvers.
@@ -67,6 +148,21 @@ class SALAD():
         # self.rho = 1.0 / (2.0*np.sqrt(max(row, col)))
         
         self.nr_elements = X.numel()
+        self.block_shape = _resolve_block_shape(
+            self.X_with_grad.shape,
+            getattr(self, 'block_p', None),
+            getattr(self, 'block_q', None),
+        )
+        if self.block_shape is None:
+            self.block_p = None
+            self.block_q = None
+            self.nr_sparse_units = self.nr_elements
+        else:
+            self.block_p, self.block_q = self.block_shape
+            rows, cols = self.X_with_grad.shape
+            self.nr_sparse_units = (
+                (rows // self.block_p) * (cols // self.block_q)
+            )
 
         if is_full:
             _, s, _ = torch.linalg.svd(X.float(), full_matrices=False)
@@ -159,7 +255,7 @@ class SALAD():
                          beta: float,
                          rho: float,
                          energy: float,) -> tuple:
-        S = self._update_S(X, L, Y, self.rate_sparsity, rho)
+        S = self._update_S(X, L, Y, rho)
         L, nr_rank = self._update_L(X, S, Y, alpha, rho, energy)
         Y = self._update_Y(X, L, S, rho)
         return L, S, Y, nr_rank
@@ -274,10 +370,26 @@ class SALAD():
                   L: torch.Tensor,
                   Y: torch.Tensor,
                   rho: float,) -> torch.Tensor:
+        candidate = X - L + Y/rho
         if self.beta_solver.mode == 'hard_cut':
-            self.beta_solver.update_quantile(X-L+Y/rho, rho)
-        # return soft_threshold(X - L + Y/rho, self.beta_solver.value/rho)
-        return self.S_hard_threshold(soft_threshold(X - L + Y/rho, self.beta_solver.value/rho))
+            quantile_values = (
+                candidate
+                if self.block_shape is None
+                else _block_norms(candidate, self.block_p, self.block_q)
+            )
+            self.beta_solver.update_quantile(quantile_values, rho)
+
+        threshold = self.beta_solver.value/rho
+        if self.block_shape is None:
+            sparse = soft_threshold(candidate, threshold)
+        else:
+            sparse = _block_soft_threshold(
+                candidate,
+                threshold,
+                self.block_p,
+                self.block_q,
+            )
+        return self.S_hard_threshold(sparse)
 
 
     def update_S(self) -> None:
@@ -366,7 +478,15 @@ class SALAD():
         # if 'embed' not in self.layer_name:
         #     if self.nr_epoch == 2000:
         #         self.beta_solver.rate_decay = self.beta_solver.rate_decay * 5.0
-        cur_elements = torch.count_nonzero(self.S)
-        self.beta_solver.update(cur_elements/self.nr_elements, self.rho)
+        if self.block_shape is None:
+            current_nonzero = torch.count_nonzero(self.S)
+        else:
+            current_nonzero = torch.count_nonzero(
+                _block_norms(self.S, self.block_p, self.block_q)
+            )
+        self.beta_solver.update(
+            current_nonzero/self.nr_sparse_units,
+            self.rho,
+        )
 
         

@@ -9,7 +9,12 @@ from pathlib import Path
 
 import yaml
 from salad.trainer_salad import SALADTrainer
-from scripts.vit_config_generator import generate_vit_config
+from scripts.vit_config_generator import (
+    VIT_BMIXED_BLOCK_SHAPES,
+    VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES,
+    VIT_MIXED_RHO_BY_SUFFIX,
+    generate_vit_config,
+)
 from scripts.vit_params import projection
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -22,6 +27,10 @@ MIXED_RHO_CONFIG_PATH = (
     REPOSITORY_ROOT
     / "configs"
     / "vit_b8_all_qkv_rho5e6_fc_rho5e8.yaml"
+)
+BMIXED_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8_bmixed.yaml"
+BMIXED_SMOKE_CONFIG_PATH = (
+    REPOSITORY_ROOT / "configs" / "vit_b8_bmixed_smoke.yaml"
 )
 MODEL_CONFIG_PATH = REPOSITORY_ROOT / "configs" / "vit_b8_model.json"
 LOCAL_PARQUET_ROOT = (
@@ -53,6 +62,10 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             cls.throughput_config = yaml.safe_load(config_file)
         with MIXED_RHO_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
             cls.mixed_rho_config = yaml.safe_load(config_file)
+        with BMIXED_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
+            cls.bmixed_config = yaml.safe_load(config_file)
+        with BMIXED_SMOKE_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
+            cls.bmixed_smoke_config = yaml.safe_load(config_file)
         with MODEL_CONFIG_PATH.open("r", encoding="utf-8") as config_file:
             cls.model_config = json.load(config_file)
 
@@ -166,6 +179,8 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             self.assertEqual(entry["params"]["rho_dict"]["rho"], 5e-6)
             self.assertNotIn("block_size", entry["params"])
             self.assertNotIn("block_sparsity", entry["params"])
+            self.assertNotIn("block_p", entry["params"])
+            self.assertNotIn("block_q", entry["params"])
 
     def test_each_vit_projection_has_an_explicit_parameter_template(self) -> None:
         params = projection()
@@ -177,6 +192,217 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             self.assertEqual(layer_params["rate_sparsity"], 0.05)
             self.assertNotIn("block_size", layer_params)
             self.assertNotIn("block_sparsity", layer_params)
+            self.assertNotIn("block_p", layer_params)
+            self.assertNotIn("block_q", layer_params)
+
+    def test_generator_adds_bmixed_row_and_column_groups(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            generated_path = Path(temporary_directory) / "vit_b8_bmixed.yaml"
+            generated_config = generate_vit_config(
+                name="vit_b8_bmixed",
+                vit_layers=1,
+                block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
+                output_path=str(generated_path),
+            )
+
+        by_suffix = {
+            entry["name"].removeprefix("backbone.blocks.0."): entry["params"]
+            for entry in generated_config["layers"]
+        }
+        for suffix, expected_shape in VIT_BMIXED_BLOCK_SHAPES.items():
+            self.assertEqual(
+                {
+                    "block_p": by_suffix[suffix]["block_p"],
+                    "block_q": by_suffix[suffix]["block_q"],
+                },
+                expected_shape,
+            )
+        self.assertEqual(
+            set(by_suffix),
+            {"attn.qkv", "attn.proj", "mlp.fc1", "mlp.fc2"},
+        )
+        for suffix in {"mlp.fc1", "mlp.fc2"}:
+            self.assertNotIn("block_p", by_suffix[suffix])
+            self.assertNotIn("block_q", by_suffix[suffix])
+
+    def test_generator_rejects_invalid_block_shape_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_path = str(Path(temporary_directory) / "invalid.yaml")
+            with self.assertRaisesRegex(ValueError, "unknown block-shape"):
+                generate_vit_config(
+                    block_shape_by_suffix={
+                        "unknown": {"block_p": 1, "block_q": "full"}
+                    },
+                    output_path=output_path,
+                )
+            with self.assertRaisesRegex(ValueError, "is missing"):
+                generate_vit_config(
+                    block_shape_by_suffix={"attn.qkv": {"block_p": 1}},
+                    output_path=output_path,
+                )
+            with self.assertRaisesRegex(ValueError, "must be positive"):
+                generate_vit_config(
+                    block_shape_by_suffix={
+                        "mlp.fc1": {"block_p": 0, "block_q": "full"}
+                    },
+                    output_path=output_path,
+                )
+            with self.assertRaisesRegex(ValueError, "unknown excluded"):
+                generate_vit_config(
+                    excluded_suffixes=("unknown",),
+                    output_path=output_path,
+                )
+
+    def test_committed_bmixed_config_structures_attention_only(self) -> None:
+        config = self.bmixed_config
+        self.assertEqual(config["name"], "vit_b8_bmixed")
+        self.assertEqual(
+            [entry["name"] for entry in config["layers"]],
+            [entry["name"] for entry in self.train_config["layers"]],
+        )
+
+        counts = {
+            (1, "full"): 0,
+            ("full", 1): 0,
+            (None, None): 0,
+        }
+        for entry in config["layers"]:
+            suffix = entry["name"].split(".", 3)[-1]
+            actual_shape = {
+                "block_p": entry["params"].get("block_p"),
+                "block_q": entry["params"].get("block_q"),
+            }
+            expected_shape = VIT_BMIXED_BLOCK_SHAPES.get(
+                suffix,
+                {"block_p": None, "block_q": None},
+            )
+            self.assertEqual(actual_shape, expected_shape, suffix)
+            self.assertEqual(
+                entry["params"]["rho_dict"]["rho"],
+                VIT_MIXED_RHO_BY_SUFFIX[suffix],
+                suffix,
+            )
+            counts[(actual_shape["block_p"], actual_shape["block_q"])] += 1
+        self.assertEqual(
+            counts,
+            {(1, "full"): 12, ("full", 1): 12, (None, None): 24},
+        )
+
+        for key, value in self.train_config.items():
+            if key not in {"name", "layers"}:
+                self.assertEqual(config[key], value, key)
+
+    def test_generator_reproduces_committed_bmixed_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            generated_path = Path(temporary_directory) / BMIXED_CONFIG_PATH.name
+            generate_vit_config(
+                name="vit_b8_bmixed",
+                lr=1e-4,
+                num_total_iters=120_000,
+                num_freq=20,
+                save_interval=5_000,
+                batch_size=64,
+                warmup_steps=2_000,
+                scheduler_total_steps=120_000,
+                num_workers=2,
+                runtime="cluster",
+                data_location="cluster_snapshot",
+                data_root=str(CLUSTER_PARQUET_ROOT),
+                data_cache_dir=str(CLUSTER_CACHE_DIR),
+                data_split="train",
+                vit_layers=-1,
+                rho_by_suffix=VIT_MIXED_RHO_BY_SUFFIX,
+                block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
+                output_path=str(generated_path),
+            )
+            with generated_path.open("r", encoding="utf-8") as config_file:
+                generated_config = yaml.safe_load(config_file)
+
+        self.assertEqual(generated_config, self.bmixed_config)
+
+    def test_bmixed_smoke_config_is_short_local_and_attention_structured(
+        self,
+    ) -> None:
+        config = self.bmixed_smoke_config
+        self.assertEqual(config["name"], "vit_b8_bmixed_smoke")
+        self.assertEqual(config["runtime"], "local")
+        self.assertEqual(config["num_total_iters"], 10)
+        self.assertEqual(config["num_freq"], 2)
+        self.assertEqual(config["save_interval"], 2)
+        self.assertEqual(config["batch_size"], 1)
+        self.assertEqual(config["num_workers"], 0)
+        self.assertFalse(config["is_wandb"])
+
+        data = config["data"]
+        self.assertEqual(data["location"], "local_smoke")
+        self.assertEqual(data["split"], "validation")
+        self.assertEqual(
+            Path(data["root"]),
+            Path("data/salaad_vision/smoke/imagenet_val64_parquet"),
+        )
+        self.assertEqual(
+            Path(data["cache_dir"]),
+            Path("data/salaad_vision/hf_cache_smoke/datasets"),
+        )
+        self.assertTrue(data["streaming"])
+        self.assertFalse(data["shuffle"])
+
+        by_suffix = {
+            entry["name"].removeprefix("backbone.blocks.0."): entry["params"]
+            for entry in config["layers"]
+        }
+        self.assertEqual(
+            set(by_suffix),
+            {"attn.qkv"},
+        )
+        self.assertEqual(
+            {
+                "block_p": by_suffix["attn.qkv"]["block_p"],
+                "block_q": by_suffix["attn.qkv"]["block_q"],
+            },
+            {"block_p": 1, "block_q": "full"},
+        )
+
+    def test_generator_reproduces_committed_bmixed_smoke_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            generated_path = (
+                Path(temporary_directory) / BMIXED_SMOKE_CONFIG_PATH.name
+            )
+            generate_vit_config(
+                name="vit_b8_bmixed_smoke",
+                model_config="vit_b8_model.json",
+                training_mode="salad",
+                lr=1e-5,
+                num_freq=2,
+                is_wandb=False,
+                is_monitor=True,
+                save_interval=2,
+                num_total_iters=10,
+                batch_size=1,
+                warmup_steps=1,
+                scheduler_total_steps=10,
+                num_workers=0,
+                precision="bfloat16",
+                runtime="local",
+                data_location="local_smoke",
+                data_root="data/salaad_vision/smoke/imagenet_val64_parquet",
+                data_cache_dir="data/salaad_vision/hf_cache_smoke/datasets",
+                data_split="validation",
+                data_streaming=True,
+                data_shuffle=False,
+                shuffle_buffer_size=64,
+                distillation_initialization="random_init",
+                include_attention=True,
+                include_mlp=True,
+                vit_layers=1,
+                block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
+                excluded_suffixes=VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES,
+                output_path=str(generated_path),
+            )
+            with generated_path.open("r", encoding="utf-8") as config_file:
+                generated_config = yaml.safe_load(config_file)
+
+        self.assertEqual(generated_config, self.bmixed_smoke_config)
 
     def test_all_target_layers_are_evenly_owned_by_four_ranks(self) -> None:
         expected_names = {entry["name"] for entry in self.train_config["layers"]}

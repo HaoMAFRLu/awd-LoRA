@@ -30,6 +30,27 @@ MLP_KEYS = [
 
 PROJECTION_PARAMS = projection()
 
+VIT_MIXED_RHO_BY_SUFFIX = {
+    "attn.qkv": 5e-6,
+    "attn.proj": 5e-8,
+    "mlp.fc1": 5e-8,
+    "mlp.fc2": 5e-8,
+}
+
+# Attention-only structured sparsity: fused QKV uses whole-row sparse groups
+# and attention output projection uses whole-column sparse groups. MLP suffixes
+# are intentionally absent from this mapping, so included FC1/FC2 layers retain
+# element-wise SALAAD sparsity.
+VIT_BMIXED_BLOCK_SHAPES = {
+    "attn.qkv": {"block_p": 1, "block_q": "full"},
+    "attn.proj": {"block_p": "full", "block_q": 1},
+}
+VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES = (
+    "attn.proj",
+    "mlp.fc1",
+    "mlp.fc2",
+)
+
 
 class NoAliasDumper(yaml.SafeDumper):
     def ignore_aliases(self, data):
@@ -70,15 +91,21 @@ def add_vit_layers(
     include_attention,
     include_mlp,
     rho_by_suffix,
+    block_shape_by_suffix,
+    excluded_suffixes,
 ):
     """Add bare-student ViT Linear layers in deterministic block order."""
     for block_index in _select_indices(num_hidden_layers, layer_count):
         base = f"backbone.blocks.{block_index}"
         if include_attention:
             for key in ATTENTION_KEYS:
+                if key in excluded_suffixes:
+                    continue
                 layer_params = copy.deepcopy(params[key])
                 if key in rho_by_suffix:
                     layer_params["rho_dict"]["rho"] = rho_by_suffix[key]
+                if key in block_shape_by_suffix:
+                    layer_params.update(block_shape_by_suffix[key])
                 layers.append(
                     {
                         "name": f"{base}.{key}",
@@ -87,9 +114,13 @@ def add_vit_layers(
                 )
         if include_mlp:
             for key in MLP_KEYS:
+                if key in excluded_suffixes:
+                    continue
                 layer_params = copy.deepcopy(params[key])
                 if key in rho_by_suffix:
                     layer_params["rho_dict"]["rho"] = rho_by_suffix[key]
+                if key in block_shape_by_suffix:
+                    layer_params.update(block_shape_by_suffix[key])
                 layers.append(
                     {
                         "name": f"{base}.{key}",
@@ -114,6 +145,73 @@ def _validate_rho_by_suffix(rho_by_suffix):
         if rho <= 0:
             raise ValueError(f"rho override for {suffix} must be positive")
         normalized[suffix] = float(rho)
+    return normalized
+
+
+def _validate_block_shape_by_suffix(block_shape_by_suffix):
+    if block_shape_by_suffix is None:
+        return {}
+    if not isinstance(block_shape_by_suffix, dict):
+        raise TypeError("block_shape_by_suffix must be a dictionary or null")
+
+    valid_suffixes = set(ATTENTION_KEYS + MLP_KEYS)
+    unknown = set(block_shape_by_suffix) - valid_suffixes
+    if unknown:
+        raise ValueError(f"unknown block-shape suffixes: {sorted(unknown)}")
+
+    def normalize_dimension(value, name, suffix):
+        if isinstance(value, str):
+            if value.lower() != "full":
+                raise ValueError(
+                    f"{name} for {suffix} must be a positive integer or 'full'"
+                )
+            return "full"
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError(
+                f"{name} for {suffix} must be a positive integer or 'full'"
+            )
+        if value <= 0:
+            raise ValueError(f"{name} for {suffix} must be positive")
+        return value
+
+    normalized = {}
+    for suffix, block_shape in block_shape_by_suffix.items():
+        if not isinstance(block_shape, dict):
+            raise TypeError(f"block shape for {suffix} must be a dictionary")
+        missing = {"block_p", "block_q"} - set(block_shape)
+        if missing:
+            raise ValueError(
+                f"block shape for {suffix} is missing {sorted(missing)}"
+            )
+        extra = set(block_shape) - {"block_p", "block_q"}
+        if extra:
+            raise ValueError(
+                f"unknown block-shape keys for {suffix}: {sorted(extra)}"
+            )
+        normalized[suffix] = {
+            "block_p": normalize_dimension(
+                block_shape["block_p"], "block_p", suffix
+            ),
+            "block_q": normalize_dimension(
+                block_shape["block_q"], "block_q", suffix
+            ),
+        }
+    return normalized
+
+
+def _validate_excluded_suffixes(excluded_suffixes):
+    if excluded_suffixes is None:
+        return frozenset()
+    if isinstance(excluded_suffixes, str) or not isinstance(
+        excluded_suffixes,
+        (list, tuple, set, frozenset),
+    ):
+        raise TypeError("excluded_suffixes must be a sequence or set")
+    valid_suffixes = set(ATTENTION_KEYS + MLP_KEYS)
+    normalized = frozenset(excluded_suffixes)
+    unknown = normalized - valid_suffixes
+    if unknown:
+        raise ValueError(f"unknown excluded suffixes: {sorted(unknown)}")
     return normalized
 
 
@@ -171,6 +269,8 @@ def generate_vit_config(
     include_mlp=True,
     vit_layers=1,
     rho_by_suffix=None,
+    block_shape_by_suffix=None,
+    excluded_suffixes=None,
     output_path=None,
 ):
     """Generate one ViT task config selected through --cfg_version."""
@@ -181,6 +281,10 @@ def generate_vit_config(
         )
     num_hidden_layers = cfg_model["num_hidden_layers"]
     rho_by_suffix = _validate_rho_by_suffix(rho_by_suffix)
+    block_shape_by_suffix = _validate_block_shape_by_suffix(
+        block_shape_by_suffix
+    )
+    excluded_suffixes = _validate_excluded_suffixes(excluded_suffixes)
 
     layers = []
     if training_mode == "salad":
@@ -192,6 +296,8 @@ def generate_vit_config(
             include_attention=include_attention,
             include_mlp=include_mlp,
             rho_by_suffix=rho_by_suffix,
+            block_shape_by_suffix=block_shape_by_suffix,
+            excluded_suffixes=excluded_suffixes,
         )
 
     data = {
@@ -339,15 +445,49 @@ if __name__ == "__main__":
     cfg_vit_b8_mixed_rho = copy.deepcopy(cfg_vit_b8)
     cfg_vit_b8_mixed_rho.update(
         name="vit_b8_all_qkv_rho5e6_fc_rho5e8",
-        rho_by_suffix={
-            "attn.qkv": 5e-6,
-            "attn.proj": 5e-8,
-            "mlp.fc1": 5e-8,
-            "mlp.fc2": 5e-8,
-        },
+        rho_by_suffix=VIT_MIXED_RHO_BY_SUFFIX,
+    )
+
+    cfg_vit_b8_bmixed = copy.deepcopy(cfg_vit_b8_mixed_rho)
+    cfg_vit_b8_bmixed.update(
+        name="vit_b8_bmixed",
+        block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
+    )
+
+    cfg_vit_b8_bmixed_smoke = dict(
+        name="vit_b8_bmixed_smoke",
+        model_config="vit_b8_model.json",
+        training_mode="salad",
+        lr=1e-5,
+        num_freq=2,
+        is_wandb=False,
+        is_monitor=True,
+        save_interval=2,
+        num_total_iters=10,
+        batch_size=1,
+        warmup_steps=1,
+        scheduler_total_steps=10,
+        num_workers=0,
+        precision="bfloat16",
+        runtime="local",
+        data_location="local_smoke",
+        data_root="data/salaad_vision/smoke/imagenet_val64_parquet",
+        data_cache_dir="data/salaad_vision/hf_cache_smoke/datasets",
+        data_split="validation",
+        data_streaming=True,
+        data_shuffle=False,
+        shuffle_buffer_size=64,
+        distillation_initialization="random_init",
+        include_attention=True,
+        include_mlp=True,
+        vit_layers=1,
+        block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
+        excluded_suffixes=VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES,
     )
 
     generate_vit_config(**cfg_vit_b8)
     generate_vit_config(**cfg_vit_b8_vanilla)
     generate_vit_config(**cfg_vit_b8_vanilla_throughput)
     generate_vit_config(**cfg_vit_b8_mixed_rho)
+    generate_vit_config(**cfg_vit_b8_bmixed)
+    generate_vit_config(**cfg_vit_b8_bmixed_smoke)
