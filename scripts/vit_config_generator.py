@@ -36,6 +36,10 @@ VIT_MIXED_RHO_BY_SUFFIX = {
     "mlp.fc1": 5e-8,
     "mlp.fc2": 5e-8,
 }
+VIT_BMIXED_RHO_BY_SUFFIX = {
+    **VIT_MIXED_RHO_BY_SUFFIX,
+    "attn.proj": 1e-7,
+}
 
 # Attention-only structured sparsity: fused QKV uses whole-row sparse groups
 # and attention output projection uses whole-column sparse groups. MLP suffixes
@@ -45,8 +49,18 @@ VIT_BMIXED_BLOCK_SHAPES = {
     "attn.qkv": {"block_p": 1, "block_q": "full"},
     "attn.proj": {"block_p": "full", "block_q": 1},
 }
-VIT_BMIXED_ALPHA_RATE_DECAY = 0.05
-VIT_BMIXED_BETA_RATE_DECAY = 0.02
+VIT_BMIXED_ALPHA_RATE_DECAY_BY_SUFFIX = {
+    "attn.qkv": 0.05,
+    "attn.proj": 0.045,
+    "mlp.fc1": 0.2,
+    "mlp.fc2": 0.2,
+}
+VIT_BMIXED_BETA_RATE_DECAY_BY_SUFFIX = {
+    "attn.qkv": 0.02,
+    "attn.proj": 0.025,
+    "mlp.fc1": 0.003,
+    "mlp.fc2": 0.003,
+}
 VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES = (
     "attn.proj",
     "mlp.fc1",
@@ -97,6 +111,8 @@ def add_vit_layers(
     excluded_suffixes,
     alpha_rate_decay,
     beta_rate_decay,
+    alpha_rate_decay_by_suffix,
+    beta_rate_decay_by_suffix,
 ):
     """Add bare-student ViT Linear layers in deterministic block order."""
     for block_index in _select_indices(num_hidden_layers, layer_count):
@@ -110,10 +126,22 @@ def add_vit_layers(
                     layer_params["rho_dict"]["rho"] = rho_by_suffix[key]
                 if key in block_shape_by_suffix:
                     layer_params.update(block_shape_by_suffix[key])
-                if alpha_rate_decay is not None:
-                    layer_params["alpha_dict"]["rate_decay"] = alpha_rate_decay
-                if beta_rate_decay is not None:
-                    layer_params["beta_dict"]["rate_decay"] = beta_rate_decay
+                layer_alpha_rate_decay = alpha_rate_decay_by_suffix.get(
+                    key,
+                    alpha_rate_decay,
+                )
+                layer_beta_rate_decay = beta_rate_decay_by_suffix.get(
+                    key,
+                    beta_rate_decay,
+                )
+                if layer_alpha_rate_decay is not None:
+                    layer_params["alpha_dict"]["rate_decay"] = (
+                        layer_alpha_rate_decay
+                    )
+                if layer_beta_rate_decay is not None:
+                    layer_params["beta_dict"]["rate_decay"] = (
+                        layer_beta_rate_decay
+                    )
                 layers.append(
                     {
                         "name": f"{base}.{key}",
@@ -129,10 +157,22 @@ def add_vit_layers(
                     layer_params["rho_dict"]["rho"] = rho_by_suffix[key]
                 if key in block_shape_by_suffix:
                     layer_params.update(block_shape_by_suffix[key])
-                if alpha_rate_decay is not None:
-                    layer_params["alpha_dict"]["rate_decay"] = alpha_rate_decay
-                if beta_rate_decay is not None:
-                    layer_params["beta_dict"]["rate_decay"] = beta_rate_decay
+                layer_alpha_rate_decay = alpha_rate_decay_by_suffix.get(
+                    key,
+                    alpha_rate_decay,
+                )
+                layer_beta_rate_decay = beta_rate_decay_by_suffix.get(
+                    key,
+                    beta_rate_decay,
+                )
+                if layer_alpha_rate_decay is not None:
+                    layer_params["alpha_dict"]["rate_decay"] = (
+                        layer_alpha_rate_decay
+                    )
+                if layer_beta_rate_decay is not None:
+                    layer_params["beta_dict"]["rate_decay"] = (
+                        layer_beta_rate_decay
+                    )
                 layers.append(
                     {
                         "name": f"{base}.{key}",
@@ -237,6 +277,24 @@ def _validate_optional_rate_decay(value, name):
     return float(value)
 
 
+def _validate_rate_decay_by_suffix(values, name):
+    if values is None:
+        return {}
+    if not isinstance(values, dict):
+        raise TypeError(f"{name} must be a dictionary or null")
+    valid_suffixes = set(ATTENTION_KEYS + MLP_KEYS)
+    unknown = set(values) - valid_suffixes
+    if unknown:
+        raise ValueError(f"unknown {name} suffixes: {sorted(unknown)}")
+    return {
+        suffix: _validate_optional_rate_decay(
+            value,
+            f"{name} override for {suffix}",
+        )
+        for suffix, value in values.items()
+    }
+
+
 def generate_vit_config(
     *,
     name="vit_b8",
@@ -295,6 +353,8 @@ def generate_vit_config(
     excluded_suffixes=None,
     alpha_rate_decay=None,
     beta_rate_decay=None,
+    alpha_rate_decay_by_suffix=None,
+    beta_rate_decay_by_suffix=None,
     output_path=None,
 ):
     """Generate one ViT task config selected through --cfg_version."""
@@ -317,6 +377,14 @@ def generate_vit_config(
         beta_rate_decay,
         "beta_rate_decay",
     )
+    alpha_rate_decay_by_suffix = _validate_rate_decay_by_suffix(
+        alpha_rate_decay_by_suffix,
+        "alpha_rate_decay_by_suffix",
+    )
+    beta_rate_decay_by_suffix = _validate_rate_decay_by_suffix(
+        beta_rate_decay_by_suffix,
+        "beta_rate_decay_by_suffix",
+    )
 
     layers = []
     if training_mode == "salad":
@@ -332,6 +400,8 @@ def generate_vit_config(
             excluded_suffixes=excluded_suffixes,
             alpha_rate_decay=alpha_rate_decay,
             beta_rate_decay=beta_rate_decay,
+            alpha_rate_decay_by_suffix=alpha_rate_decay_by_suffix,
+            beta_rate_decay_by_suffix=beta_rate_decay_by_suffix,
         )
 
     data = {
@@ -485,9 +555,12 @@ if __name__ == "__main__":
     cfg_vit_b8_bmixed = copy.deepcopy(cfg_vit_b8_mixed_rho)
     cfg_vit_b8_bmixed.update(
         name="vit_b8_bmixed",
+        rho_by_suffix=VIT_BMIXED_RHO_BY_SUFFIX,
         block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
-        alpha_rate_decay=VIT_BMIXED_ALPHA_RATE_DECAY,
-        beta_rate_decay=VIT_BMIXED_BETA_RATE_DECAY,
+        alpha_rate_decay_by_suffix=(
+            VIT_BMIXED_ALPHA_RATE_DECAY_BY_SUFFIX
+        ),
+        beta_rate_decay_by_suffix=VIT_BMIXED_BETA_RATE_DECAY_BY_SUFFIX,
     )
 
     cfg_vit_b8_bmixed_smoke = dict(
@@ -519,8 +592,10 @@ if __name__ == "__main__":
         vit_layers=1,
         block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
         excluded_suffixes=VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES,
-        alpha_rate_decay=VIT_BMIXED_ALPHA_RATE_DECAY,
-        beta_rate_decay=VIT_BMIXED_BETA_RATE_DECAY,
+        alpha_rate_decay_by_suffix=(
+            VIT_BMIXED_ALPHA_RATE_DECAY_BY_SUFFIX
+        ),
+        beta_rate_decay_by_suffix=VIT_BMIXED_BETA_RATE_DECAY_BY_SUFFIX,
     )
 
     generate_vit_config(**cfg_vit_b8)

@@ -10,11 +10,11 @@ from pathlib import Path
 import yaml
 from salad.trainer_salad import SALADTrainer
 from scripts.vit_config_generator import (
-    VIT_BMIXED_ALPHA_RATE_DECAY,
-    VIT_BMIXED_BETA_RATE_DECAY,
+    VIT_BMIXED_ALPHA_RATE_DECAY_BY_SUFFIX,
+    VIT_BMIXED_BETA_RATE_DECAY_BY_SUFFIX,
     VIT_BMIXED_BLOCK_SHAPES,
+    VIT_BMIXED_RHO_BY_SUFFIX,
     VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES,
-    VIT_MIXED_RHO_BY_SUFFIX,
     generate_vit_config,
 )
 from scripts.vit_params import projection
@@ -281,17 +281,17 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             self.assertEqual(actual_shape, expected_shape, suffix)
             self.assertEqual(
                 entry["params"]["rho_dict"]["rho"],
-                VIT_MIXED_RHO_BY_SUFFIX[suffix],
+                VIT_BMIXED_RHO_BY_SUFFIX[suffix],
                 suffix,
             )
             self.assertEqual(
                 entry["params"]["alpha_dict"]["rate_decay"],
-                VIT_BMIXED_ALPHA_RATE_DECAY,
+                VIT_BMIXED_ALPHA_RATE_DECAY_BY_SUFFIX[suffix],
                 suffix,
             )
             self.assertEqual(
                 entry["params"]["beta_dict"]["rate_decay"],
-                VIT_BMIXED_BETA_RATE_DECAY,
+                VIT_BMIXED_BETA_RATE_DECAY_BY_SUFFIX[suffix],
                 suffix,
             )
             counts[(actual_shape["block_p"], actual_shape["block_q"])] += 1
@@ -323,10 +323,14 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 data_cache_dir=str(CLUSTER_CACHE_DIR),
                 data_split="train",
                 vit_layers=-1,
-                rho_by_suffix=VIT_MIXED_RHO_BY_SUFFIX,
+                rho_by_suffix=VIT_BMIXED_RHO_BY_SUFFIX,
                 block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
-                alpha_rate_decay=VIT_BMIXED_ALPHA_RATE_DECAY,
-                beta_rate_decay=VIT_BMIXED_BETA_RATE_DECAY,
+                alpha_rate_decay_by_suffix=(
+                    VIT_BMIXED_ALPHA_RATE_DECAY_BY_SUFFIX
+                ),
+                beta_rate_decay_by_suffix=(
+                    VIT_BMIXED_BETA_RATE_DECAY_BY_SUFFIX
+                ),
                 output_path=str(generated_path),
             )
             with generated_path.open("r", encoding="utf-8") as config_file:
@@ -378,11 +382,11 @@ class VitB8TrainingConfigTest(unittest.TestCase):
         )
         self.assertEqual(
             by_suffix["attn.qkv"]["alpha_dict"]["rate_decay"],
-            VIT_BMIXED_ALPHA_RATE_DECAY,
+            VIT_BMIXED_ALPHA_RATE_DECAY_BY_SUFFIX["attn.qkv"],
         )
         self.assertEqual(
             by_suffix["attn.qkv"]["beta_dict"]["rate_decay"],
-            VIT_BMIXED_BETA_RATE_DECAY,
+            VIT_BMIXED_BETA_RATE_DECAY_BY_SUFFIX["attn.qkv"],
         )
 
     def test_generator_reproduces_committed_bmixed_smoke_config(self) -> None:
@@ -419,8 +423,12 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 vit_layers=1,
                 block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
                 excluded_suffixes=VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES,
-                alpha_rate_decay=VIT_BMIXED_ALPHA_RATE_DECAY,
-                beta_rate_decay=VIT_BMIXED_BETA_RATE_DECAY,
+                alpha_rate_decay_by_suffix=(
+                    VIT_BMIXED_ALPHA_RATE_DECAY_BY_SUFFIX
+                ),
+                beta_rate_decay_by_suffix=(
+                    VIT_BMIXED_BETA_RATE_DECAY_BY_SUFFIX
+                ),
                 output_path=str(generated_path),
             )
             with generated_path.open("r", encoding="utf-8") as config_file:
