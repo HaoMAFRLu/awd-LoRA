@@ -10,6 +10,8 @@ from pathlib import Path
 import yaml
 from salad.trainer_salad import SALADTrainer
 from scripts.vit_config_generator import (
+    VIT_BMIXED_ALPHA_RATE_DECAY,
+    VIT_BMIXED_BETA_RATE_DECAY,
     VIT_BMIXED_BLOCK_SHAPES,
     VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES,
     VIT_MIXED_RHO_BY_SUFFIX,
@@ -282,6 +284,16 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 VIT_MIXED_RHO_BY_SUFFIX[suffix],
                 suffix,
             )
+            self.assertEqual(
+                entry["params"]["alpha_dict"]["rate_decay"],
+                VIT_BMIXED_ALPHA_RATE_DECAY,
+                suffix,
+            )
+            self.assertEqual(
+                entry["params"]["beta_dict"]["rate_decay"],
+                VIT_BMIXED_BETA_RATE_DECAY,
+                suffix,
+            )
             counts[(actual_shape["block_p"], actual_shape["block_q"])] += 1
         self.assertEqual(
             counts,
@@ -313,6 +325,8 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 vit_layers=-1,
                 rho_by_suffix=VIT_MIXED_RHO_BY_SUFFIX,
                 block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
+                alpha_rate_decay=VIT_BMIXED_ALPHA_RATE_DECAY,
+                beta_rate_decay=VIT_BMIXED_BETA_RATE_DECAY,
                 output_path=str(generated_path),
             )
             with generated_path.open("r", encoding="utf-8") as config_file:
@@ -362,6 +376,14 @@ class VitB8TrainingConfigTest(unittest.TestCase):
             },
             {"block_p": 1, "block_q": "full"},
         )
+        self.assertEqual(
+            by_suffix["attn.qkv"]["alpha_dict"]["rate_decay"],
+            VIT_BMIXED_ALPHA_RATE_DECAY,
+        )
+        self.assertEqual(
+            by_suffix["attn.qkv"]["beta_dict"]["rate_decay"],
+            VIT_BMIXED_BETA_RATE_DECAY,
+        )
 
     def test_generator_reproduces_committed_bmixed_smoke_config(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -397,6 +419,8 @@ class VitB8TrainingConfigTest(unittest.TestCase):
                 vit_layers=1,
                 block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
                 excluded_suffixes=VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES,
+                alpha_rate_decay=VIT_BMIXED_ALPHA_RATE_DECAY,
+                beta_rate_decay=VIT_BMIXED_BETA_RATE_DECAY,
                 output_path=str(generated_path),
             )
             with generated_path.open("r", encoding="utf-8") as config_file:

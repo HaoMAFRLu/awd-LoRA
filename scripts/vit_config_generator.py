@@ -45,6 +45,8 @@ VIT_BMIXED_BLOCK_SHAPES = {
     "attn.qkv": {"block_p": 1, "block_q": "full"},
     "attn.proj": {"block_p": "full", "block_q": 1},
 }
+VIT_BMIXED_ALPHA_RATE_DECAY = 0.05
+VIT_BMIXED_BETA_RATE_DECAY = 0.02
 VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES = (
     "attn.proj",
     "mlp.fc1",
@@ -93,6 +95,8 @@ def add_vit_layers(
     rho_by_suffix,
     block_shape_by_suffix,
     excluded_suffixes,
+    alpha_rate_decay,
+    beta_rate_decay,
 ):
     """Add bare-student ViT Linear layers in deterministic block order."""
     for block_index in _select_indices(num_hidden_layers, layer_count):
@@ -106,6 +110,10 @@ def add_vit_layers(
                     layer_params["rho_dict"]["rho"] = rho_by_suffix[key]
                 if key in block_shape_by_suffix:
                     layer_params.update(block_shape_by_suffix[key])
+                if alpha_rate_decay is not None:
+                    layer_params["alpha_dict"]["rate_decay"] = alpha_rate_decay
+                if beta_rate_decay is not None:
+                    layer_params["beta_dict"]["rate_decay"] = beta_rate_decay
                 layers.append(
                     {
                         "name": f"{base}.{key}",
@@ -121,6 +129,10 @@ def add_vit_layers(
                     layer_params["rho_dict"]["rho"] = rho_by_suffix[key]
                 if key in block_shape_by_suffix:
                     layer_params.update(block_shape_by_suffix[key])
+                if alpha_rate_decay is not None:
+                    layer_params["alpha_dict"]["rate_decay"] = alpha_rate_decay
+                if beta_rate_decay is not None:
+                    layer_params["beta_dict"]["rate_decay"] = beta_rate_decay
                 layers.append(
                     {
                         "name": f"{base}.{key}",
@@ -215,6 +227,16 @@ def _validate_excluded_suffixes(excluded_suffixes):
     return normalized
 
 
+def _validate_optional_rate_decay(value, name):
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{name} must be a positive number or null")
+    if value <= 0:
+        raise ValueError(f"{name} must be positive")
+    return float(value)
+
+
 def generate_vit_config(
     *,
     name="vit_b8",
@@ -271,6 +293,8 @@ def generate_vit_config(
     rho_by_suffix=None,
     block_shape_by_suffix=None,
     excluded_suffixes=None,
+    alpha_rate_decay=None,
+    beta_rate_decay=None,
     output_path=None,
 ):
     """Generate one ViT task config selected through --cfg_version."""
@@ -285,6 +309,14 @@ def generate_vit_config(
         block_shape_by_suffix
     )
     excluded_suffixes = _validate_excluded_suffixes(excluded_suffixes)
+    alpha_rate_decay = _validate_optional_rate_decay(
+        alpha_rate_decay,
+        "alpha_rate_decay",
+    )
+    beta_rate_decay = _validate_optional_rate_decay(
+        beta_rate_decay,
+        "beta_rate_decay",
+    )
 
     layers = []
     if training_mode == "salad":
@@ -298,6 +330,8 @@ def generate_vit_config(
             rho_by_suffix=rho_by_suffix,
             block_shape_by_suffix=block_shape_by_suffix,
             excluded_suffixes=excluded_suffixes,
+            alpha_rate_decay=alpha_rate_decay,
+            beta_rate_decay=beta_rate_decay,
         )
 
     data = {
@@ -452,6 +486,8 @@ if __name__ == "__main__":
     cfg_vit_b8_bmixed.update(
         name="vit_b8_bmixed",
         block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
+        alpha_rate_decay=VIT_BMIXED_ALPHA_RATE_DECAY,
+        beta_rate_decay=VIT_BMIXED_BETA_RATE_DECAY,
     )
 
     cfg_vit_b8_bmixed_smoke = dict(
@@ -483,6 +519,8 @@ if __name__ == "__main__":
         vit_layers=1,
         block_shape_by_suffix=VIT_BMIXED_BLOCK_SHAPES,
         excluded_suffixes=VIT_BMIXED_SMOKE_EXCLUDED_SUFFIXES,
+        alpha_rate_decay=VIT_BMIXED_ALPHA_RATE_DECAY,
+        beta_rate_decay=VIT_BMIXED_BETA_RATE_DECAY,
     )
 
     generate_vit_config(**cfg_vit_b8)

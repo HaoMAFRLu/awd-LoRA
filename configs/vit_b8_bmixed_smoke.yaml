@@ -61,12 +61,12 @@ layers:
     alpha_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.2
+      rate_decay: 0.05
       drate: 0.01
     beta_dict:
       init: !!float '0'
       mode: adaptive
-      rate_decay: 0.003
+      rate_decay: 0.02
       drate: 0.01
     rho_dict:
       rho: 0.000005
