@@ -22,6 +22,7 @@ request_gpus    = 4
 requirements = ( \
     CUDACapability >= 9.0 && \
     CUDACapability < 9.1 && \
+    TARGET.Machine != "i205.internal.cluster.is.localnet" && \
     !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
     !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
     !regexp("GPU-45d24b88", TARGET.DetectedGPUs) && \
