@@ -252,13 +252,18 @@ def color_scales(
     scales: dict[str, dict[str, float]] = {}
     for layer_type in LAYER_TYPES:
         rows = [row for row in statistics if row["layer_type"] == layer_type]
-        vmax = max(float(row[percentile_key]) for row in rows)
+        vmax_candidates = [
+            float(row[percentile_key])
+            for row in rows
+            if math.isfinite(float(row[percentile_key]))
+            and float(row[percentile_key]) > 0.0
+        ]
         q01 = [
             float(row["abs_q01"])
             for row in rows
             if math.isfinite(float(row["abs_q01"])) and float(row["abs_q01"]) > 0
         ]
-        if not math.isfinite(vmax) or vmax <= 0.0:
+        if not vmax_candidates:
             # An aggressive display threshold can legitimately remove every
             # saved value of one layer type.  Keep those panels renderable so
             # the all-zero support remains visible instead of aborting the run.
@@ -269,6 +274,7 @@ def color_scales(
                 "all_zero": True,
             }
             continue
+        vmax = max(vmax_candidates)
         linthresh = float(np.median(q01)) if q01 else max(threshold, vmax * 1e-3)
         linthresh = min(max(linthresh, vmax * 1e-6), vmax * 0.1)
         scales[layer_type] = {
