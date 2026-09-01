@@ -259,10 +259,23 @@ def color_scales(
             if math.isfinite(float(row["abs_q01"])) and float(row["abs_q01"]) > 0
         ]
         if not math.isfinite(vmax) or vmax <= 0.0:
-            raise ValueError(f"all thresholded matrices are zero for {layer_type}")
+            # An aggressive display threshold can legitimately remove every
+            # saved value of one layer type.  Keep those panels renderable so
+            # the all-zero support remains visible instead of aborting the run.
+            vmax = max(threshold, float(np.finfo(np.float32).eps))
+            scales[layer_type] = {
+                "vmax": vmax,
+                "linthresh": vmax * 0.1,
+                "all_zero": True,
+            }
+            continue
         linthresh = float(np.median(q01)) if q01 else max(threshold, vmax * 1e-3)
         linthresh = min(max(linthresh, vmax * 1e-6), vmax * 0.1)
-        scales[layer_type] = {"vmax": vmax, "linthresh": linthresh}
+        scales[layer_type] = {
+            "vmax": vmax,
+            "linthresh": linthresh,
+            "all_zero": False,
+        }
     return scales
 
 
