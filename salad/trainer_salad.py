@@ -301,9 +301,12 @@ class SALADTrainer:
         }
         return assigned_layers, owner_map
 
-    def get_diff_per_rank(self) -> dict:
+    def get_diff_per_rank(self) -> torch.Tensor:
         """Get the difference X - L - S for each layer."""
-        diff = 0.0
+        # Some ranks may own no SALAAD layers when len(cfg_layers) is smaller
+        # than world_size.  Keep the accumulator as a tensor so every rank can
+        # still participate in the following all_reduce.
+        diff = torch.zeros((), dtype=torch.float32, device=self.device)
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
                 diff += solver.get_diff(solver.L, solver.S, solver.Y)
@@ -431,7 +434,9 @@ class SALADTrainer:
 
     def get_penalty_loss(self):
         """User-defined loss; can be overridden or passed via config."""
-        loss = 0.0
+        # A tensor zero lets ranks without an assigned layer follow the same
+        # backward/logging path as ranks with a local penalty term.
+        loss = torch.zeros((), dtype=torch.float32, device=self.device)
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
                 loss += self.world_size * solver.get_penalty(solver.L, solver.S, solver.Y)
@@ -507,6 +512,11 @@ class SALADTrainer:
         for r in range(self.world_size):
             sz = self.owner_sizes[r]
 
+            # Every rank has the same owner_sizes mapping, so all processes
+            # skip this owner together without changing collective ordering.
+            if sz == 0:
+                continue
+
             if r == self.rank:
                 buf = flat_me
                 dist.broadcast(buf, src=r)
@@ -550,9 +560,15 @@ class SALADTrainer:
         """
         Get local results for the current rank.
         Returns:
-            dict with layer names and their corresponding results.
+            Tensor with one row of statistics per configured layer.
         """
-        T = 0
+        # Empty-owner ranks still need a correctly shaped tensor for the
+        # all_reduce in sync_layer_info.
+        T = torch.zeros(
+            (len(self.name2idx), 12),
+            dtype=torch.float32,
+            device=self.device,
+        )
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
                 T += solver.T
