@@ -1,0 +1,26 @@
+executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+arguments       = \
+    -u scripts/visualize_all_sparse_matrices.py \
+    --matrix-dir $(matrix_dir) \
+    --output-dir $(output_dir) \
+    --run-label $(run_label) \
+    --zero-threshold 1e-4 \
+    --clip-percentile 99.9 \
+    --dpi 180
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/salaad_vision_bmixed_s_heatmaps_$(Cluster)_$(Process).log
+error           = jobs/salaad_vision_bmixed_s_heatmaps_$(Cluster)_$(Process).err
+output          = jobs/salaad_vision_bmixed_s_heatmaps_$(Cluster)_$(Process).out
+
+request_cpus    = 4
+request_memory  = 32000
+request_gpus    = 0
+
+getenv          = True
+
+queue run_label,matrix_dir,output_dir from (
+bmixed_original_decay data/salaad_vision/vit_b8_bmixed/20260831_145220 data/figures/salaad_vision/bmixed_s_heatmaps_threshold_1e-4/original_decay_20260831_145220
+bmixed_all_layers_decay_a005_b002 data/salaad_vision/vit_b8_bmixed/20260831_152906 data/figures/salaad_vision/bmixed_s_heatmaps_threshold_1e-4/all_layers_decay_a005_b002_20260831_152906
+)
