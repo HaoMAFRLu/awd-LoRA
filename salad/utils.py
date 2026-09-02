@@ -103,6 +103,10 @@ def print_wandb(
         - layer/<name>/alpha_decay
         - layer/<name>/beta_decay
         - layer/<name>/energy_balance_rate
+        - layer/<name>/pre_rank_ratio
+        - layer/<name>/projection_relative_change
+        - layer/<name>/spectrum_cv_before
+        - layer/<name>/spectrum_cv_after
         - layer/<name>/rho
     """
     # Build one flat payload per epoch (faster & consistent than many small logs)
@@ -127,17 +131,13 @@ def print_wandb(
         trk = int(s.get("total_rank", 0))
         rank_ratio = float(rnk / trk) if trk else 0.0
 
-        # Scalars for params
-        layer_diff = float(s.get("loss", float("nan")))
-        rho    = float(s.get("rho",    float("nan")))
-
         # Grouped metric names (easy to pick in W&B UI)
         prefix = f"layer/{name}"
-        payload.update({
-            f"{prefix}/diff": layer_diff,                                 
-            f"{prefix}/rank_ratio": rank_ratio,                   
-            f"{prefix}/rho": rho,                           
-        })
+        payload[f"{prefix}/rank_ratio"] = rank_ratio
+        if "loss" in s:
+            payload[f"{prefix}/diff"] = float(s["loss"])
+        if "rho" in s:
+            payload[f"{prefix}/rho"] = float(s["rho"])
         if "alpha" in s:
             payload[f"{prefix}/alpha"] = float(s["alpha"])
         if "non_zero" in s:
@@ -152,6 +152,17 @@ def print_wandb(
             payload[f"{prefix}/energy_balance_rate"] = float(
                 s["energy_balance_rate"]
             )
+        if "pre_rank" in s:
+            payload[f"{prefix}/pre_rank_ratio"] = (
+                float(s["pre_rank"] / trk) if trk else 0.0
+            )
+        for metric in (
+            "projection_relative_change",
+            "spectrum_cv_before",
+            "spectrum_cv_after",
+        ):
+            if metric in s:
+                payload[f"{prefix}/{metric}"] = float(s[metric])
 
     # Single log call per epoch
     wandb.log(payload, step=epoch)
@@ -198,6 +209,30 @@ def print_epoch(epoch: int,
              f"{s['dbeta']:.8f}",
              f"{s['rate_decay_beta']:.6f}",
              f"{s['rho']:.12f}"
+            ]
+            for s in layer_stats
+        ]
+    elif "projection_relative_change" in layer_stats[0]:
+        headers = [
+            "name",
+            "effective rank (pre -> post)",
+            "energy CV (pre -> post)",
+            "relative writeback",
+            "balance rate",
+        ]
+        rows = [
+            [
+                s["name"],
+                (
+                    f"{s['pre_rank']} -> {s['rank']}/{s['total_rank']} "
+                    f"({100. * s['rank']/s['total_rank']:.2f}%)"
+                ),
+                (
+                    f"{s['spectrum_cv_before']:.6f} -> "
+                    f"{s['spectrum_cv_after']:.6f}"
+                ),
+                f"{s['projection_relative_change']:.8f}",
+                f"{s['energy_balance_rate']:.8f}",
             ]
             for s in layer_stats
         ]

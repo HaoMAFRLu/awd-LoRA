@@ -1,0 +1,55 @@
+seed: 42
+name: vit_b8_block0_qkv_spectral_writeback_smoke
+model_config: vit_b8_model.json
+training_mode: spectral_writeback
+model_type: dino_vitb8
+task: dino_feature_distillation
+runtime: local
+precision: bfloat16
+num_total_iters: 2
+num_freq: 2
+gradient: coupled
+is_asyn: false
+is_init: false
+is_wandb: false
+is_monitor: true
+save_interval: 2
+is_clip: 1.0
+seed_for_shuffle: 42
+batch_size: 1
+num_workers: 0
+data:
+  type: vision
+  dataset: ILSVRC/imagenet-1k
+  location: local_smoke
+  root: data/salaad_vision/smoke/imagenet_val64_parquet
+  cache_dir: data/salaad_vision/hf_cache_smoke/datasets
+  split: validation
+  streaming: true
+  shuffle: false
+  shuffle_buffer_size: 64
+distillation:
+  initialization: random_init
+  loss: mse
+  global_weight: 1.0
+  patch_weight: 1.0
+scheduler:
+  name: cosine
+  params:
+    warmup_steps: 1
+    min_lr_ratio: 0.1
+    total_steps: 2
+optimizer:
+  name: AdamW
+  params:
+    lr: 1.0e-05
+    betas:
+    - 0.9
+    - 0.95
+    eps: 1.0e-08
+    weight_decay: 0.0
+layers:
+- name: backbone.blocks.0.attn.qkv
+  params:
+    energy: 0.999
+    energy_balance_rate: 0.0005

@@ -370,12 +370,18 @@ def generate_vit_config(
 ):
     """Generate one ViT task config selected through --cfg_version."""
     training_mode = str(training_mode).lower()
-    if training_mode not in {"salad", "admm_l", "vanilla"}:
+    if training_mode not in {
+        "salad",
+        "admm_l",
+        "spectral_writeback",
+        "vanilla",
+    }:
         raise ValueError(
-            "training_mode must be 'salad', 'admm_l'/'ADMM_L', or "
+            "training_mode must be 'salad', 'admm_l'/'ADMM_L', "
+            "'spectral_writeback', or "
             f"'vanilla', got {training_mode!r}"
         )
-    if training_mode == "admm_l":
+    if training_mode in {"admm_l", "spectral_writeback"}:
         energy_balance_rate = _validate_open_fraction(
             energy_balance_rate,
             "energy_balance_rate",
@@ -409,7 +415,7 @@ def generate_vit_config(
     )
 
     layers = []
-    if training_mode in {"salad", "admm_l"}:
+    if training_mode in {"salad", "admm_l", "spectral_writeback"}:
         add_vit_layers(
             layers,
             num_hidden_layers,
@@ -425,7 +431,7 @@ def generate_vit_config(
             alpha_rate_decay_by_suffix=alpha_rate_decay_by_suffix,
             beta_rate_decay_by_suffix=beta_rate_decay_by_suffix,
         )
-        if training_mode == "admm_l":
+        if training_mode in {"admm_l", "spectral_writeback"}:
             for entry in layers:
                 params = entry["params"]
                 for unused_key in (
@@ -441,6 +447,8 @@ def generate_vit_config(
                     "block_q",
                 ):
                     params.pop(unused_key, None)
+                if training_mode == "spectral_writeback":
+                    params.pop("rho_dict", None)
                 params["energy_balance_rate"] = energy_balance_rate
 
     data = {
@@ -648,6 +656,31 @@ if __name__ == "__main__":
         energy_balance_rate=0.05,
     )
 
+    cfg_vit_b8_block0_qkv_spectral_writeback = copy.deepcopy(cfg_vit_b8)
+    cfg_vit_b8_block0_qkv_spectral_writeback.update(
+        name="vit_b8_block0_qkv_spectral_writeback",
+        training_mode="spectral_writeback",
+        include_attention=True,
+        include_mlp=False,
+        vit_layers=1,
+        excluded_suffixes=("attn.proj",),
+        energy_balance_rate=5e-4,
+    )
+
+    cfg_vit_b8_block0_qkv_spectral_writeback_smoke = copy.deepcopy(
+        cfg_vit_b8_bmixed_smoke
+    )
+    cfg_vit_b8_block0_qkv_spectral_writeback_smoke.update(
+        name="vit_b8_block0_qkv_spectral_writeback_smoke",
+        training_mode="spectral_writeback",
+        energy_balance_rate=5e-4,
+        num_total_iters=2,
+        scheduler_total_steps=2,
+        block_shape_by_suffix=None,
+        alpha_rate_decay_by_suffix=None,
+        beta_rate_decay_by_suffix=None,
+    )
+
     generate_vit_config(**cfg_vit_b8)
     generate_vit_config(**cfg_vit_b8_vanilla)
     generate_vit_config(**cfg_vit_b8_vanilla_throughput)
@@ -655,3 +688,5 @@ if __name__ == "__main__":
     generate_vit_config(**cfg_vit_b8_bmixed)
     generate_vit_config(**cfg_vit_b8_bmixed_smoke)
     generate_vit_config(**cfg_vit_b8_block0_qkv_admm_l_full_spectrum)
+    generate_vit_config(**cfg_vit_b8_block0_qkv_spectral_writeback)
+    generate_vit_config(**cfg_vit_b8_block0_qkv_spectral_writeback_smoke)

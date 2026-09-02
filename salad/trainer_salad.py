@@ -12,6 +12,7 @@ from salad.admm_l_solver import ADMM_L
 from salad.register import get_scheduler
 from salad.salad_solver import SALAD
 from salad.simple_timer import SimpleTimer
+from salad.spectral_writeback import SpectralWriteback
 from salad.utils import (
     atomic_pickle_dump,
     atomic_torch_save,
@@ -27,20 +28,24 @@ from salaad_vision.distillation import dino_feature_mse
 
 
 ADMM_TRAINING_MODES = frozenset({"salad", "admm_l"})
-SUPPORTED_TRAINING_MODES = ADMM_TRAINING_MODES | {"vanilla"}
+WRITEBACK_TRAINING_MODES = frozenset({"spectral_writeback"})
+LAYERWISE_TRAINING_MODES = ADMM_TRAINING_MODES | WRITEBACK_TRAINING_MODES
+SUPPORTED_TRAINING_MODES = LAYERWISE_TRAINING_MODES | {"vanilla"}
 
 
 def normalize_training_mode(mode: str) -> str:
     """Return the canonical, case-insensitive training-mode name."""
     if not isinstance(mode, str):
         raise ValueError(
-            "training_mode must be 'salad', 'admm_l'/'ADMM_L', or "
+            "training_mode must be 'salad', 'admm_l'/'ADMM_L', "
+            "'spectral_writeback', or "
             f"'vanilla', got {mode!r}"
         )
     normalized = mode.lower()
     if normalized not in SUPPORTED_TRAINING_MODES:
         raise ValueError(
-            "training_mode must be 'salad', 'admm_l'/'ADMM_L', or "
+            "training_mode must be 'salad', 'admm_l'/'ADMM_L', "
+            "'spectral_writeback', or "
             f"'vanilla', got {mode!r}"
         )
     return normalized
@@ -97,6 +102,7 @@ class SALADTrainer:
             "train": SimpleTimer("train"),
             "S": SimpleTimer("S"),
             "L": SimpleTimer("L"),
+            "project": SimpleTimer("project"),
             "Y": SimpleTimer("Y"),
             "sync": SimpleTimer("sync"),
             "save": SimpleTimer("save"),
@@ -155,7 +161,7 @@ class SALADTrainer:
             f"[Rank {self.rank}] student master dtype={student_dtype}, "
             f"forward dtype={self.compute_dtype}"
         )
-        if self.training_mode in ADMM_TRAINING_MODES:
+        if self.training_mode in LAYERWISE_TRAINING_MODES:
             names_model_layers = get_linear_layers_name(self.model)
             self.cfg_layers = self.get_cfg_layers(self.config, names_model_layers)
         else:
@@ -189,7 +195,7 @@ class SALADTrainer:
                                         num_training_steps=scheduler_steps,
                                         warmup_steps=config['scheduler']['params'].get('warmup_steps', 0),
                                         min_lr_ratio=config['scheduler']['params'].get('min_lr_ratio', 0.0))
-        if self.training_mode in ADMM_TRAINING_MODES:
+        if self.training_mode in LAYERWISE_TRAINING_MODES:
             assigned_layers, owner_map = self.assign_layers(
                 self.cfg_layers,
                 self.rank,
@@ -201,9 +207,15 @@ class SALADTrainer:
                 self.world_size,
             )
 
-            # initialize the ADMM solvers
+            # Initialize one layer operator on every rank.  Only the assigned
+            # owner materializes and updates the operator's full state.
             self.ADMM_solvers = []
-            solver_class = SALAD if self.training_mode == 'salad' else ADMM_L
+            solver_classes = {
+                'salad': SALAD,
+                'admm_l': ADMM_L,
+                'spectral_writeback': SpectralWriteback,
+            }
+            solver_class = solver_classes[self.training_mode]
             for entry in self.cfg_layers:
                 name = entry['name']
                 params = entry['params']
@@ -233,13 +245,25 @@ class SALADTrainer:
 
         self.layer_info = {}
         for entry in self.cfg_layers:
-            info = {
-                'loss': [],
-                'rank': [],
-                'rho': [],
-                'total_rank': [],
-                'total_elements': [],
-            }
+            if self.training_mode == 'spectral_writeback':
+                info = {
+                    'pre_rank': [],
+                    'rank': [],
+                    'total_rank': [],
+                    'total_elements': [],
+                    'energy_balance_rate': [],
+                    'projection_relative_change': [],
+                    'spectrum_cv_before': [],
+                    'spectrum_cv_after': [],
+                }
+            else:
+                info = {
+                    'loss': [],
+                    'rank': [],
+                    'rho': [],
+                    'total_rank': [],
+                    'total_elements': [],
+                }
             if self.training_mode == 'salad':
                 info.update({
                     'alpha_mode': [],
@@ -441,7 +465,7 @@ class SALADTrainer:
                 global_avg_loss_penalty,
                 global_avg_diff,
             )
-        elif self.training_mode == 'vanilla':
+        elif self.training_mode in {'vanilla', 'spectral_writeback'}:
             loss.backward()
 
             if self.is_clip > 0:
@@ -513,6 +537,16 @@ class SALADTrainer:
                     item for item in self.ADMM_solvers
                     if item.layer_name == name
                 )
+                if self.training_mode == 'spectral_writeback':
+                    info['pre_rank'].append(int(row[0].item()))
+                    info['rank'].append(int(row[1].item()))
+                    info['spectrum_cv_before'].append(row[2].item())
+                    info['spectrum_cv_after'].append(row[3].item())
+                    info['energy_balance_rate'].append(row[4].item())
+                    info['projection_relative_change'].append(row[5].item())
+                    info['total_rank'].append(int(row[6].item()))
+                    info['total_elements'].append(int(row[7].item()))
+                    continue
                 info['rho'].append(row[4].item())
                 info['loss'].append(row[7].item())
                 info['rank'].append(int(row[8].item()))
@@ -664,6 +698,16 @@ class SALADTrainer:
         for solver in self.ADMM_solvers:
             solver.update_rho()
 
+    def update_spectral_writeback(self) -> None:
+        """Project locally owned weights and preserve their Parameter objects."""
+        if self.training_mode != 'spectral_writeback':
+            raise ValueError(
+                "spectral writeback is only valid in spectral_writeback mode"
+            )
+        for solver in self.ADMM_solvers:
+            if solver.layer_gpu_map == self.rank:
+                solver.project_and_writeback()
+
     def solvers_reset(self):
         """
         Reset all solvers for a new training epoch.
@@ -699,6 +743,21 @@ class SALADTrainer:
         layer_stats = []
         for entry in self.cfg_layers:
             info = layer_info[entry['name']]
+            if self.training_mode == 'spectral_writeback':
+                layer_stats.append({
+                    'name': entry['name'],
+                    'pre_rank': info['pre_rank'][-1],
+                    'rank': info['rank'][-1],
+                    'total_rank': info['total_rank'][-1],
+                    'total_elements': info['total_elements'][-1],
+                    'energy_balance_rate': info['energy_balance_rate'][-1],
+                    'projection_relative_change': (
+                        info['projection_relative_change'][-1]
+                    ),
+                    'spectrum_cv_before': info['spectrum_cv_before'][-1],
+                    'spectrum_cv_after': info['spectrum_cv_after'][-1],
+                })
+                continue
             stats = {
                 'name': entry['name'],
                 'loss': info['loss'][-1],
@@ -837,6 +896,21 @@ class SALADTrainer:
                         self.sync_layer_info()
 
                     self.solvers_reset()
+                elif self.training_mode == 'spectral_writeback':
+                    # This is projected optimization rather than ADMM: after
+                    # AdamW, write the balanced matrix directly into the same
+                    # Parameter, synchronize it, and add no penalty or dual
+                    # update.
+                    # Gradients have already been consumed by optimizer.step;
+                    # release them before the GPU spectral decomposition to
+                    # reduce peak memory.
+                    self.optimizer.zero_grad(set_to_none=True)
+                    with self.timers['project']:
+                        self.update_spectral_writeback()
+                    with self.timers['sync']:
+                        self.broadcast_params(self.ddp_model)
+                        self.update_ADMM_single_step(target='save')
+                        self.sync_layer_info()
                 # average losses
                 ep_loss /= self.num_freq
                 ep_cls_loss /= self.num_freq
@@ -858,7 +932,7 @@ class SALADTrainer:
                                     self.lr_scheduler.get_last_lr()[0])
                         
                     if self.is_monitor:
-                        print(f'Train: {self.timers["train"].total:.3f}s | Avg Train: {self.timers["train"].avg():.3f}s | S: {self.timers["S"].total:.3f}s | L: {self.timers["L"].total:.3f}s | Y: {self.timers["Y"].total:.3f}s | Sync: {self.timers["sync"].total:.3f}s | Save: {self.timers["save"].total:.3f}s')
+                        print(f'Train: {self.timers["train"].total:.3f}s | Avg Train: {self.timers["train"].avg():.3f}s | S: {self.timers["S"].total:.3f}s | L: {self.timers["L"].total:.3f}s | Project: {self.timers["project"].total:.3f}s | Y: {self.timers["Y"].total:.3f}s | Sync: {self.timers["sync"].total:.3f}s | Save: {self.timers["save"].total:.3f}s')
                         for key in self.timers:
                             self.timers[key].reset()
 

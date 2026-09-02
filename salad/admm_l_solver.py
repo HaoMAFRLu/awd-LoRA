@@ -17,6 +17,10 @@ from __future__ import annotations
 import torch
 
 from salad.adaptive_rho import RHO
+from salad.spectral_writeback import (
+    balance_singular_energies,
+    validate_balance_rate,
+)
 from salad.utils import get_energy_quantile
 
 
@@ -39,8 +43,8 @@ class ADMM_L:
         self.energy = params.get("energy", 0.999)
         self.energy_balance_rate = params.get("energy_balance_rate", 0.05)
         self._validate_fraction(self.energy, "energy")
-        self._validate_balance_rate(
-            self.energy_balance_rate,
+        self.energy_balance_rate = validate_balance_rate(
+            self.energy_balance_rate
         )
 
         rho_cfg = dict(params.get("rho_dict", {}))
@@ -87,18 +91,6 @@ class ADMM_L:
         ):
             raise ValueError(f"{name} must be in (0, 1], got {value!r}")
 
-    @staticmethod
-    def _validate_balance_rate(value: float) -> None:
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, (int, float))
-            or not 0.0 < float(value) < 1.0
-        ):
-            raise ValueError(
-                "energy_balance_rate must be in (0, 1) so one update "
-                f"cannot flatten the spectrum immediately, got {value!r}"
-            )
-
     def reset(self) -> None:
         self.total_loss = 0.0
         self.nr_cals = 0
@@ -132,26 +124,6 @@ class ADMM_L:
         )
 
     @staticmethod
-    def _balance_singular_energies(
-        singular_values: torch.Tensor,
-        balance_rate: float,
-    ) -> torch.Tensor:
-        """Move spectral energies toward their mean by one conservative step.
-
-        If ``e_i = sigma_i**2``, this computes
-        ``e_i' = (1-rate)*e_i + rate*mean(e)``.  Therefore total spectral
-        energy is conserved, values above the mean decrease, and values below
-        the mean increase.
-        """
-        energies = singular_values.square()
-        mean_energy = energies.mean()
-        balanced_energies = (
-            (1.0 - balance_rate) * energies
-            + balance_rate * mean_energy
-        )
-        return balanced_energies.clamp_min(0.0).sqrt()
-
-    @staticmethod
     def _update_L(
         X: torch.Tensor,
         Y: torch.Tensor,
@@ -163,7 +135,7 @@ class ADMM_L:
             X + Y / rho,
             full_matrices=False,
         )
-        balanced = ADMM_L._balance_singular_energies(
+        balanced = balance_singular_energies(
             singular_values,
             energy_balance_rate,
         )

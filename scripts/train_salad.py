@@ -107,6 +107,16 @@ def main(cfg_version: str,
                 and 'lm_head' not in layer['name']
             ):
                 params['rho_dict']['rho'] = rho
+    elif training_mode == 'spectral_writeback':
+        if any(
+            value is not None
+            for value in (rho, alpha_rate, beta_rate, dalpha, dbeta)
+        ):
+            raise ValueError(
+                "spectral_writeback has no ADMM or SALAAD controller; "
+                "--rho, --alpha_rate, --beta_rate, --dalpha, and "
+                "--dbeta are not valid for this training mode"
+            )
     elif rho is not None and alpha_rate is not None and beta_rate is not None:
         for layer in cfg['layers']:
             if 'embed' in layer['name'] or 'lm_head' in layer['name']:
