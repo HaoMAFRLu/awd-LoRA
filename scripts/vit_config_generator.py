@@ -277,6 +277,16 @@ def _validate_optional_rate_decay(value, name):
     return float(value)
 
 
+def _validate_open_fraction(value, name):
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not 0.0 < float(value) < 1.0
+    ):
+        raise ValueError(f"{name} must be in (0, 1), got {value!r}")
+    return float(value)
+
+
 def _validate_rate_decay_by_suffix(values, name):
     if values is None:
         return {}
@@ -355,9 +365,21 @@ def generate_vit_config(
     beta_rate_decay=None,
     alpha_rate_decay_by_suffix=None,
     beta_rate_decay_by_suffix=None,
+    energy_balance_rate=0.05,
     output_path=None,
 ):
     """Generate one ViT task config selected through --cfg_version."""
+    training_mode = str(training_mode).lower()
+    if training_mode not in {"salad", "admm_l", "vanilla"}:
+        raise ValueError(
+            "training_mode must be 'salad', 'admm_l'/'ADMM_L', or "
+            f"'vanilla', got {training_mode!r}"
+        )
+    if training_mode == "admm_l":
+        energy_balance_rate = _validate_open_fraction(
+            energy_balance_rate,
+            "energy_balance_rate",
+        )
     cfg_model = load_model_config(model_config)
     if cfg_model.get("model_type") != "dino_vitb8":
         raise ValueError(
@@ -387,7 +409,7 @@ def generate_vit_config(
     )
 
     layers = []
-    if training_mode == "salad":
+    if training_mode in {"salad", "admm_l"}:
         add_vit_layers(
             layers,
             num_hidden_layers,
@@ -403,6 +425,23 @@ def generate_vit_config(
             alpha_rate_decay_by_suffix=alpha_rate_decay_by_suffix,
             beta_rate_decay_by_suffix=beta_rate_decay_by_suffix,
         )
+        if training_mode == "admm_l":
+            for entry in layers:
+                params = entry["params"]
+                for unused_key in (
+                    "init_energy",
+                    "is_init",
+                    "iter_max",
+                    "tol",
+                    "rate_rank",
+                    "rate_sparsity",
+                    "alpha_dict",
+                    "beta_dict",
+                    "block_p",
+                    "block_q",
+                ):
+                    params.pop(unused_key, None)
+                params["energy_balance_rate"] = energy_balance_rate
 
     data = {
         "type": "vision",
@@ -480,7 +519,7 @@ def generate_vit_config(
         )
 
     print(f"Configuration written to {output_path}")
-    print(f"Generated {len(layers)} SALAAD layers.")
+    print(f"Generated {len(layers)} {training_mode} layers.")
     return cfg
 
 
@@ -598,9 +637,21 @@ if __name__ == "__main__":
         beta_rate_decay_by_suffix=VIT_BMIXED_BETA_RATE_DECAY_BY_SUFFIX,
     )
 
+    cfg_vit_b8_block0_qkv_admm_l_full_spectrum = copy.deepcopy(cfg_vit_b8)
+    cfg_vit_b8_block0_qkv_admm_l_full_spectrum.update(
+        name="vit_b8_block0_qkv_admm_l_full_spectrum",
+        training_mode="admm_l",
+        include_attention=True,
+        include_mlp=False,
+        vit_layers=1,
+        excluded_suffixes=("attn.proj",),
+        energy_balance_rate=0.05,
+    )
+
     generate_vit_config(**cfg_vit_b8)
     generate_vit_config(**cfg_vit_b8_vanilla)
     generate_vit_config(**cfg_vit_b8_vanilla_throughput)
     generate_vit_config(**cfg_vit_b8_mixed_rho)
     generate_vit_config(**cfg_vit_b8_bmixed)
     generate_vit_config(**cfg_vit_b8_bmixed_smoke)
+    generate_vit_config(**cfg_vit_b8_block0_qkv_admm_l_full_spectrum)

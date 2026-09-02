@@ -92,7 +92,7 @@ def print_wandb(
       Global series:
         - train/loss, train/cls_loss, train/patch_loss, train/layer_diff,
           train/penalty, train/lr, train/images, epoch
-      Per-layer series (for each layer name):
+      Per-layer series (depending on training mode):
         - layer/<name>/layer_diff
         - layer/<name>/non_zero_ratio
         - layer/<name>/rank_ratio
@@ -102,6 +102,7 @@ def print_wandb(
         - layer/<name>/dbeta
         - layer/<name>/alpha_decay
         - layer/<name>/beta_decay
+        - layer/<name>/energy_balance_rate
         - layer/<name>/rho
     """
     # Build one flat payload per epoch (faster & consistent than many small logs)
@@ -122,33 +123,35 @@ def print_wandb(
         if not name:
             continue
 
-        # Ratios
-        nz = int(s.get("non_zero", 0))
-        tot = int(s.get("total_elements", 0))
-        non_zero_ratio = float(nz / tot) if tot else 0.0
-
         rnk = int(s.get("rank", 0))
         trk = int(s.get("total_rank", 0))
         rank_ratio = float(rnk / trk) if trk else 0.0
 
         # Scalars for params
         layer_diff = float(s.get("loss", float("nan")))
-        alpha  = float(s.get("alpha",  float("nan")))
-        dalpha = float(s.get("dalpha", float("nan")))
-        beta   = float(s.get("beta",   float("nan")))
-        dbeta  = float(s.get("dbeta",  float("nan")))
         rho    = float(s.get("rho",    float("nan")))
 
         # Grouped metric names (easy to pick in W&B UI)
         prefix = f"layer/{name}"
         payload.update({
             f"{prefix}/diff": layer_diff,                                 
-            f"{prefix}/non_zero_ratio": non_zero_ratio,          
             f"{prefix}/rank_ratio": rank_ratio,                   
-            f"{prefix}/alpha": alpha,                              
-            f"{prefix}/beta": beta,                             
             f"{prefix}/rho": rho,                           
         })
+        if "alpha" in s:
+            payload[f"{prefix}/alpha"] = float(s["alpha"])
+        if "non_zero" in s:
+            nz = int(s["non_zero"])
+            tot = int(s.get("total_elements", 0))
+            payload[f"{prefix}/non_zero_ratio"] = (
+                float(nz / tot) if tot else 0.0
+            )
+        if "beta" in s:
+            payload[f"{prefix}/beta"] = float(s["beta"])
+        if "energy_balance_rate" in s:
+            payload[f"{prefix}/energy_balance_rate"] = float(
+                s["energy_balance_rate"]
+            )
 
     # Single log call per epoch
     wandb.log(payload, step=epoch)
@@ -176,26 +179,64 @@ def print_epoch(epoch: int,
         print("-" * 120)
         return
 
-    headers = ["name", "layer diff", "non-zero", "rank", 
-               "mode", "alpha", "dalpha", "decay", 
-               "mode", "beta", "dbeta", "decay", "rho"]
-    rows = [
-        [s["name"], 
-         f"{s['loss']:.6f}", 
-         f"{s['non_zero']}/{s['total_elements']} ({100. * s['non_zero']/s['total_elements']:.2f}%)", 
-         f"{s['rank']}/{s['total_rank']} ({100. * s['rank']/s['total_rank']:.2f}%)",
-         f"{s['alpha_mode']}",
-         f"{s['alpha']:.12f}", 
-         f"{s['dalpha']:.12f}",
-         f"{s['rate_decay_alpha']:.6f}",
-         f"{s['beta_mode']}",
-         f"{s['beta']:.8f}",
-         f"{s['dbeta']:.8f}",
-         f"{s['rate_decay_beta']:.6f}",
-         f"{s['rho']:.12f}"
+    has_sparse_component = "beta_mode" in layer_stats[0]
+    if has_sparse_component:
+        headers = ["name", "layer diff", "non-zero", "rank",
+                   "mode", "alpha", "dalpha", "decay",
+                   "mode", "beta", "dbeta", "decay", "rho"]
+        rows = [
+            [s["name"],
+             f"{s['loss']:.6f}",
+             f"{s['non_zero']}/{s['total_elements']} ({100. * s['non_zero']/s['total_elements']:.2f}%)",
+             f"{s['rank']}/{s['total_rank']} ({100. * s['rank']/s['total_rank']:.2f}%)",
+             f"{s['alpha_mode']}",
+             f"{s['alpha']:.12f}",
+             f"{s['dalpha']:.12f}",
+             f"{s['rate_decay_alpha']:.6f}",
+             f"{s['beta_mode']}",
+             f"{s['beta']:.8f}",
+             f"{s['dbeta']:.8f}",
+             f"{s['rate_decay_beta']:.6f}",
+             f"{s['rho']:.12f}"
+            ]
+            for s in layer_stats
         ]
-        for s in layer_stats
-    ]
+    elif "energy_balance_rate" in layer_stats[0]:
+        headers = [
+            "name",
+            "layer diff",
+            "effective rank",
+            "balance rate",
+            "rho",
+        ]
+        rows = [
+            [
+                s["name"],
+                f"{s['loss']:.6f}",
+                (
+                    f"{s['rank']}/{s['total_rank']} "
+                    f"({100. * s['rank']/s['total_rank']:.2f}%)"
+                ),
+                f"{s['energy_balance_rate']:.6f}",
+                f"{s['rho']:.12f}",
+            ]
+            for s in layer_stats
+        ]
+    else:
+        headers = ["name", "layer diff", "rank", "mode", "alpha",
+                   "dalpha", "decay", "rho"]
+        rows = [
+            [s["name"],
+             f"{s['loss']:.6f}",
+             f"{s['rank']}/{s['total_rank']} ({100. * s['rank']/s['total_rank']:.2f}%)",
+             f"{s['alpha_mode']}",
+             f"{s['alpha']:.12f}",
+             f"{s['dalpha']:.12f}",
+             f"{s['rate_decay_alpha']:.6f}",
+             f"{s['rho']:.12f}"
+            ]
+            for s in layer_stats
+        ]
 
     print(tabulate(rows, headers=headers, tablefmt="grid"))
     print("-" * 120)

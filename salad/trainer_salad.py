@@ -8,6 +8,7 @@ from loguru import logger
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 
+from salad.admm_l_solver import ADMM_L
 from salad.register import get_scheduler
 from salad.salad_solver import SALAD
 from salad.simple_timer import SimpleTimer
@@ -23,6 +24,26 @@ from salad.utils import (
     print_wandb,
 )
 from salaad_vision.distillation import dino_feature_mse
+
+
+ADMM_TRAINING_MODES = frozenset({"salad", "admm_l"})
+SUPPORTED_TRAINING_MODES = ADMM_TRAINING_MODES | {"vanilla"}
+
+
+def normalize_training_mode(mode: str) -> str:
+    """Return the canonical, case-insensitive training-mode name."""
+    if not isinstance(mode, str):
+        raise ValueError(
+            "training_mode must be 'salad', 'admm_l'/'ADMM_L', or "
+            f"'vanilla', got {mode!r}"
+        )
+    normalized = mode.lower()
+    if normalized not in SUPPORTED_TRAINING_MODES:
+        raise ValueError(
+            "training_mode must be 'salad', 'admm_l'/'ADMM_L', or "
+            f"'vanilla', got {mode!r}"
+        )
+    return normalized
 
 
 class SALADTrainer:
@@ -65,12 +86,9 @@ class SALADTrainer:
         ):
             raise ValueError("save_interval must be a positive integer")
 
-        self.training_mode = config.get('training_mode', 'salad')
-        if self.training_mode not in {'salad', 'vanilla'}:
-            raise ValueError(
-                "training_mode must be 'salad' or 'vanilla', "
-                f"got {self.training_mode!r}"
-            )
+        self.training_mode = normalize_training_mode(
+            config.get('training_mode', 'salad')
+        )
 
         if self.rank == 0:
             print(f'Total rank: {self.world_size}')
@@ -137,13 +155,13 @@ class SALADTrainer:
             f"[Rank {self.rank}] student master dtype={student_dtype}, "
             f"forward dtype={self.compute_dtype}"
         )
-        if self.training_mode == 'salad':
+        if self.training_mode in ADMM_TRAINING_MODES:
             names_model_layers = get_linear_layers_name(self.model)
             self.cfg_layers = self.get_cfg_layers(self.config, names_model_layers)
         else:
             self.cfg_layers = []
 
-        if config.get('is_init', False):
+        if self.training_mode == 'salad' and config.get('is_init', False):
             for entry in self.cfg_layers:
                 name = entry['name']
                 params = entry['params']
@@ -171,7 +189,7 @@ class SALADTrainer:
                                         num_training_steps=scheduler_steps,
                                         warmup_steps=config['scheduler']['params'].get('warmup_steps', 0),
                                         min_lr_ratio=config['scheduler']['params'].get('min_lr_ratio', 0.0))
-        if self.training_mode == 'salad':  # only do the admm for the salad training
+        if self.training_mode in ADMM_TRAINING_MODES:
             assigned_layers, owner_map = self.assign_layers(
                 self.cfg_layers,
                 self.rank,
@@ -185,14 +203,17 @@ class SALADTrainer:
 
             # initialize the ADMM solvers
             self.ADMM_solvers = []
+            solver_class = SALAD if self.training_mode == 'salad' else ADMM_L
             for entry in self.cfg_layers:
                 name = entry['name']
                 params = entry['params']
-                solver = SALAD(name, 
-                            params, 
-                            get_weight(self.ddp_model, name), 
-                            len(self.cfg_layers),
-                            is_full=name in assigned_layers)
+                solver = solver_class(
+                    name,
+                    params,
+                    get_weight(self.ddp_model, name),
+                    len(self.cfg_layers),
+                    is_full=name in assigned_layers,
+                )
                 solver.layer_gpu_map = self.rank if name in assigned_layers else -1
                 self.ADMM_solvers.append(solver)
 
@@ -210,22 +231,32 @@ class SALADTrainer:
                 solver.layer_idx = self.name2idx[solver.layer_name]
                 solver.init_T(len(global_layer_names), K=12)
 
-        self.layer_info = {entry['name']: {
-            'loss': [],
-            'rank': [],
-            'alpha_mode': [],
-            'beta_mode': [],
-            'alpha': [],
-            'dalpha': [],
-            'beta': [],
-            'dbeta': [],
-            'rho': [],
-            'rate_decay_alpha': [],
-            'rate_decay_beta': [],
-            'nonzero': [],
-            'total_rank': [],
-            'total_elements': []
-        } for entry in self.cfg_layers}
+        self.layer_info = {}
+        for entry in self.cfg_layers:
+            info = {
+                'loss': [],
+                'rank': [],
+                'rho': [],
+                'total_rank': [],
+                'total_elements': [],
+            }
+            if self.training_mode == 'salad':
+                info.update({
+                    'alpha_mode': [],
+                    'alpha': [],
+                    'dalpha': [],
+                    'rate_decay_alpha': [],
+                    'beta_mode': [],
+                    'beta': [],
+                    'dbeta': [],
+                    'rate_decay_beta': [],
+                    'nonzero': [],
+                })
+            elif self.training_mode == 'admm_l':
+                info.update({
+                    'energy_balance_rate': [],
+                })
+            self.layer_info[entry['name']] = info
         self.layer_info['avg_loss'] = []
         self.layer_info['avg_cls_loss'] = []
         self.layer_info['avg_patch_loss'] = []
@@ -302,14 +333,17 @@ class SALADTrainer:
         return assigned_layers, owner_map
 
     def get_diff_per_rank(self) -> torch.Tensor:
-        """Get the difference X - L - S for each layer."""
+        """Get the local primal residual for each owned ADMM layer."""
         # Some ranks may own no SALAAD layers when len(cfg_layers) is smaller
         # than world_size.  Keep the accumulator as a tensor so every rank can
         # still participate in the following all_reduce.
         diff = torch.zeros((), dtype=torch.float32, device=self.device)
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                diff += solver.get_diff(solver.L, solver.S, solver.Y)
+                if self.training_mode == 'admm_l':
+                    diff += solver.get_diff()
+                else:
+                    diff += solver.get_diff(solver.L, solver.S, solver.Y)
         return diff
 
     def get_gradient_per_layer(self) -> dict:
@@ -317,7 +351,16 @@ class SALADTrainer:
         gradient_per_layer = {}
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                Z = solver.get_gradient(solver.X_with_grad.detach(), solver.L, solver.S, solver.Y, solver.rho)
+                if self.training_mode == 'admm_l':
+                    Z = solver.get_gradient()
+                else:
+                    Z = solver.get_gradient(
+                        solver.X_with_grad.detach(),
+                        solver.L,
+                        solver.S,
+                        solver.Y,
+                        solver.rho,
+                    )
                 gradient_per_layer[solver.layer_name] = Z
         return gradient_per_layer
 
@@ -345,18 +388,18 @@ class SALADTrainer:
             + distillation_config.get('patch_weight', 1.0) * distillation_loss.patches
         )
 
-        if self.training_mode == 'salad':
-            # get the loss for each layer, (X - L - S)
+        if self.training_mode in ADMM_TRAINING_MODES:
+            # Get each layer's primal residual: X-L-S or X-L.
             # update ema_r and ema_s for updating rho
             diff_per_rank = self.get_diff_per_rank()
             dist.all_reduce(diff_per_rank, op=dist.ReduceOp.SUM)
             global_avg_diff = diff_per_rank.item() / len(self.cfg_layers)
             # calculate the penalty loss of each layer
-            # X with gradient -> rho/2 * (X - L - S + Y/rho)^2
+            # X with gradient -> augmented-Lagrangian quadratic penalty.
             # only used for coupled gradient
             loss_penalty = self.get_penalty_loss()
             if gradient == 'decoupled':
-                # Closed-form gradient: rho * (X - L - S + Y / rho).
+                # Closed-form gradient of the active ADMM constraint.
                 gradient_per_layer = self.get_gradient_per_layer()
                 loss.backward()
             elif gradient == 'coupled':
@@ -439,7 +482,14 @@ class SALADTrainer:
         loss = torch.zeros((), dtype=torch.float32, device=self.device)
         for solver in self.ADMM_solvers:
             if solver.layer_gpu_map == self.rank:
-                loss += self.world_size * solver.get_penalty(solver.L, solver.S, solver.Y)
+                if self.training_mode == 'admm_l':
+                    loss += self.world_size * solver.get_penalty()
+                else:
+                    loss += self.world_size * solver.get_penalty(
+                        solver.L,
+                        solver.S,
+                        solver.Y,
+                    )
         return loss
 
     def sync_layer_info(self):
@@ -459,20 +509,29 @@ class SALADTrainer:
             for name, i in self.name2idx.items():
                 row = T[i]
                 info = self.layer_info[name]
-                info['alpha_mode'].append(self.ADMM_solvers[0].alpha_solver.mode)
-                info['beta_mode'].append(self.ADMM_solvers[0].beta_solver.mode)
-                info['alpha'].append(row[0].item())
-                info['beta'].append(row[1].item())
-                info['dalpha'].append(row[2].item())
-                info['dbeta'].append(row[3].item())
+                solver = next(
+                    item for item in self.ADMM_solvers
+                    if item.layer_name == name
+                )
                 info['rho'].append(row[4].item())
-                info['rate_decay_alpha'].append(row[5].item())
-                info['rate_decay_beta'].append(row[6].item())
                 info['loss'].append(row[7].item())
                 info['rank'].append(int(row[8].item()))
-                info['nonzero'].append(int(row[9].item()))
                 info['total_rank'].append(int(row[10].item()))
                 info['total_elements'].append(int(row[11].item()))
+                if self.training_mode == 'salad':
+                    info['alpha_mode'].append(solver.alpha_solver.mode)
+                    info['alpha'].append(row[0].item())
+                    info['dalpha'].append(row[2].item())
+                    info['rate_decay_alpha'].append(row[5].item())
+                    info['beta_mode'].append(solver.beta_solver.mode)
+                    info['beta'].append(row[1].item())
+                    info['dbeta'].append(row[3].item())
+                    info['rate_decay_beta'].append(row[6].item())
+                    info['nonzero'].append(int(row[9].item()))
+                else:
+                    info['energy_balance_rate'].append(
+                        solver.energy_balance_rate
+                    )
     
     def get_global_loss(self, log_loss):
         """
@@ -539,20 +598,21 @@ class SALADTrainer:
             # save the layer_info
             atomic_pickle_dump(self.layer_info, os.path.join(path_folder, "layer_info.pkl"))
 
-        if self.training_mode == 'salad':
+        if self.training_mode in ADMM_TRAINING_MODES:
             LL = {}
-            SS = {}
             YY = {}
+            SS = {} if self.training_mode == 'salad' else None
             for solver in self.ADMM_solvers:
                 if solver.layer_gpu_map == self.rank:
                     LL[solver.layer_name] = solver.L.to('cpu')
-                    SS[solver.layer_name] = solver.S.to('cpu')
-                    YY[solver.layer_name] = solver.Y.to('cpu')         
+                    YY[solver.layer_name] = solver.Y.to('cpu')
+                    if SS is not None:
+                        SS[solver.layer_name] = solver.S.to('cpu')
             
             # save the data
-            MATRIX = {
-                'LL': LL, 'SS': SS, 'YY': YY
-            }
+            MATRIX = {'LL': LL, 'YY': YY}
+            if SS is not None:
+                MATRIX['SS'] = SS
 
             atomic_pickle_dump(MATRIX, os.path.join(path_folder, 'matrix_rank'+str(self.rank)+'.pkl'))
 
@@ -582,12 +642,18 @@ class SALADTrainer:
                 if target == 'L':
                     solver.update_L()
                 elif target == 'S':
+                    if self.training_mode != 'salad':
+                        raise ValueError("ADMM_L has no S update")
                     solver.update_S()
                 elif target == 'Y':
                     solver.update_Y()
                 elif target == 'alpha':
+                    if self.training_mode != 'salad':
+                        raise ValueError("ADMM_L has no alpha update")
                     solver.update_alpha()
                 elif target == 'beta':
+                    if self.training_mode != 'salad':
+                        raise ValueError("ADMM_L has no beta update")
                     solver.update_beta()
                 elif target == 'save':
                     solver.cal_results()
@@ -630,21 +696,36 @@ class SALADTrainer:
                   'avg_loss_penalty': loss_penalty,
                   'avg_diff': loss_diff}
         
-        layer_stats = [{'name': entry['name'],
-                        'loss': layer_info[entry['name']]['loss'][-1],
-                        'alpha_mode': layer_info[entry['name']]['alpha_mode'][-1],
-                        'beta_mode': layer_info[entry['name']]['beta_mode'][-1],
-                        'alpha': layer_info[entry['name']]['alpha'][-1],
-                        'beta': layer_info[entry['name']]['beta'][-1],
-                        'dalpha': layer_info[entry['name']]['dalpha'][-1],
-                        'dbeta': layer_info[entry['name']]['dbeta'][-1],
-                        'rho': layer_info[entry['name']]['rho'][-1],
-                        'rate_decay_alpha': layer_info[entry['name']]['rate_decay_alpha'][-1],
-                        'rate_decay_beta': layer_info[entry['name']]['rate_decay_beta'][-1],
-                        'non_zero': layer_info[entry['name']]['nonzero'][-1],
-                        'rank': layer_info[entry['name']]['rank'][-1],
-                        'total_rank': layer_info[entry['name']]['total_rank'][-1],
-                        'total_elements': layer_info[entry['name']]['total_elements'][-1]} for entry in self.cfg_layers]
+        layer_stats = []
+        for entry in self.cfg_layers:
+            info = layer_info[entry['name']]
+            stats = {
+                'name': entry['name'],
+                'loss': info['loss'][-1],
+                'rho': info['rho'][-1],
+                'rank': info['rank'][-1],
+                'total_rank': info['total_rank'][-1],
+                'total_elements': info['total_elements'][-1],
+            }
+            if self.training_mode == 'salad':
+                stats.update({
+                    'alpha_mode': info['alpha_mode'][-1],
+                    'alpha': info['alpha'][-1],
+                    'dalpha': info['dalpha'][-1],
+                    'rate_decay_alpha': info['rate_decay_alpha'][-1],
+                    'beta_mode': info['beta_mode'][-1],
+                    'beta': info['beta'][-1],
+                    'dbeta': info['dbeta'][-1],
+                    'rate_decay_beta': info['rate_decay_beta'][-1],
+                    'non_zero': info['nonzero'][-1],
+                })
+            else:
+                stats.update({
+                    'energy_balance_rate': (
+                        info['energy_balance_rate'][-1]
+                    ),
+                })
+            layer_stats.append(stats)
         
         print_epoch(epoch, total_epochs, num_freq, lr, acc_num_images, losses, layer_stats)
         if self.is_wandb and self.rank == 0:
@@ -736,14 +817,15 @@ class SALADTrainer:
             if num_it % self.num_freq == 0:
                 epoch += 1
 
-                if self.training_mode == 'salad':
+                if self.training_mode in ADMM_TRAINING_MODES:
                     with self.timers['L']:
                         self.update_ADMM_single_step(target='L')
-                    self.update_ADMM_single_step(target='alpha')
 
-                    with self.timers['S']:
-                        self.update_ADMM_single_step(target='S')
-                    self.update_ADMM_single_step(target='beta')
+                    if self.training_mode == 'salad':
+                        self.update_ADMM_single_step(target='alpha')
+                        with self.timers['S']:
+                            self.update_ADMM_single_step(target='S')
+                        self.update_ADMM_single_step(target='beta')
                     
                     self.update_ADMM_rho()
                     

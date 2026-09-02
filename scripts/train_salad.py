@@ -42,7 +42,7 @@ def parse_args():
     parser.add_argument('--beta_rate', type=float, default=None, help='Beta Rate')
     parser.add_argument('--dalpha', type=float, default=None, help='Delta Alpha')
     parser.add_argument('--dbeta', type=float, default=None, help='Delta Beta')
-    parser.add_argument('--cfg_version', type=str, default='vit_b8', help='Config version in configs/')
+    parser.add_argument('--cfg_version', type=str, default='vit_b8_admm_l_smoke', help='Config version in configs/')
     parser.add_argument('--folder', type=str, default='salaad_vision', help='Output folder under data/')
     parser.add_argument(
         '--num_total_iters',
@@ -88,7 +88,26 @@ def main(cfg_version: str,
     
     target_layers = [entry['name'] for entry in cfg['layers']]
 
-    if rho is not None and alpha_rate is not None and beta_rate is not None:
+    training_mode = str(cfg.get('training_mode', 'salad')).lower()
+    if training_mode == 'admm_l':
+        if any(
+            value is not None
+            for value in (alpha_rate, beta_rate, dalpha, dbeta)
+        ):
+            raise ValueError(
+                "ADMM_L has no alpha/beta controller; --alpha_rate, "
+                "--beta_rate, --dalpha, and --dbeta are not valid for "
+                "this training mode"
+            )
+        for layer in cfg['layers']:
+            params = layer['params']
+            if (
+                rho is not None
+                and 'embed' not in layer['name']
+                and 'lm_head' not in layer['name']
+            ):
+                params['rho_dict']['rho'] = rho
+    elif rho is not None and alpha_rate is not None and beta_rate is not None:
         for layer in cfg['layers']:
             if 'embed' in layer['name'] or 'lm_head' in layer['name']:
                 layer['params']['alpha_dict']['rate_decay'] = alpha_rate
