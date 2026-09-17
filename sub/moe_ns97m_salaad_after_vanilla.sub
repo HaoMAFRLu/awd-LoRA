@@ -1,0 +1,18 @@
+# Monitor the existing vanilla job; this does not reserve training GPUs.
+universe        = scheduler
+executable      = /usr/bin/python3
+arguments       = \
+    -u scripts/submit_moe_salaad_when_ready.py \
+    --baseline-dag $(baseline_dag) \
+    --bid $(training_bid) \
+    --minimum-step 100 \
+    --poll-seconds 60
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+log             = jobs/moe_salaad_followup_$(Cluster)_$(Process).log
+error           = jobs/moe_salaad_followup_$(Cluster)_$(Process).err
+output          = jobs/moe_salaad_followup_$(Cluster)_$(Process).out
+
+getenv          = True
++JobBatchName   = "moe_ns97m_salaad_after_vanilla"
+queue 1

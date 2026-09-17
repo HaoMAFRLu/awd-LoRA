@@ -1,0 +1,47 @@
+# Four-GPU SALAAD MoE training through the shared main entry point.
+# Prepare tokens_ns97m/manifest.json before submitting this job.
+universe        = vanilla
+# Resolve the virtualenv's Python on the worker, not on the scheduler host.
+executable      = /usr/bin/env
+arguments       = \
+    /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python \
+    -u -m torch.distributed.run \
+    --standalone \
+    --nnodes=1 \
+    --nproc_per_node=4 \
+    scripts/train_salad.py \
+    --cfg_version ns97m \
+    --device cuda \
+    --cpu-threads 4 \
+    --data-manifest /lustre/home/hma2/projects/awd-LoRA/data/moe_corpora/dclm_20260916/tokens_ns97m/manifest.json \
+    --output /lustre/home/hma2/projects/awd-LoRA/data/moe/ns97m_salaad/$(Cluster)_$(Process)
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/moe_ns97m_salaad_$(Cluster)_$(Process).log
+error           = jobs/moe_ns97m_salaad_$(Cluster)_$(Process).err
+output          = jobs/moe_ns97m_salaad_$(Cluster)_$(Process).out
+
+request_cpus    = 16
+request_memory  = 64000
+request_gpus    = 4
+
+# Use H100-class GPUs and retain the existing cluster hardware exclusions.
+requirements = ( \
+    CUDACapability >= 9.0 && \
+    CUDACapability < 9.1 && \
+    CUDAGlobalMemoryMb >= 80000 && \
+    TARGET.Machine != "i203.internal.cluster.is.localnet" && \
+    TARGET.Machine != "i205.internal.cluster.is.localnet" && \
+    !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
+    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) && \
+    !regexp("GPU-0e5a23fb", TARGET.DetectedGPUs) && \
+    !regexp("GPU-b211f480", TARGET.DetectedGPUs) \
+)
+
+should_transfer_files = NO
+getenv          = True
+environment     = "OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 WANDB_MODE=online PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+
+queue 1
