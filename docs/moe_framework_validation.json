@@ -1,0 +1,127 @@
+{
+  "date": "2026-09-16",
+  "scope": "Standalone native DP MoE training with SALAAD; no legacy dense LLM/Vision dispatch",
+  "unit_tests": {
+    "command": "myenv/bin/python -m unittest discover -s tests/moe -v",
+    "passed": 49,
+    "failed": 0,
+    "log": "/tmp/moe_framework_refactor_m_91h47m/tests.log"
+  },
+  "numerical_comparison": {
+    "salaad": {
+      "steps": 8,
+      "model_optimizer_salaad_reader_rng": "bitwise_identical"
+    },
+    "vanilla": {
+      "steps": 8,
+      "model_optimizer_salaad_reader_rng": "bitwise_identical"
+    }
+  },
+  "numerical_comparison_root": "/tmp/moe_framework_refactor_m_91h47m",
+  "smoke_tests": {
+    "gpu": {
+      "exit_code": 0,
+      "steps": 8,
+      "output": "/tmp/moe_framework_refactor_m_91h47m/gpu_run",
+      "device": "cuda:0",
+      "world_size": 1,
+      "validation_raw_nll": 4.869912385940552,
+      "validation_reconstructed_nll": 4.869897365570068,
+      "salaad_sweeps": 4,
+      "wandb_project": "SALAAD-MoE",
+      "wandb_run_id": "bb03670a",
+      "wandb_mode": "offline",
+      "wandb_last_logged_step": 8
+    },
+    "dp2": {
+      "exit_code": 0,
+      "steps": 8,
+      "output": "/tmp/moe_framework_refactor_m_91h47m/dp2_run",
+      "device": "cpu",
+      "world_size": 2,
+      "validation_raw_nll": 4.869808912277222,
+      "validation_reconstructed_nll": 4.869827508926392,
+      "salaad_sweeps": 4,
+      "wandb_project": "SALAAD-MoE",
+      "wandb_run_id": "1fc30575",
+      "wandb_mode": "offline",
+      "wandb_last_logged_step": 8
+    }
+  },
+  "gpu_hardware": "NVIDIA GeForce RTX 3050 Ti Laptop GPU, 4096 MiB",
+  "limitations": [
+    "Random-token smoke tests only",
+    "No 97M/480M pretraining or H100 throughput measurement",
+    "No multi-GPU CUDA test",
+    "W&B SDK tested offline; no cloud upload"
+  ],
+  "sha256": {
+    "scripts/train_salad.py": "5d03a916ac7facacbe06c5009e2a898a1f61502a8a260a61ee602fedcb8a06b2",
+    "scripts/train_moe.py": "f1b9016776b9ac157911ea0c647cebb0ada12eadb6881798e0c8220f5df3f8ce",
+    "salaad_moe/runtime.py": "65d2d8c43a53536ad4853c1f0e50d1b16fdde06c29bcc23da266b0fed4a4f3b4",
+    "salaad_moe/trainer.py": "967574403a7029b847fb764163f5698ccc217685d2baa554db9800dddf594239",
+    "salaad_moe/solver.py": "40d12b4c8211cf4a5a58e6d5ae10640dfe6c6154c44e914ddfe852d41e512f97",
+    "salaad_moe/config.py": "19c57e73c59684012d7e8ade10784a815aa7efd85a6276055a8f68ac40053ffe",
+    "salaad_moe/model.py": "f739ab5dc494a0b2efac29f0c9852f4ad27159721b25cb47907ff6b4de859380",
+    "salaad_moe/data.py": "347d53968ce7e082e98586fa6bae63f3df3c4b9fada8a7d832c84be1cb85b235",
+    "salaad_moe/distributed.py": "05c192e09b7bf4155e39a093a116d135bb1b5423c275f3e573732306a0756b89",
+    "salaad_moe/groups.py": "7444e1c73b46d274aa3b0cd0b9e1735e91801e0298dea3c0b2d26bfb16f876bc",
+    "salaad_moe/checkpoint.py": "b67f480e6962d6d690ec12a6effaeb5a8774d26db9dc65601aec36c171377d36",
+    "salaad_moe/tracking.py": "904535238c3c1dfa819bf7dbef06f98982a161048945ee41ab0b6eab15b62d92",
+    "tests/moe/test_entrypoint_tracking.py": "2c9be10afe9a614943db1f65303a6b7574664bc996bef456457f5ab4f343d987",
+    "configs/ns97m.yaml": "11f321e45275c8156bd556fa02fc18a1a1a5cc15ea754884ed950faef67c7b9b",
+    "configs/ns480m.yaml": "64d129efc82ab0efc75ee4aacbabdeace3f3c7bd44fd14c76f2ab7223a7a8a6a",
+    "configs/ns97m_vanilla.yaml": "70a2b204bfc4ffe4c93bcc757fb6d6c7750ff3b24ce5c1c9dd0a7fb1e564d0a2",
+    "configs/smoke.yaml": "10b0a832a8fce11fe3d9c34d15c712ee865089bfbfa2bcec1197b3c7487aea3b",
+    "configs/smoke_dp2.yaml": "a4f0099dc9ebeeb21ed18c1cbcd6c73154314a33ce59ce3ab574fc029ef1c3cb",
+    "configs/smoke_bf16.yaml": "d366642eae8b21fe244e5a1c50f7a8235388d8a9cd7e3e6a732f108113832181"
+  },
+  "sha256_before_comment_translation": {
+    "scripts/train_salad.py": "179052d9b766d6c1a3f3e64473c750b7f3da4a57da4a462b03330f41ed3f4131",
+    "scripts/train_moe.py": "79d4b1626f91b4642f90fc9ab7536b47c9faef26c86302ee71e50346c8542618",
+    "salaad_moe/runtime.py": "1b2923e0694e8efe695e2b95ec032470afc8eceb9a148d15c5691f2f335afb39",
+    "salaad_moe/trainer.py": "731fc28f03e6086ef3ed42aa45dae430c148274d9b1b7e07c1a745e50c5f9680",
+    "salaad_moe/solver.py": "f9c57b9c1d75da925d26087b44cc6dfa63097cde12bbceac059c96c956e8d6c0",
+    "salaad_moe/config.py": "04bd6260acdd94f93e1cb6aab71ffa2ce69d5200bd7853fea8fea3b1e4432012",
+    "salaad_moe/model.py": "e53df129854c03a4ea284f1441716d52f0bd20c13071dfa30e46a140014636a0",
+    "salaad_moe/data.py": "7352cd17e535a7c7a1596d4fcef8f838ccf10dddd6e0b3164c2b35f1e2bd585e",
+    "salaad_moe/distributed.py": "aa082c6d443309733793f828ad2c1cbeb058087320193e00c3b3593a0a3520e9",
+    "salaad_moe/groups.py": "7444e1c73b46d274aa3b0cd0b9e1735e91801e0298dea3c0b2d26bfb16f876bc",
+    "salaad_moe/checkpoint.py": "b67f480e6962d6d690ec12a6effaeb5a8774d26db9dc65601aec36c171377d36",
+    "salaad_moe/tracking.py": "904535238c3c1dfa819bf7dbef06f98982a161048945ee41ab0b6eab15b62d92",
+    "tests/moe/test_entrypoint_tracking.py": "2d09b80bc68d66546575b5ae316b0e47ba3e7c76d6dc715f87867e1d8d097ddf",
+    "configs/ns97m.yaml": "17d275bd26f49d9dcc9863a1ecac6ccdd588747490f2c9b7bf6f613f9cc5f932",
+    "configs/ns480m.yaml": "64d129efc82ab0efc75ee4aacbabdeace3f3c7bd44fd14c76f2ab7223a7a8a6a",
+    "configs/ns97m_vanilla.yaml": "70a2b204bfc4ffe4c93bcc757fb6d6c7750ff3b24ce5c1c9dd0a7fb1e564d0a2",
+    "configs/smoke.yaml": "8c91432395b1be1e7d6091acb4e55daed1b31fd6608db2e07aaefee18c57431d",
+    "configs/smoke_dp2.yaml": "a4f0099dc9ebeeb21ed18c1cbcd6c73154314a33ce59ce3ab574fc029ef1c3cb",
+    "configs/smoke_bf16.yaml": "d79c1fa582d129eecb396951cc5fa41ede0f0d11ef57bee9f9bece0d888850e9"
+  },
+  "comment_translation": {
+    "date": "2026-09-16",
+    "language": "English",
+    "note": "Runtime test results above apply to sha256_before_comment_translation. Current sha256 reflects only comment and docstring translation; equivalence checks are recorded below.",
+    "python_files_checked": 27,
+    "yaml_files_checked": 7,
+    "python_ast_unchanged_excluding_docstrings": true,
+    "yaml_values_unchanged": true,
+    "python_syntax_valid": true,
+    "no_chinese_text_in_checked_code_and_configs": true,
+    "changed_files": [
+      "configs/ns97m.yaml",
+      "configs/smoke.yaml",
+      "configs/smoke_bf16.yaml",
+      "salaad_moe/config.py",
+      "salaad_moe/data.py",
+      "salaad_moe/distributed.py",
+      "salaad_moe/model.py",
+      "salaad_moe/runtime.py",
+      "salaad_moe/solver.py",
+      "salaad_moe/trainer.py",
+      "scripts/train_moe.py",
+      "scripts/train_salad.py",
+      "tests/moe/test_entrypoint_tracking.py"
+    ],
+    "training_tests_rerun": false
+  }
+}

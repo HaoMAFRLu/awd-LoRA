@@ -1,0 +1,254 @@
+{
+  "date": "2026-09-09",
+  "purpose": "software correctness and integration smoke tests; no pretrained-model quality claim",
+  "branch": "feature/moe-salaad",
+  "base_commit": "7177dc76ec6c10da2e707de0d05cac758fce36cc",
+  "environment": {
+    "python": "3.9.21",
+    "packages": {
+      "torch": "2.7.1",
+      "numpy": "1.26.4",
+      "PyYAML": "6.0.2",
+      "transformers": "4.57.6",
+      "tokenizers": "0.22.2",
+      "lm_eval": "0.4.9.1",
+      "wandb": "0.21.0"
+    },
+    "gpu": "NVIDIA GeForce RTX 3050 Ti Laptop GPU, 4 GiB",
+    "cuda_build": "12.6"
+  },
+  "unit_tests": {
+    "command": "myenv/bin/python -m unittest discover -s tests/moe -v",
+    "tests": 44,
+    "result": "passed",
+    "date": "2026-09-09",
+    "elapsed_seconds": 16.847
+  },
+  "distributed_contracts": {
+    "command": "myenv/bin/torchrun --standalone --nproc-per-node=2 tests/moe/distributed_worker.py",
+    "backend": "gloo",
+    "empty_owner_rank": "passed",
+    "collective_svd_failure_without_state_commit": "passed",
+    "owner_shard_restore": "passed",
+    "collective_corrupt_checkpoint_failure": "passed",
+    "date": "2026-09-09",
+    "rank_zero_wandb_only": "passed",
+    "collective_wandb_initialization_failure": "passed"
+  },
+  "native_end_to_end": {
+    "fixture": "2 layers, hidden 32, FFN 24, 8 experts, top-2, seq 32, global batch 4",
+    "optimizer_steps": 8,
+    "synthetic_prediction_tokens": 1024,
+    "cpu_single_process": "passed",
+    "cpu_dp2": "passed",
+    "cuda_bf16_with_attention_recomputation": "passed",
+    "cpu_dp1_vs_dp2": {
+      "model_max_abs_difference": 0.0,
+      "optimizer_max_abs_difference": 0.0,
+      "auxiliary_max_abs_difference": 0.0,
+      "reader_equal": true
+    },
+    "cpu_dp2_resume_from_step4": {
+      "model_max_abs_difference": 0.0,
+      "optimizer_max_abs_difference": 0.0,
+      "auxiliary_max_abs_difference": 0.0,
+      "reader_equal": true
+    },
+    "cuda_bf16_resume_from_step4": {
+      "model_max_abs_difference": 0.0,
+      "optimizer_max_abs_difference": 0.0,
+      "auxiliary_max_abs_difference": 0.0,
+      "reader_equal": true
+    },
+    "initial_validation_date": "2026-09-08"
+  },
+  "export": {
+    "cpu_actual_file_roundtrip": "passed",
+    "cuda_svd_export": "passed",
+    "cuda_exported_materialized_evaluation": "passed",
+    "smoke_cuda_tensor_bytes": 71088,
+    "smoke_dense_bf16_tensor_bytes": 107840,
+    "native_sparse_kernel_validated": false,
+    "initial_validation_date": "2026-09-08"
+  },
+  "megatron": {
+    "required_revision": "cbaf684c5d03997e0fdd5347c5e2d371c381a3d8",
+    "native_flags_checked_against_pinned_arguments_py": true,
+    "fp32_master_hook_protocol": "passed",
+    "full_mha_qkv_swiglu_te_norm_mapping": "passed",
+    "fixed_monitor_test_split_and_sidecar_protocol": "passed",
+    "actual_megatron_cuda_execution": false,
+    "H100_throughput_benchmark": false,
+    "megatron_gpu_logits_parity": false,
+    "initial_validation_date": "2026-09-08"
+  },
+  "downstream": {
+    "harness_likelihood_vs_manual_tokens": "passed",
+    "six_real_task_runs_completed": false,
+    "initial_validation_date": "2026-09-08"
+  },
+  "data": {
+    "local_text_tokenizer_dedup_split_packing": "passed",
+    "full_DCLM_preparation_completed": false,
+    "actual_Megatron_indexed_builder_executed": false,
+    "synthetic_manifest_sha256": "4b8cc15a69bbb21093a1d27db222b3423516bb94a7a952a2b49e243e9770815e",
+    "initial_validation_date": "2026-09-08"
+  },
+  "source_sha256": {
+    "README.md": "13043d0dfb70fa9fd1c27bf63f5af281c788dc715886cf35d99a7243ad1b7b02",
+    "configs/ns480m.yaml": "64d129efc82ab0efc75ee4aacbabdeace3f3c7bd44fd14c76f2ab7223a7a8a6a",
+    "configs/ns97m.yaml": "2213b357efa5efb3943b6783ac2ac686d781d141b45449599ea00312d9cff74d",
+    "configs/ns97m_independent_ls.yaml": "a825d81729e9b65599ad7e86e295825052bd229aeee1f538d1c10646c653d678",
+    "configs/ns97m_vanilla.yaml": "70a2b204bfc4ffe4c93bcc757fb6d6c7750ff3b24ce5c1c9dd0a7fb1e564d0a2",
+    "configs/smoke.yaml": "524f4c2e3c4dab4085ce3a9876c4743fe8364748a0f8adbc8bf533f7898d1818",
+    "configs/smoke_bf16.yaml": "d58ddf7bfcd4fffcf75a67a4370e52e721f3bdd3651b0208ec2a6e68b23a88d4",
+    "configs/smoke_dp2.yaml": "a4f0099dc9ebeeb21ed18c1cbcd6c73154314a33ce59ce3ab574fc029ef1c3cb",
+    "docs/moe_salaad.md": "4703e17eedf261d0139f8a5e3f896ce1ad7d5fc0213c1c92e2be3b4b713d25a5",
+    "salaad_moe/__init__.py": "a13f57b09854e9fbdb2cffaf47cbe0b94985ccc4d6114c4a78beadf7370c4828",
+    "salaad_moe/checkpoint.py": "b67f480e6962d6d690ec12a6effaeb5a8774d26db9dc65601aec36c171377d36",
+    "salaad_moe/config.py": "37cdefbdd8f6463f2509452bd8199f23e9281706ff40370a03ca64159cc9723f",
+    "salaad_moe/data.py": "2c1a91b2cb83cf75c671fd1cb0ae8474d356412ee84039e31c96c4d2480c12e6",
+    "salaad_moe/distributed.py": "7fbb8f78cc60265e1325c5ead10632308bf59899b982d9b9f49486a1a49d2b51",
+    "salaad_moe/export.py": "941d381783cf83f38fccc0e4a3e5d718524b0697628b4f2e54b310aebde60f28",
+    "salaad_moe/groups.py": "7444e1c73b46d274aa3b0cd0b9e1735e91801e0298dea3c0b2d26bfb16f876bc",
+    "salaad_moe/lm_eval_adapter.py": "44355139580b7ffb8b75aedb4678fc8d7fc4ef7d501a4a8c04ddf85e1dee4a4c",
+    "salaad_moe/megatron.py": "50a365960cb0cfe2e411781d73550b44ed7e881630a50a3190bc3529b635d439",
+    "salaad_moe/model.py": "45650088d3271e915be2fc6c0ffe591edea3f53d91abd0571e25af0805572c6a",
+    "salaad_moe/solver.py": "0a8e7fe10204b133b9b6ce7e8557083136acc90e80cd446edbdc65288d64e25c",
+    "salaad_moe/tracking.py": "904535238c3c1dfa819bf7dbef06f98982a161048945ee41ab0b6eab15b62d92",
+    "salaad_moe/trainer.py": "d00575a14413534249bc42bb27b1d2f454bfffdc681b9e71360a90058cf36e98",
+    "scripts/evaluate_moe.py": "689994d1ea3f825b1c4fef3772471a7e0b2b5786ac4e5e6de2bbbc2b41924d74",
+    "scripts/evaluate_moe_tasks.py": "d49ecf429051fe329a0c608cc69e3e99c57ef29adf257d90470003b334c1f09d",
+    "scripts/export_moe.py": "5aed89379d8c5efef8ccd1a59478f659881af98f67b07d07f3e1b40854774b73",
+    "scripts/fetch_moe_sources.py": "bdac739fe8ced41e8eaabf57490dc19332f38d42f7bd864912a8ec75077816cb",
+    "scripts/prepare_moe_data.py": "4514294f9f62b5ae3bfae4ef415876cc8e2ee0be563507176b5d5e6812022cd3",
+    "scripts/train_moe.py": "510efdd5f081e53492b93ba64452076e228bbc31cf6c0b0cf7cd46b596f19951",
+    "scripts/train_moe_megatron.py": "758c7720839e1930c07f329fe3a9e5dbeffd2ef92a52e155f056272cdf10582c",
+    "scripts/train_salad.py": "021edbfa09ac1b26e9928d11c58fb0df67cb40f9d0142da1f82debfd58890368",
+    "tests/moe/distributed_worker.py": "faefcb9a7f9bae8d1a683023593c9327d93d92b74989c10b98b31d227f4291dd",
+    "tests/moe/test_core.py": "575134ad6e0114887df1c4e8ae19e67a0926e222d7aba5905b11016ba6f9a5ba",
+    "tests/moe/test_entrypoint_tracking.py": "49d65fe226fdf323b6bb3a96947cd4dd6863a194192097b3ac8d170ee39e4b68",
+    "tests/moe/test_megatron_adapter.py": "3eb494afc4836597768ca4f83f14356b816e0034dc7e2c856234c8b850e6c38e",
+    "tests/moe/test_workflow.py": "bd2a1fa69170c2f719b6301a3b7d356039e7741c8872535c14c52a89a9452a1d"
+  },
+  "documentation_revisions": [
+    {
+      "date": "2026-09-08",
+      "reason": "Record user decision: default native DP and matched vanilla baseline; Megatron optional, reference-paper framework parity not required.",
+      "training_code_configs_and_tests_unchanged": true,
+      "training_tests_rerun": false,
+      "prior_test_results_preserved": true,
+      "document_sha256": {
+        "README.md": {
+          "before": "ccee9c7d26d5b08cd711b1f920d6107fe4712d2df17a25a25deaa4ecc8f56c34",
+          "after": "991b85d50bb26e4ffc5ac5c593492077b9efedad7adfd02871ad81e3607f1005"
+        },
+        "docs/moe_salaad.md": {
+          "before": "e600cf1f14ae853023cdd339581219c7593a66aef7254ecc96099d086549cb95",
+          "after": "7684c0470211d6ea4f64eaaf76d41c7e4b987a04cf8d9c77614d596c478fe178"
+        }
+      }
+    }
+  ],
+  "entrypoint_wandb_validation": {
+    "date": "2026-09-09",
+    "config_directory": "configs/",
+    "configs_checked": [
+      "ns97m",
+      "ns480m",
+      "ns97m_vanilla",
+      "ns97m_independent_ls",
+      "smoke",
+      "smoke_dp2",
+      "smoke_bf16"
+    ],
+    "existing_entrypoint": "scripts/train_salad.py --cfg_version smoke_bf16",
+    "cfg_version_resolution_from_outside_repo": "passed",
+    "legacy_main_and_distributed_initializer_ast_unchanged": true,
+    "automatic_smoke_data_and_output": "passed",
+    "wandb_enabled_by_default": true,
+    "wandb_project": "SALAAD-MoE",
+    "wandb_entity": "hao-ma-eth-z-rich",
+    "default_mode": "online",
+    "only_rank_zero_initializes_wandb": "passed",
+    "logging_on_off_model_optimizer_rng_identical": "passed; mocked W&B consumes Python, NumPy, and torch CPU RNG",
+    "resume_reuses_run_id": "passed; actual trainer, mocked W&B online protocol",
+    "rewind_uses_new_run_id": "passed; mocked W&B online protocol",
+    "real_sdk_version": "0.21.0",
+    "real_sdk_test_mode": "offline",
+    "online_upload_tested": false,
+    "real_sdk_smoke_runs": [
+      {
+        "name": "bf16",
+        "output": "/tmp/moe_root_wandb_bf16_20260909",
+        "run_id": "105dd0c9",
+        "project": "SALAAD-MoE",
+        "mode": "offline",
+        "wandb_history_steps": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "sdk_run_directories": 1,
+        "metric_namespaces": [
+          "optimizer_step",
+          "router",
+          "salaad",
+          "train",
+          "validation_raw",
+          "validation_reconstructed"
+        ],
+        "data_manifest": "/tmp/moe_root_wandb_bf16_20260909/data/manifest.json"
+      },
+      {
+        "name": "dp2",
+        "output": "/tmp/moe_root_wandb_dp2_20260909",
+        "run_id": "23b58a80",
+        "project": "SALAAD-MoE",
+        "mode": "offline",
+        "wandb_history_steps": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "sdk_run_directories": 1,
+        "metric_namespaces": [
+          "optimizer_step",
+          "router",
+          "salaad",
+          "train",
+          "validation_raw",
+          "validation_reconstructed"
+        ],
+        "data_manifest": "/tmp/moe_root_wandb_dp2_20260909/data/manifest.json"
+      }
+    ],
+    "real_sdk_bf16_command": "WANDB_MODE=offline myenv/bin/torchrun --standalone --nproc-per-node=1 scripts/train_salad.py --cfg_version smoke_bf16 --device cuda --output /tmp/moe_root_wandb_bf16_20260909",
+    "real_sdk_dp2_command": "myenv/bin/torchrun --standalone --nproc-per-node=2 scripts/train_salad.py --config /tmp/moe_dp2_offline_config_20260909.yaml --device cpu --output /tmp/moe_root_wandb_dp2_20260909",
+    "dp2_temporary_config": {
+      "inherits": "/home/hao/Desktop/MPI/awd-LoRA/configs/smoke_dp2.yaml",
+      "wandb_mode": "offline"
+    },
+    "fixture": "2 layers, hidden 32, FFN 24, 8 experts, top-2, seq 32, global batch 4",
+    "optimizer_steps_per_run": 8,
+    "synthetic_prediction_tokens_per_run": 1024,
+    "offline_binary_record_inspection": "exactly one W&B run directory and optimizer steps 1 through 8 per execution; project and metric namespaces verified"
+  },
+  "source_snapshot_date": "2026-09-09",
+  "validation_revision": {
+    "date": "2026-09-09",
+    "changes": "Move seven MoE YAMLs to configs/; route the existing cfg_version entry to native DP; enable rank-zero W&B logging in SALAAD-MoE.",
+    "prior_report_sha256": "1d712b45dfe600798e3f2bd9a69c5b1cd07caf3f9570a5313825fcb1ee04d5b5",
+    "historical_results": "Sections marked initial_validation_date=2026-09-08 preserve the initial results. The full unit suite and distributed contracts were rerun on 2026-09-09; current real-SDK smoke results are in entrypoint_wandb_validation. Prior export and GPU/DP resume comparisons were not repeated for this revision."
+  }
+}

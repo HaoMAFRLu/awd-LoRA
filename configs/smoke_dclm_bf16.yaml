@@ -1,0 +1,10 @@
+# Eight-step GPU smoke test using real DCLM text and the pinned Pythia tokenizer.
+# The CLI defaults to the prepared local slice; use --data-manifest to override it.
+inherits: smoke_bf16.yaml
+experiment: moe_salaad_dclm_bf16_smoke
+wandb_mode: offline
+model:
+  padded_vocab_size: 50304
+data:
+  synthetic_smoke: false
+  tokenizer_length: 50277

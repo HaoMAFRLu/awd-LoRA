@@ -1,0 +1,19 @@
+# Runtime overrides of configs/ns97m.yaml.
+inherits: ns97m.yaml
+experiment: moe_salaad_ns480m
+model:
+  num_layers: 12
+  hidden_size: 512
+  expert_ffn_hidden_size: 352
+training:
+  total_optimizer_steps: 3624
+  micro_batch_sequences_per_rank: 8
+  accumulation_steps: 32
+  warmup_steps: 37
+  decay_steps: 363
+parallel:
+  hardware: 4xH100_80GB_same_node
+  world_size: 4
+  data_parallel_size: 4
+salaad:
+  rho: 3.3333333333333333e-6

@@ -1,0 +1,4 @@
+inherits: ns97m.yaml
+experiment: moe_ns97m_independent_ls
+salaad:
+  shared_mode: none

@@ -1,0 +1,4 @@
+inherits: ns97m.yaml
+experiment: moe_ns97m_vanilla
+salaad:
+  enabled: false

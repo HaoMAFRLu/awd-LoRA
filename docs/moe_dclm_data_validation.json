@@ -1,0 +1,101 @@
+{
+  "recorded_at_utc": "2026-09-16T13:03:47.287154+00:00",
+  "dataset": "mlfoundations/dclm-baseline-1.0",
+  "dataset_revision": "a3b142c183aebe5af344955ae20836eb34dcf69b",
+  "tokenizer_sha256": "c24618a1b3e6a38167beff1c72cffd126c3a66254347304b50547d12c5f25624",
+  "space_checked_before_download": {
+    "local_available_approx_gib": 54,
+    "remote_shared_available_approx_tib": 19,
+    "user_quota": "not reported by available quota tools"
+  },
+  "cloud": {
+    "directory": "/lustre/home/hma2/projects/awd-LoRA/data/moe_corpora/dclm_20260916",
+    "raw_download_status": "complete",
+    "planned_shards": 48,
+    "planned_raw_bytes": 10502832978,
+    "target_train_prediction_tokens": 4404019200,
+    "full_tokenization_completed": false,
+    "cpu_preparation_job_submitted": false,
+    "pending": [
+      "HTCondor bid from user",
+      "Matching MoE code on the cluster; existing repository branch was preserved"
+    ],
+    "verified_shards": 48,
+    "verified_raw_bytes": 10502832978,
+    "all_raw_sha256_match_huggingface": true,
+    "tokenizer_sha256_matches_local": true,
+    "source_manifest": "/lustre/home/hma2/projects/awd-LoRA/data/moe_corpora/dclm_20260916/sources/shards.json",
+    "source_manifest_sha256": "709da610692bf187e64c9e09c06e844a2c8c300c00c064f21c58d3dcef88edd3",
+    "raw_download_process_exit_code": 0
+  },
+  "local": {
+    "source_manifest": "data/moe_corpora/dclm_20260916/sources_local/shards.json",
+    "raw_bytes": 141306362,
+    "raw_sha256_matches_huggingface": true,
+    "token_manifest": "data/moe_corpora/dclm_20260916/smoke_tokens/manifest.json",
+    "train_prediction_tokens": 1048576,
+    "splits": {
+      "train": {
+        "tokens": 1048577,
+        "documents": 798,
+        "max_token_id": 50276,
+        "path": "train.tokens.bin",
+        "sha256": "6e55332a4c7028cb0efa453efc9eb01ed4d233eb4d002bc76aad5663973b4a25",
+        "bytes": 4194308,
+        "sequences": 32768
+      },
+      "validation": {
+        "tokens": 513,
+        "documents": 1,
+        "max_token_id": 46947,
+        "path": "validation.tokens.bin",
+        "sha256": "8a187a83db6eb0eff4f7ebe7eb78a515f6ddfa7528b9744e01e84cf9b903781c",
+        "bytes": 2052,
+        "sequences": 16
+      },
+      "test": {
+        "tokens": 513,
+        "documents": 1,
+        "max_token_id": 50276,
+        "path": "test.tokens.bin",
+        "sha256": "7602a909f9c266d99dacd701f39c732d1ae91de06b9074178a78eda6c6d66b57",
+        "bytes": 2052,
+        "sequences": 16
+      }
+    }
+  },
+  "tests": {
+    "command": "myenv/bin/python -m unittest discover -s tests/moe -p test_workflow.py -v",
+    "passed": 15,
+    "failed": 0
+  },
+  "real_text_smoke": {
+    "output": "data/salaad_moe/smoke_dclm_bf16/20260916_real_text",
+    "device": "NVIDIA GeForce RTX 3050 Ti Laptop GPU, 4096 MiB",
+    "task_precision": "bfloat16",
+    "steps": 8,
+    "prediction_tokens_consumed": 1024,
+    "salaad_sweeps": 4,
+    "validation_raw_nll": 10.809207916259766,
+    "validation_reconstructed_nll": 10.80920934677124,
+    "checkpoint_complete": true,
+    "wandb": {
+      "id": "570b3895",
+      "project": "SALAAD-MoE",
+      "entity": "hao-ma-eth-z-rich",
+      "last_logged_step": 8,
+      "parent_run_id": null,
+      "mode": "offline",
+      "url": null
+    }
+  },
+  "source_sha256": {
+    "salaad_moe/data.py": "0821402aec55236f01b6d57da7e75800b192322e797a30cc76f26b8419f9a360",
+    "scripts/prepare_moe_data.py": "a4d38fcab32ea421bf80303e534784a716ea6eeef1ac6221f8555372d454f4ed",
+    "scripts/fetch_moe_sources.py": "bdac739fe8ced41e8eaabf57490dc19332f38d42f7bd864912a8ec75077816cb",
+    "scripts/train_salad.py": "5d03a916ac7facacbe06c5009e2a898a1f61502a8a260a61ee602fedcb8a06b2",
+    "configs/smoke_dclm_bf16.yaml": "9612737a0237a271787b8278119a97f3240dc167ade7d74d6031a55294916e61",
+    "tests/moe/test_workflow.py": "502142fcb613422d9947d7761911c5700ffdf449995cabc9900444aadf78bcd0",
+    "requirements.txt": "72947b292d5781bd44c94c0e996870ba159eb57ff0634c74844865c884cf79eb"
+  }
+}

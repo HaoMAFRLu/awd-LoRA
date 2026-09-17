@@ -1,0 +1,44 @@
+# Eight-step test with a small model and generated random tokens to check the training flow.
+# Inherits unspecified fields from ns97m.yaml; SALAAD initializes before training
+# and updates every 2 steps.
+inherits: ns97m.yaml
+experiment: moe_salaad_cpu_smoke
+model:
+  num_layers: 2
+  hidden_size: 32
+  expert_ffn_hidden_size: 24
+  num_attention_heads: 4
+  num_query_groups: 4
+  num_experts: 8
+  router_topk: 2
+  padded_vocab_size: 128
+data:
+  synthetic_smoke: true
+  tokenizer_length: 128
+  seq_length: 32
+  indexed_sample_length: 33
+  validation_sequences: 16
+  monitor_validation_sequences: 4
+  test_sequences: 16
+training:
+  total_optimizer_steps: 8
+  global_batch_sequences: 4
+  micro_batch_sequences_per_rank: 2
+  accumulation_steps: 2
+  task_precision: float32
+  warmup_steps: 1
+  decay_steps: 2
+  learning_rate: 0.001
+  min_learning_rate: 0.0001
+  validation_interval_steps: 4
+  checkpoint_interval_steps: 4
+  activation_recompute: none
+parallel:
+  hardware: CPU_or_GPU_smoke_only
+  world_size: 1
+  data_parallel_size: 1
+salaad:
+  rho: 0.05
+  state_initialization_step: 0
+  guidance_period_optimizer_steps: 2
+  svd_chunk_size: 4

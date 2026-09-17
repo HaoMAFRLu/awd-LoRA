@@ -1,0 +1,9 @@
+# Synthetic config for local single-GPU debugging. Uses BF16 compute while
+# parameters, gradients, Adam states, and auxiliary states remain FP32.
+inherits: smoke.yaml
+experiment: moe_salaad_bf16_smoke
+training:
+  task_precision: bfloat16
+  activation_recompute: selective_attention
+parallel:
+  hardware: single_GPU_smoke_only

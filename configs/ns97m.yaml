@@ -1,0 +1,177 @@
+# MoE config: train_salad.py --cfg_version ns97m.
+# This YAML defines the model, data, training, and SALAAD; no *_model.json is needed.
+experiment: moe_salaad_ns97m
+is_wandb: true
+wandb_project: SALAAD-MoE
+wandb_entity: hao-ma-eth-z-rich
+seed: 42
+model:
+  family: llama_style_no_shared_expert
+  num_layers: 8
+  moe_layer_pattern: all
+  hidden_size: 256
+  expert_ffn_hidden_size: 176
+  dense_ffn_hidden_size: null
+  num_attention_heads: 16
+  num_query_groups: 16
+  num_experts: 64
+  num_shared_experts: 0
+  router_topk: 8
+  router_score_function: softmax
+  router_pre_softmax: false
+  selected_weights_sum_to_one: true
+  mirror_routing_mu: 0.0
+  router_dtype: float32
+  capacity_factor: null
+  token_dropping: false
+  swiglu: true
+  normalization: RMSNorm
+  norm_epsilon: 1.0e-06
+  position_embedding_type: rope
+  rotary_base: 10000
+  rotary_percent: 1.0
+  linear_bias: false
+  tie_embeddings: false
+  attention_dropout: 0.0
+  hidden_dropout: 0.0
+  init_std: 0.02
+  output_projection_init: std_div_sqrt_2depth
+  padded_vocab_size: 50304
+  expert_implementation: sequential_mlp_reference
+data:
+  dataset: mlfoundations/dclm-baseline-1.0
+  dataset_revision: a3b142c183aebe5af344955ae20836eb34dcf69b
+  tokenizer: EleutherAI/pythia-12b
+  tokenizer_revision: bb1e3e710cdf6b524461d543cfb5ba773f0a81b6
+  tokenizer_length: 50277
+  eod_id: 0
+  append_eod: true
+  append_bos: false
+  seq_length: 2048
+  indexed_sample_length: 2049
+  cross_document_attention: true
+  reset_position_ids_at_eod: false
+  reset_attention_at_eod: false
+  include_eod_in_loss: true
+  split: sha256_text_mod_10000_val_0_99_test_100_199_train_200_9999
+  corpus_order_seed: 42
+  validation_sequences: 8192
+  monitor_validation_sequences: 2048
+  test_sequences: 8192
+  data_manifest: null
+  packing: fixed_length_no_padding
+training:
+  # Full training budget; CLI --stop-after/--num_total_iters pauses the run
+  # without shortening the schedule.
+  total_optimizer_steps: 2100
+  global_batch_sequences: 1024
+  micro_batch_sequences_per_rank: 16
+  accumulation_steps: 16
+  task_precision: bfloat16
+  master_parameter_precision: float32
+  gradient_precision: float32
+  optimizer: AdamW
+  learning_rate: 0.0003
+  min_learning_rate: 3.0e-05
+  beta1: 0.9
+  beta2: 0.95
+  epsilon: 1.0e-08
+  weight_decay: 0.0
+  no_weight_decay:
+  - normalization
+  - bias
+  gradient_clip_global_norm: 1.0
+  schedule: warmup_stable_cosine_decay
+  warmup_steps: 21
+  decay_steps: 210
+  load_balancing_coefficient: 0.1
+  load_balancing_reduction: mean_over_rank_microbatches_sum_over_layers
+  load_balancing_assignment_denominator: num_tokens_times_topk
+  router_z_loss_coefficient: 0.001
+  z_loss_reduction: mean_over_tokens_sum_over_layers
+  expert_task_gradient_rescale: 1.0
+  validation_interval_steps: 100
+  checkpoint_interval_steps: 100
+  keep_latest_checkpoints: 2
+  keep_best_checkpoints: 3
+  activation_recompute: selective_attention
+parallel:
+  # Standard DP: each rank holds the full model and processes different samples.
+  hardware: 4xH100_80GB_same_node
+  world_size: 4
+  data_parallel_size: 4
+  expert_parallel_size: 1
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  context_parallel_size: 1
+  distributed_optimizer: false
+  overlap_gradient_reduce: false
+  overlap_parameter_gather: false
+salaad:
+  # Set enabled to false for a vanilla MoE baseline using the same trainer.
+  enabled: true
+  projections:
+  - gate
+  - up
+  - down
+  consensus_scope: same_layer_same_projection_all_experts
+  rho: 1.0e-05
+  rho_scope: global_fixed_all_experts_all_layers
+  penalty_reduction: sum_all_entries_all_expert_matrices
+  gradient_injection: after_dp_reduce_and_prepare_grads_before_global_clip
+  # Initialize shared/L/S/U from the model weights before the first optimizer step.
+  state_initialization_step: 0
+  initialization: shared_mean_L_zero_S_residual_dual_zero
+  guidance_period_optimizer_steps: 10  # Update structure every 10 optimizer steps thereafter.
+  structure_inner_steps: 1
+  structure_order:
+  - shared
+  - low_rank
+  - sparse
+  - dual
+  refresh_anchor_after_structure: true
+  final_structure_flush: true
+  auxiliary_dtype: float32
+  # Structural updates always use SALAAD++ streaming SVD (one QR iteration).
+  # Seed the persistent basis once with an ordinary SVD at initialization.
+  svd_chunk_size: 8
+  auxiliary_owner: deterministic_group_id_mod_dp
+  broadcast_anchor_dtype: float32
+  controller:
+    # Effective rank uses the sum of singular values. Rank/density targets
+    # guide the controller; they do not impose hard truncation.
+    alpha_init: 0.0
+    beta_init: 0.0
+    gain_alpha: 0.02
+    gain_beta: 0.005
+    threshold_gain_convention: tau_alpha_delta_equals_gain_times_rank_error
+    # Allow signed integral-controller thresholds after overshoot.
+    nonnegative_projection: false
+    rank_statistic: linear_singular_value_mass
+    gamma: 0.999
+    zero_matrix_rank_ratio: 0.0
+    # Use these fixed targets throughout training.
+    target_rank_ratio: 0.15
+    target_density: 0.1
+  shared_mode: learned
+  low_rank_enabled: true
+  sparse_enabled: true
+export:
+  # Export trained values at checkpoint precision, without rank/density limits.
+  reconstructed_eval: true
+evaluation:
+  primary_loss: token_mean_language_model_nll_only
+  export_nll_gap_target: 0.03
+  raw_nll_gap_vs_baseline_target: 0.02
+  final_export_nll_gap_vs_baseline_target: 0.05
+  tasks:
+  - arc_easy
+  - openbookqa
+  - hellaswag
+  - piqa
+  - boolq
+  - social_iqa
+  num_fewshot: 0
+  primary_task_metric: acc
+  also_report_acc_norm_when_available: true
+  task_seed: 42
