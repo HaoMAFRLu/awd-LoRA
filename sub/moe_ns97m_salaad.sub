@@ -27,10 +27,12 @@ request_memory  = 64000
 request_gpus    = 4
 
 # Use H100-class GPUs and retain the existing cluster hardware exclusions.
+# Both MoE jobs failed CUDA initialization on i106 on 2026-09-17.
 requirements = ( \
     CUDACapability >= 9.0 && \
     CUDACapability < 9.1 && \
     CUDAGlobalMemoryMb >= 80000 && \
+    TARGET.Machine != "i106.internal.cluster.is.localnet" && \
     TARGET.Machine != "i203.internal.cluster.is.localnet" && \
     TARGET.Machine != "i205.internal.cluster.is.localnet" && \
     !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
