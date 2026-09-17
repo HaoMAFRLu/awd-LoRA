@@ -3,7 +3,5 @@
 JOB PREPARE sub/moe_ns97m_prepare.sub
 JOB VANILLA sub/moe_ns97m_vanilla.sub
 
-# Read only corpus metadata on the submit host before requesting GPUs.
-SCRIPT PRE VANILLA /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python scripts/check_moe_data.py --config configs/ns97m_vanilla.yaml --data-manifest /lustre/home/hma2/projects/awd-LoRA/data/moe_corpora/dclm_20260916/tokens_ns97m/manifest.json
-
+# PREPARE checks corpus sizes on its CPU worker before reporting success.
 PARENT PREPARE CHILD VANILLA

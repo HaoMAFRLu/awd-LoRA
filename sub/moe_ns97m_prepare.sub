@@ -1,13 +1,7 @@
 # Tokenize the downloaded DCLM shards on a CPU worker before GPU training.
 universe        = vanilla
-executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
-arguments       = \
-    -u scripts/prepare_moe_data.py \
-    --config configs/ns97m_vanilla.yaml \
-    --shard-manifest /lustre/home/hma2/projects/awd-LoRA/data/moe_corpora/dclm_20260916/sources/shards.json \
-    --tokenizer-json /lustre/home/hma2/projects/awd-LoRA/data/moe_corpora/dclm_20260916/sources/tokenizer/tokenizer.json \
-    --max-train-tokens 4404019200 \
-    --output /lustre/home/hma2/projects/awd-LoRA/data/moe_corpora/dclm_20260916/tokens_ns97m
+executable      = /bin/bash
+arguments       = scripts/prepare_ns97m_corpus.sh
 
 initialdir      = /lustre/home/hma2/projects/awd-LoRA
 

@@ -1,8 +1,10 @@
 # Four-GPU vanilla MoE training through the shared main entry point.
 # Prepare tokens_ns97m/manifest.json before submitting this job.
 universe        = vanilla
-executable      = /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python
+# Resolve the virtualenv's Python on the worker, not on the scheduler host.
+executable      = /usr/bin/env
 arguments       = \
+    /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python \
     -u -m torch.distributed.run \
     --standalone \
     --nnodes=1 \
