@@ -225,9 +225,15 @@ class TrackingTests(unittest.TestCase):
         make_synthetic_corpus(self.config, self.path / "data", 64)
         return TokenCorpus(self.path / "data/manifest.json", self.config)
 
-    def test_actual_trainer_logs_losses_validation_router_and_salaad(self):
+    def test_actual_trainer_logs_training_metrics_without_validation(self):
+        self.config["training"]["checkpoint_interval_steps"] = 2
         trainer = Trainer(self.config, self.corpus(), "cpu")
-        trainer.run(self.path / "run")
+        with patch(
+            "salaad_moe.trainer.evaluate_model",
+            side_effect=AssertionError("Training must not run validation"),
+        ) as evaluate:
+            trainer.run(self.path / "run")
+        evaluate.assert_not_called()
         self.assertEqual(len(self.runs), 1)
         run = self.runs[0]
         self.assertEqual(run.kwargs["project"], "SALAAD-MoE")
@@ -236,11 +242,41 @@ class TrackingTests(unittest.TestCase):
         first, last = run.logs[0][0], run.logs[-1][0]
         self.assertIn("train/lm_nll", first)
         self.assertIn("router/mean_token_entropy/0", first)
-        self.assertIn("validation_raw/nll", last)
-        self.assertIn("validation_reconstructed/nll", last)
+        for payload, _ in run.logs:
+            self.assertFalse(any(key.startswith("validation_") for key in payload))
+            self.assertNotIn("train/reconstruction_nll_gap", payload)
+        checkpoints = self.path / "run/checkpoints"
+        self.assertEqual(
+            {path.name for path in checkpoints.iterdir()}, {"step_00000006", "step_00000008"}
+        )
+        for checkpoint in checkpoints.iterdir():
+            metadata = json.loads((checkpoint / "complete.json").read_text())
+            self.assertNotIn("validation_nll", metadata)
         # With step-zero initialization, the first structural update is at step 2.
         first_structure_update = run.logs[1][0]
-        self.assertTrue(any(key.endswith("/linear_mass_rank_ratio") for key in first_structure_update))
+        self.assertIn(
+            "layer/layers.0.moe.experts.gate.expert_0/effective_rank_ratio", first_structure_update
+        )
+        # Report exactly five metrics and retain each expert's own values.
+        expected_keys = set()
+        rho = self.config["salaad"]["rho"]
+        for group in trainer.manager.groups:
+            state = trainer.manager.states[group.name]
+            expected = {
+                "diff": (group.weight() - state.reconstruction()).flatten(1).norm(dim=1),
+                "density": state.sparse.ne(0).float().mean((-1, -2)),
+                "effective_rank_ratio": state.rank_ratio,
+                "alpha": rho * state.tau_l,
+                "beta": rho * state.tau_s,
+            }
+            for expert in range(self.config["model"]["num_experts"]):
+                prefix = f"layer/{group.name}.expert_{expert}"
+                for metric, values in expected.items():
+                    key = f"{prefix}/{metric}"
+                    self.assertEqual(last[key], values[expert].item())
+                    expected_keys.add(key)
+        self.assertEqual({key for key in last if key.startswith("layer/")}, expected_keys)
+        self.assertFalse(any(key.startswith("salaad/") for key in last))
         self.assertEqual(run.finished, 0)
         self.assertEqual(
             json.loads((self.path / "run/wandb_run.json").read_text())["last_logged_step"], 8

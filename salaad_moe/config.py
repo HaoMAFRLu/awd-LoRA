@@ -54,9 +54,9 @@ def fingerprint(value) -> str:
 def validate_config(c: dict, world_size=None) -> None:
     # This framework accepts only the MoE schema; legacy dense LLM/Vision
     # configs are not used to dispatch training.
-    sections = ("model", "data", "training", "parallel", "salaad", "export")
+    sections = ("model", "data", "training", "parallel", "salaad")
     if any(not isinstance(c.get(section), dict) for section in sections):
-        raise ValueError("Expected a MoE configuration with model/data/training/parallel/salaad/export sections")
+        raise ValueError("Expected a MoE configuration with model/data/training/parallel/salaad sections")
     if c["model"].get("family") != "llama_style_no_shared_expert":
         raise ValueError("Only the no-shared-expert MoE architecture is supported")
     m, t, p, s = (c[k] for k in ("model", "training", "parallel", "salaad"))
@@ -162,13 +162,10 @@ def validate_config(c: dict, world_size=None) -> None:
     }.items():
         if t[key] != value:
             raise ValueError(f"Unsupported training.{key}={t[key]!r}")
-    for key in ("validation_interval_steps", "checkpoint_interval_steps"):
-        if not isinstance(t[key], int) or t[key] < 1:
-            raise ValueError(f"training.{key} must be a positive integer")
-    if t["keep_latest_checkpoints"] < 1 or t["keep_best_checkpoints"] < 0:
-        raise ValueError(
-            "Keep at least one latest checkpoint and a nonnegative number of best checkpoints"
-        )
+    if not isinstance(t["checkpoint_interval_steps"], int) or t["checkpoint_interval_steps"] < 1:
+        raise ValueError("training.checkpoint_interval_steps must be a positive integer")
+    if t["keep_latest_checkpoints"] < 1:
+        raise ValueError("Keep at least one latest checkpoint")
     if (
         not all(0 <= t[key] < 1 for key in ("beta1", "beta2"))
         or t["epsilon"] <= 0
@@ -188,10 +185,7 @@ def validate_config(c: dict, world_size=None) -> None:
         raise ValueError("Invalid sequence length or EOD token")
     if d["indexed_sample_length"] != d["seq_length"] + 1:
         raise ValueError("Samples must contain seq_length+1 tokens (one label shift)")
-    if (
-        not 1 <= d["monitor_validation_sequences"] <= d["validation_sequences"]
-        or d["test_sequences"] < 1
-    ):
+    if d["validation_sequences"] < 1 or d["test_sequences"] < 1:
         raise ValueError("Invalid held-out sequence counts")
     if (
         d["packing"] != "fixed_length_no_padding"

@@ -32,7 +32,7 @@ class FollowupTests(unittest.TestCase):
             }))
             for name in ["training.pt"] + [f"rank_{rank:05d}.pt" for rank in range(4)]:
                 (path / name).touch()
-            records[-1].update(checkpoint=str(path), validation_raw={"nll": 9.8})
+            records[-1].update(checkpoint=str(path))
         (self.run / "metrics.jsonl").write_text("".join(json.dumps(r) + "\n" for r in records))
         return records
 
@@ -40,7 +40,7 @@ class FollowupTests(unittest.TestCase):
         self.write_training(99, checkpoint=False)
         self.assertEqual(followup.check_training(self.run, 100)["stage"], "training")
         self.write_training(100, checkpoint=False)
-        self.assertEqual(followup.check_training(self.run, 100)["stage"], "waiting_for_validation_and_checkpoint")
+        self.assertEqual(followup.check_training(self.run, 100)["stage"], "waiting_for_checkpoint")
         self.write_training()
         self.assertEqual(followup.check_training(self.run, 100)["stage"], "ready")
         (self.run / "checkpoints/step_00000100/rank_00003.pt").unlink()

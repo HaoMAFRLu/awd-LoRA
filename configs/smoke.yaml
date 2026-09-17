@@ -18,7 +18,6 @@ data:
   seq_length: 32
   indexed_sample_length: 33
   validation_sequences: 16
-  monitor_validation_sequences: 4
   test_sequences: 16
 training:
   total_optimizer_steps: 8
@@ -30,7 +29,6 @@ training:
   decay_steps: 2
   learning_rate: 0.001
   min_learning_rate: 0.0001
-  validation_interval_steps: 4
   checkpoint_interval_steps: 4
   activation_recompute: none
 parallel:

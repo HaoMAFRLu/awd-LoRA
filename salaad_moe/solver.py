@@ -292,45 +292,34 @@ class ConsensusManager:
 
     @torch.no_grad()
     def metrics(self):
+        """Report diff, density, effective rank ratio, alpha and beta per expert."""
         if not self.initialized:
             return {}
-        records = []
+        records = {}
+        rho = self.config["salaad"]["rho"]
         for _, group in self.owned():
             state, x = self.states[group.name], group.weight()
-            residual2 = (x - state.reconstruction()).square().sum()
-            norm2 = x.square().sum()
-            records.append(
-                {
-                    "group": group.name,
-                    "residual_squared": residual2.item(),
-                    "weight_squared": norm2.item(),
-                    "relative_residual": (residual2 / norm2.clamp_min(1e-30)).sqrt().item(),
-                    "linear_mass_rank_ratio": state.rank_ratio.mean().item(),
-                    "actual_rank_mean": state.actual_rank.mean().item(),
-                    "density": state.density.mean().item(),
-                    "tau_l_mean": state.tau_l.mean().item(),
-                    "tau_s_mean": state.tau_s.mean().item(),
-                    "dual_norm": state.dual.norm().item(),
+            # Include the shared matrix in the MoE reconstruction residual.
+            diff = (x - state.reconstruction()).flatten(1).norm(dim=1)
+            # Report alpha/beta in their original units: tau = coefficient / rho.
+            values = torch.stack(
+                (diff, state.density, state.rank_ratio, rho * state.tau_l, rho * state.tau_s),
+                dim=1,
+            ).tolist()
+            for expert, (diff, density, effective_rank_ratio, alpha, beta) in enumerate(values):
+                records[f"{group.name}.expert_{expert}"] = {
+                    "diff": diff,
+                    "density": density,
+                    # Use the current MoE controller's per-expert rank statistic.
+                    "effective_rank_ratio": effective_rank_ratio,
+                    "alpha": alpha,
+                    "beta": beta,
                 }
-            )
         if dist.is_initialized():
             parts = [None] * world_size()
             dist.all_gather_object(parts, records)
-            records = [item for part in parts for item in part]
-        records.sort(key=lambda r: r["group"])
-        values = torch.tensor([r["relative_residual"] for r in records])
-        return {
-            "sweeps": self.sweeps,
-            "relative_residual": (
-                sum(r["residual_squared"] for r in records)
-                / max(sum(r["weight_squared"] for r in records), 1e-30)
-            )
-            ** 0.5,
-            "group_residual_median": values.quantile(0.5).item(),
-            "group_residual_p95": values.quantile(0.95).item(),
-            "group_residual_max": values.max().item(),
-            "groups": records,
-        }
+            records = {name: values for part in parts for name, values in part.items()}
+        return dict(sorted(records.items()))
 
     def local_state_dict(self):
         return {

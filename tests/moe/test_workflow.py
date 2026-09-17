@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import torch
 
@@ -215,16 +216,13 @@ class WorkflowTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "preserve training"):
             load_checkpoint(invalid, prefix, branch_from_vanilla=True)
 
-    def test_reconstructed_eval_does_not_change_training_state(self):
+    def test_training_reads_only_training_batches(self):
+        self.c["is_wandb"] = False
         trainer = Trainer(self.c, self.corpus, "cpu")
-        trainer.train_step()
-        before = {n: p.clone() for n, p in trainer.model.state_dict().items()}
-        anchors = {n: t.clone() for n, t in trainer.manager.anchors.items()}
-        trainer.evaluate(reconstructed=True)
-        for name, value in before.items():
-            torch.testing.assert_close(trainer.model.state_dict()[name], value, rtol=0, atol=0)
-        for name, value in anchors.items():
-            torch.testing.assert_close(trainer.manager.anchors[name], value, rtol=0, atol=0)
+        with patch.object(self.corpus, "batch", wraps=self.corpus.batch) as batch:
+            trainer.run(self.path / "run")
+        self.assertTrue(batch.call_args_list)
+        self.assertEqual({call.args[0] for call in batch.call_args_list}, {"train"})
 
     def test_bfloat16_compute_retains_float32_master_gradients(self):
         self.c["training"]["task_precision"] = "bfloat16"

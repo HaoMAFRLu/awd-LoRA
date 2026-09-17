@@ -252,7 +252,7 @@ class CoreTests(unittest.TestCase):
                 if len(updates) == 1:
                     # Fixed targets apply immediately; both thresholds cross zero.
                     torch.testing.assert_close(new.tau_l, torch.full((2,), -0.002))
-                    torch.testing.assert_close(new.tau_s, torch.full((2,), -0.00004))
+                    torch.testing.assert_close(new.tau_s, torch.full((2,), -0.00019))
         self.assertEqual(updates, [2, 4, 6, 8])
 
     def test_independent_and_fixed_mean_ablation(self):

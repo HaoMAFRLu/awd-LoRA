@@ -34,7 +34,7 @@ def query_jobs(constraint, history=True):
 
 
 def check_training(run, minimum_step):
-    """Require finite training metrics, validation, and a complete checkpoint."""
+    """Require finite training metrics and a complete checkpoint."""
     metrics = run / "metrics.jsonl"
     if not metrics.exists():
         return {"stage": "waiting_for_training_logs"}
@@ -64,11 +64,8 @@ def check_training(run, minimum_step):
     for record in reversed(records):
         if record["step"] < minimum_step:
             break
-        if "checkpoint" not in record or "validation_raw" not in record:
+        if "checkpoint" not in record:
             continue
-        validation_nll = record["validation_raw"]["nll"]
-        if not math.isfinite(validation_nll):
-            raise ValueError("Nonfinite vanilla validation NLL")
         checkpoint = Path(record["checkpoint"])
         marker_path = checkpoint / "complete.json"
         if not marker_path.exists():
@@ -86,9 +83,8 @@ def check_training(run, minimum_step):
             raise ValueError("The vanilla checkpoint is incomplete or inconsistent")
         return {
             "stage": "ready", "step": step, "checkpoint": str(checkpoint),
-            "validation_nll": validation_nll,
         }
-    return {"stage": "waiting_for_validation_and_checkpoint", "step": step}
+    return {"stage": "waiting_for_checkpoint", "step": step}
 
 
 def save_state(path, state):

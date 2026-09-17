@@ -39,7 +39,10 @@ def flatten_metrics(record):
             result[prefix] = value
 
     for key, value in record.items():
-        if key != "step":
+        if key == "salaad":
+            # Log each expert matrix under layer/<matrix>/<metric>.
+            visit(value, "layer")
+        elif key != "step":
             visit(value, key if isinstance(value, dict) else f"train/{key}")
     return result
 

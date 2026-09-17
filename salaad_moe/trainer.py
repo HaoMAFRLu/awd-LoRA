@@ -80,11 +80,6 @@ class Trainer:
         self.config = copy.deepcopy(config)
         self.corpus = corpus
         self.device = torch.device(device)
-        for split, key in (("validation", "validation_sequences"), ("test", "test_sequences")):
-            if corpus.lengths[split] < config["data"][key]:
-                raise ValueError(
-                    f"The corpus has too few {split} sequences for this training configuration"
-                )
         seed_everything(config["seed"])
         # Each DP rank builds the full model; broadcast initial parameters
         # so all replicas start with identical weights.
@@ -258,39 +253,8 @@ class Trainer:
         agree_or_raise(error, self.device, "Task step failed before optimizer update")
         return losses, counts, entropy
 
-    def evaluate(self, reconstructed=False):
-        # Evaluate a separate model copy so reconstruction leaves the training
-        # weights and Adam states intact for the next step.
-        evaluation_model = copy.deepcopy(self.model).eval()
-        if reconstructed:
-            if not self.manager or not self.manager.initialized:
-                raise ValueError("Reconstruction requires initialized SALAAD state")
-            with torch.no_grad():
-                eval_groups = {
-                    g.name: g
-                    for g in native_groups(evaluation_model, self.config["salaad"]["projections"])
-                }
-                for i, group in enumerate(self.manager.groups):
-                    value = (
-                        self.manager.states[group.name].reconstruction().contiguous()
-                        if i % world_size() == rank()
-                        else torch.empty_like(group.weight())
-                    )
-                    if dist.is_initialized():
-                        dist.broadcast(value, src=i % world_size())
-                    eval_groups[group.name].parameter.copy_(value)
-        return evaluate_model(
-            evaluation_model,
-            self.corpus,
-            "validation",
-            self.config["data"]["monitor_validation_sequences"],
-            self.config["training"]["micro_batch_sequences_per_rank"],
-            self.config,
-            self.device,
-        )
-
     def run(self, output, resume=None, stop_after=None, branch_from=None):
-        """Orchestrate metadata, state restoration, training, evaluation, saving, and logging."""
+        """Orchestrate metadata, state restoration, training, saving, and logging."""
         output = Path(output)
         self._prepare_output(output, resume, branch_from)
         if resume:
@@ -355,26 +319,13 @@ class Trainer:
         agree_or_raise(error, self.device, "Run directory")
 
     def _run_steps(self, output, end, tracker):
-        """Train, evaluate, and save on all ranks; write JSONL and W&B logs on rank 0."""
+        """Train and save on all ranks; write JSONL and W&B logs on rank 0."""
         checkpoint = None
         while self.step < end:
             record = self.train_step()
             t = self.config["training"]
-            validation_nll = None
-            if self.step % t["validation_interval_steps"] == 0 or self.step == end:
-                record["validation_raw"] = self.evaluate()
-                validation_nll = record["validation_raw"]["nll"]
-                if (
-                    self.manager
-                    and self.manager.initialized
-                    and self.config["export"]["reconstructed_eval"]
-                ):
-                    record["validation_reconstructed"] = self.evaluate(reconstructed=True)
-                    record["reconstruction_nll_gap"] = (
-                        record["validation_reconstructed"]["nll"] - validation_nll
-                    )
             if self.step % t["checkpoint_interval_steps"] == 0 or self.step == end:
-                checkpoint = save_checkpoint(self, output / "checkpoints", validation_nll)
+                checkpoint = save_checkpoint(self, output / "checkpoints")
                 error = None
                 if rank() == 0:
                     try:

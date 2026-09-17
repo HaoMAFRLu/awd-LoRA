@@ -67,9 +67,6 @@ def main():
         raise ValueError("Use torchrun with the configured DP size")
     primary = int(os.environ.get("RANK", 0)) == 0
     corpus = TokenCorpus(Path(args.data_directory) / "manifest.json", config, verify_hashes=primary)
-    for split, key in (("validation", "validation_sequences"), ("test", "test_sequences")):
-        if corpus.lengths[split] < config["data"][key]:
-            raise ValueError(f"Insufficient {split} sequences for the configured experiment")
     if not corpus.manifest["provenance"].get("megatron_indexed"):
         raise ValueError("Prepare real text with --write-megatron-indexed first")
     for info in corpus.manifest["provenance"]["indexed_files"]:
@@ -120,7 +117,6 @@ def main():
         training,
         config,
         fingerprint({"corpus": corpus.identity, "tokenizer": token_meta}),
-        corpus,
         branch_from_vanilla=bool(args.branch_from),
     )
     sys.argv = [str(Path(args.megatron_path) / "pretrain_gpt.py"), *native_args]

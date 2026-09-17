@@ -1,6 +1,4 @@
 """CPU protocol tests; actual CUDA Megatron execution remains a separate check."""
-import copy
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -72,6 +70,8 @@ class MegatronAdapterTests(unittest.TestCase):
             ("--moe-z-loss-coeff", "0.001"),
             ("--lr-wsd-decay-style", "cosine"),
             ("--train-iters", "2100"),
+            ("--eval-iters", "0"),
+            ("--eval-interval", "2101"),
         ):
             self.assertEqual(args[args.index(flag) + 1], expected)
 
@@ -169,14 +169,11 @@ class MegatronAdapterTests(unittest.TestCase):
             decoder=SimpleNamespace(final_layernorm=source.norm, layers=layers),
         )
 
-    def test_fixed_monitor_test_split_and_checkpoint_sidecars(self):
-        from salaad_moe.data import TokenCorpus, make_synthetic_corpus
+    def test_checkpoint_sidecars_without_validation(self):
         from salaad_moe.checkpoint import checkpoint_metadata
 
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            make_synthetic_corpus(self.c, root / "data", 32)
-            corpus = TokenCorpus(root / "data/manifest.json", self.c)
             source = MoELanguageModel(self.c)
             fake = self.make_megatron_fixture(source)
             p = torch.nn.Parameter(torch.randn(3, 4, 5).bfloat16())
@@ -207,39 +204,24 @@ class MegatronAdapterTests(unittest.TestCase):
                 get_args=lambda: native_args,
                 setup_model_and_optimizer=lambda: ([fake], optimizer, None),
                 train_step=lambda: None,
-                evaluate=lambda *a, **k: None,
             )
-            training.evaluate_and_print_results = lambda prefix: training.evaluate()
             training.save_checkpoint = lambda iteration, *a, **k: (
                 Path(native_args.save) / f"iter_{iteration:07d}"
             ).mkdir()
-            active = install_training_integration(training, self.c, corpus.identity, corpus)
+            active = install_training_integration(training, self.c, "test-data-identity")
             training.setup_model_and_optimizer()
             self.assertTrue(active["hook"].manager.initialized)
             active["hook"].step = 1
             rng_before = torch.get_rng_state().clone()
             weights_before = native_weights_from_megatron([fake], self.c)
-            training.evaluate_and_print_results("iteration 1")
-            monitor = copy.deepcopy(active["validation"])
-            training.evaluate_and_print_results("iteration 1 on test set")
+            training.save_checkpoint(1, [fake], optimizer, None)
             torch.testing.assert_close(torch.get_rng_state(), rng_before, rtol=0, atol=0)
-            self.assertEqual(active["validation"], monitor)
-            events = [
-                json.loads(line)
-                for line in (Path(native_args.save) / "salaad_validation.jsonl")
-                .read_text()
-                .splitlines()
-            ]
-            self.assertEqual(events[0]["raw"]["sequences"], 4)
-            self.assertEqual(events[1]["raw"]["sequences"], 16)
-            self.assertEqual(events[1]["split"], "test")
             for name, tensor in weights_before.items():
                 torch.testing.assert_close(
                     native_weights_from_megatron([fake], self.c)[name], tensor, rtol=0, atol=0
                 )
-            training.save_checkpoint(1, [fake], optimizer, None)
             meta = checkpoint_metadata(Path(native_args.save) / "salaad/iter_0000001")
-            self.assertEqual(meta["validation_nll"], monitor["raw"]["nll"])
+            self.assertNotIn("validation_nll", meta)
             self.assertEqual(meta["resume_backend"], "megatron_only")
 
 

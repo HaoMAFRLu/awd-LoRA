@@ -56,7 +56,6 @@ data:
   split: sha256_text_mod_10000_val_0_99_test_100_199_train_200_9999
   corpus_order_seed: 42
   validation_sequences: 8192
-  monitor_validation_sequences: 2048
   test_sequences: 8192
   data_manifest: null
   packing: fixed_length_no_padding
@@ -90,10 +89,8 @@ training:
   router_z_loss_coefficient: 0.001
   z_loss_reduction: mean_over_tokens_sum_over_layers
   expert_task_gradient_rescale: 1.0
-  validation_interval_steps: 100
   checkpoint_interval_steps: 100
   keep_latest_checkpoints: 2
-  keep_best_checkpoints: 3
   activation_recompute: selective_attention
 parallel:
   # Standard DP: each rank holds the full model and processes different samples.
@@ -143,7 +140,7 @@ salaad:
     alpha_init: 0.0
     beta_init: 0.0
     gain_alpha: 0.02
-    gain_beta: 0.005
+    gain_beta: 0.002
     threshold_gain_convention: tau_alpha_delta_equals_gain_times_rank_error
     # Allow signed integral-controller thresholds after overshoot.
     nonnegative_projection: false
@@ -156,14 +153,8 @@ salaad:
   shared_mode: learned
   low_rank_enabled: true
   sparse_enabled: true
-export:
-  # Export trained values at checkpoint precision, without rank/density limits.
-  reconstructed_eval: true
 evaluation:
   primary_loss: token_mean_language_model_nll_only
-  export_nll_gap_target: 0.03
-  raw_nll_gap_vs_baseline_target: 0.02
-  final_export_nll_gap_vs_baseline_target: 0.05
   tasks:
   - arc_easy
   - openbookqa

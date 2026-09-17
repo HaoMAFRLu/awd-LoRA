@@ -47,7 +47,7 @@ def restore_rng(state):
         torch.cuda.set_rng_state_all(state["cuda"])
 
 
-def save_checkpoint(trainer, root, validation_nll=None):
+def save_checkpoint(trainer, root):
     root = Path(root)
     name = f"step_{trainer.step:08d}"
     temporary, target = root / (name + ".incomplete"), root / name
@@ -94,7 +94,6 @@ def save_checkpoint(trainer, root, validation_nll=None):
                 "step": trainer.step,
                 "world_size": world_size(),
                 "config_hash": fingerprint(trainer.config),
-                "validation_nll": validation_nll,
             }
             (temporary / "complete.json").write_text(json.dumps(marker, indent=2) + "\n")
             os.replace(temporary, target)
@@ -191,13 +190,7 @@ def prune_checkpoints(root, config):
             entries.append((path, meta))
     entries.sort(key=lambda pair: pair[1]["step"])
     latest = config["training"]["keep_latest_checkpoints"]
-    best = config["training"]["keep_best_checkpoints"]
-    keep = {p for p, _ in entries[-latest:]} if latest else set()
-    scored = sorted(
-        ((p, m) for p, m in entries if m["validation_nll"] is not None),
-        key=lambda pair: pair[1]["validation_nll"],
-    )
-    keep.update(p for p, _ in scored[:best])
+    keep = {p for p, _ in entries[-latest:]}
     for path, _ in entries:
         if path not in keep:
             shutil.rmtree(path)
