@@ -4,6 +4,8 @@
 # condor_submit wrapper otherwise resets DAG child jobs to bid 1.
 JOB PREPARE sub/moe_ns97m_prepare.sub
 JOB VANILLA sub/moe_ns97m_vanilla.sub
+JOB SALAAD sub/moe_ns97m_salaad.sub
 
 # PREPARE checks corpus sizes on its CPU worker before reporting success.
-PARENT PREPARE CHILD VANILLA
+# Both training runs become eligible as soon as the same corpus is ready.
+PARENT PREPARE CHILD VANILLA SALAAD
