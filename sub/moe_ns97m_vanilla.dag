@@ -1,5 +1,7 @@
 # Generate the DAGMan submit file with -no_submit and the agreed bid minus 1000
 # as -priority, then submit that generated file with condor_submit_bid.
+# Export DEFAULT_JOB_BID to the same bid when submitting: the cluster's
+# condor_submit wrapper otherwise resets DAG child jobs to bid 1.
 JOB PREPARE sub/moe_ns97m_prepare.sub
 JOB VANILLA sub/moe_ns97m_vanilla.sub
 
