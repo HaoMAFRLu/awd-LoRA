@@ -10,7 +10,6 @@ training:
   micro_batch_sequences_per_rank: 8
   accumulation_steps: 32
   warmup_steps: 37
-  decay_steps: 363
 parallel:
   hardware: 4xH100_80GB_same_node
   world_size: 4

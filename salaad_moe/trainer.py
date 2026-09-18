@@ -197,7 +197,6 @@ class Trainer:
             .cpu()
             .tolist(),
             "mean_token_entropy": entropy.cpu().tolist(),
-            "effective_experts_from_entropy": entropy.exp().cpu().tolist(),
         }
         record = {
             "step": self.step,

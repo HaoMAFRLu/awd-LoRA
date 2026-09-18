@@ -80,9 +80,9 @@ training:
   - normalization
   - bias
   gradient_clip_global_norm: 1.0
-  schedule: warmup_stable_cosine_decay
+  # Decay from peak to minimum over all steps after linear warmup.
+  schedule: cosine
   warmup_steps: 21
-  decay_steps: 210
   load_balancing_coefficient: 0.1
   load_balancing_reduction: mean_over_rank_microbatches_sum_over_layers
   load_balancing_assignment_denominator: num_tokens_times_topk
@@ -90,7 +90,7 @@ training:
   z_loss_reduction: mean_over_tokens_sum_over_layers
   expert_task_gradient_rescale: 1.0
   checkpoint_interval_steps: 100
-  keep_latest_checkpoints: 2
+  keep_latest_checkpoints: 1  # Remove the previous checkpoint after a successful save.
   activation_recompute: selective_attention
 parallel:
   # Standard DP: each rank holds the full model and processes different samples.

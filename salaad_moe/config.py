@@ -136,7 +136,6 @@ def validate_config(c: dict, world_size=None) -> None:
         "global_batch_sequences",
         "micro_batch_sequences_per_rank",
         "accumulation_steps",
-        "decay_steps",
     ):
         if not isinstance(t[key], int) or t[key] < 1:
             raise ValueError(f"training.{key} must be a positive integer")
@@ -145,14 +144,17 @@ def validate_config(c: dict, world_size=None) -> None:
         != t["micro_batch_sequences_per_rank"] * t["accumulation_steps"] * p["world_size"]
     ):
         raise ValueError("global batch must equal micro batch * accumulation * DP")
-    if not 0 <= t["warmup_steps"] <= t["total_optimizer_steps"] - t["decay_steps"]:
-        raise ValueError("Invalid WSD warmup/decay intervals")
+    if (
+        not isinstance(t["warmup_steps"], int)
+        or not 0 <= t["warmup_steps"] < t["total_optimizer_steps"]
+    ):
+        raise ValueError("warmup_steps must be an integer in [0, total_optimizer_steps)")
     if not 0 <= t["min_learning_rate"] <= t["learning_rate"] or t["learning_rate"] <= 0:
         raise ValueError("Invalid learning rates")
     if t["task_precision"] not in ("float32", "bfloat16"):
         raise ValueError("Only float32 and bfloat16 compute are supported")
-    if t["optimizer"] != "AdamW" or t["schedule"] != "warmup_stable_cosine_decay":
-        raise ValueError("Only AdamW with WSD is implemented")
+    if t["optimizer"] != "AdamW" or t["schedule"] != "cosine":
+        raise ValueError("Only AdamW with linear warmup and cosine decay is implemented")
     for key, value in {
         "load_balancing_reduction": "mean_over_rank_microbatches_sum_over_layers",
         "load_balancing_assignment_denominator": "num_tokens_times_topk",
@@ -290,7 +292,6 @@ def learning_rate(config: dict, update: int) -> float:
     peak, low, warm = t["learning_rate"], t["min_learning_rate"], t["warmup_steps"]
     if warm and update <= warm:
         return peak * update / warm
-    start = t["total_optimizer_steps"] - t["decay_steps"]
-    if update <= start:
-        return peak
-    return low + 0.5 * (peak - low) * (1 + math.cos(math.pi * (update - start) / t["decay_steps"]))
+    # Use the full remaining budget, even when this invocation pauses early.
+    progress = (update - warm) / (t["total_optimizer_steps"] - warm)
+    return low + 0.5 * (peak - low) * (1 + math.cos(math.pi * progress))

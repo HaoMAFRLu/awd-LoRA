@@ -240,14 +240,30 @@ class TrackingTests(unittest.TestCase):
         self.assertEqual(run.kwargs["config"], self.config)
         self.assertEqual([step for _, step in run.logs], list(range(1, 9)))
         first, last = run.logs[0][0], run.logs[-1][0]
-        self.assertIn("train/lm_nll", first)
+        self.assertEqual(
+            {key for key in first if key.startswith("train/")},
+            {"train/lm_nll", "train/load_balancing_loss", "train/router_z_loss", "train/learning_rate"},
+        )
+        self.assertEqual(
+            {key for key in first if key.startswith("train_stats/")},
+            {
+                "train_stats/consumed_sequences",
+                "train_stats/prediction_tokens",
+                "train_stats/task_gradient_norm",
+                "train_stats/constraint_gradient_norm",
+                "train_stats/constraint_task_gradient_ratio",
+                "train_stats/combined_gradient_norm_before_clip",
+                "train_stats/step_seconds",
+            },
+        )
         self.assertIn("router/mean_token_entropy/0", first)
         for payload, _ in run.logs:
             self.assertFalse(any(key.startswith("validation_") for key in payload))
             self.assertNotIn("train/reconstruction_nll_gap", payload)
+            self.assertFalse(any("effective_experts_from_entropy" in key for key in payload))
         checkpoints = self.path / "run/checkpoints"
         self.assertEqual(
-            {path.name for path in checkpoints.iterdir()}, {"step_00000006", "step_00000008"}
+            {path.name for path in checkpoints.iterdir()}, {"step_00000008"}
         )
         for checkpoint in checkpoints.iterdir():
             metadata = json.loads((checkpoint / "complete.json").read_text())
@@ -255,12 +271,14 @@ class TrackingTests(unittest.TestCase):
         # With step-zero initialization, the first structural update is at step 2.
         first_structure_update = run.logs[1][0]
         self.assertIn(
-            "layer/layers.0.moe.experts.gate.expert_0/effective_rank_ratio", first_structure_update
+            "salaad_structure/layer_0_gate_expert_0_effective_rank_ratio", first_structure_update
         )
-        # Report exactly five metrics and retain each expert's own values.
-        expected_keys = set()
+        # Keep each expert's five values and log the global rho only once.
+        expected_keys = {"salaad_hyperparameters/rho"}
         rho = self.config["salaad"]["rho"]
+        self.assertEqual(last["salaad_hyperparameters/rho"], rho)
         for group in trainer.manager.groups:
+            layer, projection = group.name.split(".")[1], group.name.split(".")[-1]
             state = trainer.manager.states[group.name]
             expected = {
                 "diff": (group.weight() - state.reconstruction()).flatten(1).norm(dim=1),
@@ -270,12 +288,19 @@ class TrackingTests(unittest.TestCase):
                 "beta": rho * state.tau_s,
             }
             for expert in range(self.config["model"]["num_experts"]):
-                prefix = f"layer/{group.name}.expert_{expert}"
                 for metric, values in expected.items():
-                    key = f"{prefix}/{metric}"
+                    section = "hyperparameters" if metric in ("alpha", "beta") else "structure"
+                    key = f"salaad_{section}/layer_{layer}_{projection}_expert_{expert}_{metric}"
                     self.assertEqual(last[key], values[expert].item())
                     expected_keys.add(key)
-        self.assertEqual({key for key in last if key.startswith("layer/")}, expected_keys)
+        salaad_keys = {key for key in last if key.startswith("salaad_")}
+        self.assertEqual(salaad_keys, expected_keys)
+        self.assertEqual(
+            {key.split("/")[0] for key in salaad_keys},
+            {"salaad_structure", "salaad_hyperparameters"},
+        )
+        self.assertTrue(all(key.count("/") == 1 for key in expected_keys))
+        self.assertFalse(any(key.startswith("layer/") for key in last))
         self.assertFalse(any(key.startswith("salaad/") for key in last))
         self.assertEqual(run.finished, 0)
         self.assertEqual(

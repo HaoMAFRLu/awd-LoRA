@@ -64,13 +64,31 @@ class CoreTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validate_config(c)
 
-    def test_wsd_uses_full_budget_and_reaches_minimum(self):
+    def test_cosine_decays_throughout_after_warmup_and_reaches_minimum(self):
         c = load_config(ROOT / "configs/ns97m.yaml")
         self.assertAlmostEqual(learning_rate(c, 1), 3e-4 / 21)
         self.assertEqual(learning_rate(c, 21), 3e-4)
-        self.assertEqual(learning_rate(c, 500), 3e-4)
-        self.assertEqual(learning_rate(c, 1890), 3e-4)
+        rates = [learning_rate(c, step) for step in range(21, 2101)]
+        self.assertTrue(all(before > after for before, after in zip(rates, rates[1:])))
         self.assertAlmostEqual(learning_rate(c, 2100), 3e-5)
+        # Halfway through cosine decay, LR is halfway between peak and minimum.
+        c["training"]["total_optimizer_steps"] = 2099
+        self.assertAlmostEqual(learning_rate(c, 1060), (3e-4 + 3e-5) / 2)
+        for step in (0, 2100):
+            with self.assertRaises(ValueError):
+                learning_rate(c, step)
+
+    def test_cosine_warmup_must_leave_steps_for_decay(self):
+        for warmup in (-1, 1.5, 8, 9):
+            c = copy.deepcopy(self.c)
+            c["training"]["warmup_steps"] = warmup
+            with self.assertRaisesRegex(ValueError, "warmup_steps"):
+                validate_config(c)
+        for warmup in (0, 7):
+            c = copy.deepcopy(self.c)
+            c["training"]["warmup_steps"] = warmup
+            validate_config(c)
+            self.assertAlmostEqual(learning_rate(c, 8), c["training"]["min_learning_rate"])
 
     def test_router_selected_softmax_and_full_probability_balance(self):
         logits = torch.randn(11, 8, requires_grad=True)

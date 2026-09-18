@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import torch
 
-from salaad_moe.config import load_config
+from salaad_moe.config import learning_rate, load_config
 from salaad_moe.groups import StackedGroup
 from salaad_moe.megatron import (
     MegatronOptimizerHook,
@@ -61,6 +61,8 @@ class MegatronAdapterTests(unittest.TestCase):
             "--use-distributed-optimizer",
             "--overlap-grad-reduce",
             "--moe-grouped-gemm",
+            "--lr-wsd-decay-style",
+            "--lr-wsd-decay-iters",
         ):
             self.assertNotIn(absent, args)
         for flag, expected in (
@@ -68,7 +70,9 @@ class MegatronAdapterTests(unittest.TestCase):
             ("--moe-router-topk", "8"),
             ("--moe-aux-loss-coeff", "0.1"),
             ("--moe-z-loss-coeff", "0.001"),
-            ("--lr-wsd-decay-style", "cosine"),
+            ("--lr-decay-style", "cosine"),
+            ("--lr-warmup-iters", "21"),
+            ("--lr-decay-iters", "2100"),
             ("--train-iters", "2100"),
             ("--eval-iters", "0"),
             ("--eval-interval", "2101"),
@@ -91,7 +95,7 @@ class MegatronAdapterTests(unittest.TestCase):
         torch.testing.assert_close(optimizer.before_clip, expected_gradient)
         self.assertAlmostEqual(norm, expected_gradient.norm().item(), places=5)
         clipped = expected_gradient * min(1.0, 0.2 / (expected_gradient.norm().item() + 1e-6))
-        torch.testing.assert_close(p.main_param, initial - 0.001 * clipped)
+        torch.testing.assert_close(p.main_param, initial - learning_rate(self.c, 2) * clipped)
         torch.testing.assert_close(p, p.main_param.bfloat16(), rtol=0, atol=0)
         self.assertEqual(hook.step, 2)
         with self.assertRaises(ValueError):

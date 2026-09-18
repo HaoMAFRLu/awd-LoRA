@@ -292,7 +292,7 @@ class ConsensusManager:
 
     @torch.no_grad()
     def metrics(self):
-        """Report diff, density, effective rank ratio, alpha and beta per expert."""
+        """Report each expert's structure and coefficients, including the shared rho."""
         if not self.initialized:
             return {}
         records = {}
@@ -312,6 +312,7 @@ class ConsensusManager:
                     "density": density,
                     # Use the current MoE controller's per-expert rank statistic.
                     "effective_rank_ratio": effective_rank_ratio,
+                    "rho": rho,
                     "alpha": alpha,
                     "beta": beta,
                 }

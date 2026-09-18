@@ -40,10 +40,26 @@ def flatten_metrics(record):
 
     for key, value in record.items():
         if key == "salaad":
-            # Log each expert matrix under layer/<matrix>/<metric>.
-            visit(value, "layer")
+            # Use exactly two sections across all layers. Keep layer/projection/
+            # expert identifiers after the only slash so they do not form sections.
+            for name, metrics in value.items():
+                _, layer, _, _, projection, expert = name.split(".")
+                matrix = f"layer_{layer}_{projection}_{expert}"
+                for metric in ("diff", "density", "effective_rank_ratio"):
+                    result[f"salaad_structure/{matrix}_{metric}"] = metrics[metric]
+                for metric in ("alpha", "beta"):
+                    result[f"salaad_hyperparameters/{matrix}_{metric}"] = metrics[metric]
+                # Rho is global and fixed; emit one metric shared by all layers.
+                result["salaad_hyperparameters/rho"] = metrics["rho"]
         elif key != "step":
-            visit(value, key if isinstance(value, dict) else f"train/{key}")
+            if isinstance(value, dict):
+                prefix = key
+            else:
+                section = "train" if key in (
+                    "lm_nll", "load_balancing_loss", "router_z_loss", "learning_rate"
+                ) else "train_stats"
+                prefix = f"{section}/{key}"
+            visit(value, prefix)
     return result
 
 
