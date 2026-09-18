@@ -292,9 +292,50 @@ class CoreTests(unittest.TestCase):
         full = task + 0.5 * self.c["salaad"]["rho"] * (p - manager.anchors["g"]).square().sum()
         expected = torch.autograd.grad(full, p, retain_graph=True)[0]
         task.backward()
-        manager.inject_gradients()
+        task_gradient = p.grad.clone()
+        structural_gradient = self.c["salaad"]["rho"] * (p.detach() - manager.anchors["g"])
+        norm, cosine = manager.inject_gradients(task_gradient.norm().item())
         torch.testing.assert_close(p.grad, expected)
         self.assertGreater(p.grad[2:].norm().item(), 0)
+        self.assertAlmostEqual(norm, structural_gradient.norm().item(), places=6)
+        self.assertAlmostEqual(
+            cosine,
+            torch.nn.functional.cosine_similarity(
+                task_gradient.flatten(), structural_gradient.flatten(), dim=0
+            ).item(),
+            places=6,
+        )
+
+    def test_gradient_cosine_directions_small_penalties_and_zero_vectors(self):
+        self.c["salaad"]["rho"] = 1.0
+        for task, structural, extra_task_norm, expected_cosine in (
+            ([3.0, 4.0], [6.0, 8.0], 0.0, 1.0),
+            ([3.0, 4.0], [-6.0, -8.0], 0.0, -1.0),
+            ([3.0, 4.0], [-4.0, 3.0], 0.0, 0.0),
+            ([3.0, 4.0], [3e-12, 4e-12], 0.0, 1.0),
+            # Include task gradients outside the structurally constrained experts.
+            ([3.0, 4.0], [6.0, 8.0], 12.0, 5.0 / 13.0),
+            ([3.0, 4.0], [0.0, 0.0], 0.0, None),
+            ([0.0, 0.0], [3.0, 4.0], 0.0, None),
+            (None, [3.0, 4.0], 0.0, None),
+        ):
+            with self.subTest(task=task, structural=structural, extra=extra_task_norm):
+                p = torch.nn.Parameter(torch.zeros(1, 1, 2))
+                manager = ConsensusManager([StackedGroup("g", p)], self.c)
+                self.assertEqual(manager.inject_gradients(1.0), (0.0, None))
+                manager.initialize(0)
+                structural_gradient = torch.tensor(structural).view_as(p)
+                manager.anchors["g"] = -structural_gradient
+                task_gradient = torch.zeros_like(p) if task is None else torch.tensor(task).view_as(p)
+                p.grad = None if task is None else task_gradient.clone()
+                task_norm = (task_gradient.square().sum().item() + extra_task_norm**2)**0.5
+                norm, cosine = manager.inject_gradients(task_norm)
+                torch.testing.assert_close(p.grad, task_gradient + structural_gradient, rtol=0, atol=0)
+                self.assertAlmostEqual(norm, structural_gradient.norm().item(), places=6)
+                if expected_cosine is None:
+                    self.assertIsNone(cosine)
+                else:
+                    self.assertAlmostEqual(cosine, expected_cosine, places=6)
 
     def test_structure_failure_leaves_all_states_and_anchors_unchanged(self):
         p = torch.nn.Parameter(torch.randn(3, 4, 5))
@@ -330,19 +371,23 @@ class CoreTests(unittest.TestCase):
     def test_fused_sequential_views_use_fp32_master_not_bf16_copy(self):
         parameters = []
         values = torch.randn(3, 2, 4, 5)
+        task_gradients = torch.randn_like(values)
         for i in range(3):
             p = torch.nn.Parameter(torch.zeros(8, 5, dtype=torch.bfloat16))
             p.main_param = values[i].reshape(8, 5).clone()
+            p.main_param.grad = task_gradients[i].reshape(8, 5).clone()
             parameters.append(p)
         gate = SequentialFusedGroup("gate", parameters, "gate")
         up = SequentialFusedGroup("up", parameters, "up")
         torch.testing.assert_close(gate.weight(), values[:, 0])
         torch.testing.assert_close(up.weight(), values[:, 1])
-        gate.add_gradient(torch.ones_like(gate.weight()))
-        up.add_gradient(2 * torch.ones_like(up.weight()))
-        for p in parameters:
-            torch.testing.assert_close(p.main_param.grad[:4], torch.ones(4, 5))
-            torch.testing.assert_close(p.main_param.grad[4:], torch.full((4, 5), 2.0))
+        gate_dot = gate.add_gradient(torch.ones_like(gate.weight()))
+        up_dot = up.add_gradient(2 * torch.ones_like(up.weight()))
+        torch.testing.assert_close(gate_dot, task_gradients[:, 0].sum())
+        torch.testing.assert_close(up_dot, (2 * task_gradients[:, 1]).sum())
+        for i, p in enumerate(parameters):
+            torch.testing.assert_close(p.main_param.grad[:4], task_gradients[i, 0] + 1)
+            torch.testing.assert_close(p.main_param.grad[4:], task_gradients[i, 1] + 2)
             self.assertIsNone(p.grad)
 
     def test_fused_grouped_views_and_transposed_gradients(self):
@@ -353,13 +398,21 @@ class CoreTests(unittest.TestCase):
         up = GroupedFusedGroup("up", p, "up", k, d)
         torch.testing.assert_close(gate.weight(), logical[:, :, :f].transpose(1, 2))
         torch.testing.assert_close(up.weight(), logical[:, :, f:].transpose(1, 2))
+        task_gradient = torch.randn_like(p)
+        p.grad = task_gradient.clone()
         delta = torch.randn_like(gate.weight())
-        gate.add_gradient(delta)
-        torch.testing.assert_close(p.grad.view_as(logical)[:, :, :f], delta.transpose(1, 2))
-        self.assertEqual(p.grad.view_as(logical)[:, :, f:].count_nonzero(), 0)
+        dot = gate.add_gradient(delta)
+        torch.testing.assert_close(dot, (task_gradient.view_as(logical)[:, :, :f] * delta.mT).sum())
+        torch.testing.assert_close(
+            p.grad.view_as(logical)[:, :, :f], task_gradient.view_as(logical)[:, :, :f] + delta.mT
+        )
+        torch.testing.assert_close(p.grad.view_as(logical)[:, :, f:], task_gradient.view_as(logical)[:, :, f:])
+        up_dot = up.add_gradient(delta)
+        torch.testing.assert_close(up_dot, (task_gradient.view_as(logical)[:, :, f:] * delta.mT).sum())
         down_p = torch.nn.Parameter(torch.randn(k * f, d))
         down = GroupedFusedGroup("down", down_p, "down", k, d)
         torch.testing.assert_close(down.weight(), down_p.view(k, f, d).transpose(1, 2))
+        self.assertEqual(down.add_gradient(torch.ones_like(down.weight())).item(), 0.0)
 
 
 if __name__ == "__main__":

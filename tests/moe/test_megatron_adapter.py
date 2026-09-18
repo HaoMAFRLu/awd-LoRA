@@ -94,6 +94,13 @@ class MegatronAdapterTests(unittest.TestCase):
         self.assertEqual(optimizer.calls, ["prepare", "clip", "step"])
         torch.testing.assert_close(optimizer.before_clip, expected_gradient)
         self.assertAlmostEqual(norm, expected_gradient.norm().item(), places=5)
+        self.assertAlmostEqual(
+            hook.last_metrics["constraint_task_gradient_cosine"],
+            torch.nn.functional.cosine_similarity(
+                p.main_grad.flatten(), (self.c["salaad"]["rho"] * initial).flatten(), dim=0
+            ).item(),
+            places=6,
+        )
         clipped = expected_gradient * min(1.0, 0.2 / (expected_gradient.norm().item() + 1e-6))
         torch.testing.assert_close(p.main_param, initial - learning_rate(self.c, 2) * clipped)
         torch.testing.assert_close(p, p.main_param.bfloat16(), rtol=0, atol=0)

@@ -19,10 +19,13 @@ class StackedGroup:
         return master(self.parameter).detach()
 
     def add_gradient(self, delta):
+        """Return the task/structure dot product before adding the structure gradient."""
         p = master(self.parameter)
         if p.grad is None:
             p.grad = torch.zeros_like(p)
+        dot = (p.grad * delta).sum()
         p.grad.add_(delta)
+        return dot
 
 
 class SequentialFusedGroup:
@@ -42,11 +45,15 @@ class SequentialFusedGroup:
         return torch.stack([self.view(master(p).detach()) for p in self.parameters])
 
     def add_gradient(self, delta):
+        dot = delta.new_zeros(())
         for p, update in zip(self.parameters, delta.unbind(0)):
             p = master(p)
             if p.grad is None:
                 p.grad = torch.zeros_like(p)
-            self.view(p.grad).add_(update)
+            gradient = self.view(p.grad)
+            dot += (gradient * update).sum()
+            gradient.add_(update)
+        return dot
 
 
 class GroupedFusedGroup:
@@ -69,7 +76,10 @@ class GroupedFusedGroup:
         p = master(self.parameter)
         if p.grad is None:
             p.grad = torch.zeros_like(p)
-        self.view(p.grad).add_(delta)
+        gradient = self.view(p.grad)
+        dot = (gradient * delta).sum()
+        gradient.add_(delta)
+        return dot
 
 
 def native_groups(model, projections=("gate", "up", "down")):

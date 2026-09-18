@@ -141,7 +141,9 @@ class Trainer:
         )
         # 3. Add rho * (X - Q) once for all experts, with Q = shared + L + S - U.
         # Add it after DP averaging, never separately for each micro-batch.
-        constraint_norm = self.manager.inject_gradients() if self.manager else 0.0
+        constraint_norm, gradient_cosine = (
+            self.manager.inject_gradients(task_norm) if self.manager else (0.0, None)
+        )
         error = (
             None
             if all_finite([p.grad for p in self.model.parameters()])
@@ -213,6 +215,8 @@ class Trainer:
             "step_seconds": time.perf_counter() - started,
             "router": router,
         }
+        if gradient_cosine is not None:
+            record["constraint_task_gradient_cosine"] = gradient_cosine
         if changed:
             record["salaad"] = self.manager.metrics()
         return record

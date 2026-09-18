@@ -243,17 +243,26 @@ class ConsensusManager:
             self.anchors[group.name] = value
 
     @torch.no_grad()
-    def inject_gradients(self):
-        """Add rho * (X-Q) to existing gradients and return its norm over all parameters."""
+    def inject_gradients(self, task_norm):
+        """Add rho * (X-Q); return its norm and cosine with the original task gradient."""
         if not self.initialized:
-            return 0.0
-        squared = torch.zeros((), device=self.device)
+            return 0.0, None
+        # Accumulate the squared structure norm and the dot product directly.
+        # Measuring before addition avoids cancellation when the penalty is small.
+        statistics = torch.zeros(2, device=self.device)
         rho = self.config["salaad"]["rho"]
         for group in self.groups:
             delta = (group.weight() - self.anchors[group.name]) * rho
-            group.add_gradient(delta)
-            squared += delta.square().sum()
-        return squared.sqrt().item()
+            statistics[1] += group.add_gradient(delta)
+            statistics[0] += delta.square().sum()
+        statistics[0].sqrt_()
+        constraint_norm, dot = statistics.tolist()
+        if task_norm == 0 or constraint_norm == 0:
+            return constraint_norm, None  # A zero vector has no direction.
+        # The task norm includes all model parameters; structural gradients are
+        # zero outside the expert groups. Clamp only floating-point roundoff.
+        cosine = max(-1.0, min(1.0, dot / (task_norm * constraint_norm)))
+        return constraint_norm, cosine
 
     @torch.no_grad()
     def update(self, step):

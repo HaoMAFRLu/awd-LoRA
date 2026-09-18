@@ -228,7 +228,9 @@ class MegatronOptimizerHook:
             .sqrt()
             .item()
         )
-        constraint_norm = self.manager.inject_gradients() if self.manager else 0.0
+        constraint_norm, gradient_cosine = (
+            self.manager.inject_gradients(task_norm) if self.manager else (0.0, None)
+        )
         error = (
             None
             if all_finite([p.grad for p in parameters])
@@ -240,6 +242,8 @@ class MegatronOptimizerHook:
             "constraint_gradient_norm": constraint_norm,
             "constraint_task_gradient_ratio": constraint_norm / max(task_norm, 1e-30),
         }
+        if gradient_cosine is not None:
+            self.last_metrics["constraint_task_gradient_cosine"] = gradient_cosine
         return False
 
     @torch.no_grad()

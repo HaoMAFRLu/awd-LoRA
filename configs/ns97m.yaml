@@ -112,7 +112,7 @@ salaad:
   - up
   - down
   consensus_scope: same_layer_same_projection_all_experts
-  rho: 1.0e-05
+  rho: 1.0e-06
   rho_scope: global_fixed_all_experts_all_layers
   penalty_reduction: sum_all_entries_all_expert_matrices
   gradient_injection: after_dp_reduce_and_prepare_grads_before_global_clip

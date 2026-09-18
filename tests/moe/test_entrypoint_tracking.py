@@ -244,14 +244,17 @@ class TrackingTests(unittest.TestCase):
             {key for key in first if key.startswith("train/")},
             {"train/lm_nll", "train/load_balancing_loss", "train/router_z_loss", "train/learning_rate"},
         )
+        # The first optimizer update makes the structural gradient nonzero at step 2.
+        second = run.logs[1][0]
         self.assertEqual(
-            {key for key in first if key.startswith("train_stats/")},
+            {key for key in second if key.startswith("train_stats/")},
             {
                 "train_stats/consumed_sequences",
                 "train_stats/prediction_tokens",
                 "train_stats/task_gradient_norm",
                 "train_stats/constraint_gradient_norm",
                 "train_stats/constraint_task_gradient_ratio",
+                "train_stats/constraint_task_gradient_cosine",
                 "train_stats/combined_gradient_norm_before_clip",
                 "train_stats/step_seconds",
             },
@@ -261,6 +264,12 @@ class TrackingTests(unittest.TestCase):
             self.assertFalse(any(key.startswith("validation_") for key in payload))
             self.assertNotIn("train/reconstruction_nll_gap", payload)
             self.assertFalse(any("effective_experts_from_entropy" in key for key in payload))
+            cosine_key = "train_stats/constraint_task_gradient_cosine"
+            if payload["train_stats/task_gradient_norm"] and payload["train_stats/constraint_gradient_norm"]:
+                self.assertGreaterEqual(payload[cosine_key], -1.0)
+                self.assertLessEqual(payload[cosine_key], 1.0)
+            else:
+                self.assertNotIn(cosine_key, payload)
         checkpoints = self.path / "run/checkpoints"
         self.assertEqual(
             {path.name for path in checkpoints.iterdir()}, {"step_00000008"}
@@ -306,6 +315,14 @@ class TrackingTests(unittest.TestCase):
         self.assertEqual(
             json.loads((self.path / "run/wandb_run.json").read_text())["last_logged_step"], 8
         )
+
+    def test_vanilla_does_not_log_an_undefined_gradient_cosine(self):
+        self.config["salaad"]["enabled"] = False
+        trainer = Trainer(self.config, self.corpus(), "cpu")
+        trainer.run(self.path / "vanilla", stop_after=2)
+        for payload, _ in self.runs[0].logs:
+            self.assertEqual(payload["train_stats/constraint_gradient_norm"], 0.0)
+            self.assertNotIn("train_stats/constraint_task_gradient_cosine", payload)
 
     def test_tracking_does_not_change_weights_optimizer_or_rng(self):
         corpus = self.corpus()
