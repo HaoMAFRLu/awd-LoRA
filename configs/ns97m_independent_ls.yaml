@@ -1,4 +1,6 @@
 inherits: ns97m.yaml
 experiment: moe_ns97m_independent_ls
 salaad:
+  # Match the rho=1e-5 consensus run; keep shared at zero so X = L + S.
+  rho: 1.0e-05
   shared_mode: none
