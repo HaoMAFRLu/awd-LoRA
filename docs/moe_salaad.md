@@ -6,6 +6,10 @@
 当前入口只服务 MoE，已移除旧 dense LLM/Vision 的配置分流和训练器依赖。
 阅读代码建议先看 [MoE 训练流程与注释指南](moe_training_walkthrough.md)。
 
+新增的 `ns97m_aligned` 配置在求 shared 之前联合对齐 gate/up/down 的通道，
+训练和恢复方式见 [MoE 通道对齐训练](moe_channel_alignment.md)。
+下文 `ns97m` 仍指不对齐的 consensus 基线。
+
 ## 当前默认与对照原则（2026-09-17）
 
 后续讨论和实验默认普通 DP，`EP=TP=PP=CP=1`。vanilla MoE 和 SALAAD 都使用

@@ -60,6 +60,12 @@ def validate_config(c: dict, world_size=None) -> None:
     if c["model"].get("family") != "llama_style_no_shared_expert":
         raise ValueError("Only the no-shared-expert MoE architecture is supported")
     m, t, p, s = (c[k] for k in ("model", "training", "parallel", "salaad"))
+    alignment = s.get("channel_alignment", {})
+    if not isinstance(alignment, dict) or not isinstance(alignment.get("enabled", False), bool):
+        raise ValueError("salaad.channel_alignment must be a mapping with a boolean enabled")
+    aligned = alignment.get("enabled", False)
+    if aligned and not s["enabled"]:
+        raise ValueError("Channel alignment requires salaad.enabled")
     if not isinstance(c.get("is_wandb", False), bool):
         raise ValueError("is_wandb must be a boolean")
     if c.get("is_wandb") and (
@@ -214,10 +220,10 @@ def validate_config(c: dict, world_size=None) -> None:
             "rho_scope": "global_fixed_all_experts_all_layers",
             "penalty_reduction": "sum_all_entries_all_expert_matrices",
             "gradient_injection": "after_dp_reduce_and_prepare_grads_before_global_clip",
-            "structure_order": ["shared", "low_rank", "sparse", "dual"],
+            "structure_order": (["permutation"] if aligned else []) + ["shared", "low_rank", "sparse", "dual"],
             "refresh_anchor_after_structure": True,
             "auxiliary_dtype": "float32",
-            "auxiliary_owner": "deterministic_group_id_mod_dp",
+            "auxiliary_owner": "deterministic_layer_id_mod_dp" if aligned else "deterministic_group_id_mod_dp",
             "broadcast_anchor_dtype": "float32",
         }
         for key, value in required_salaad.items():
@@ -256,6 +262,26 @@ def validate_config(c: dict, world_size=None) -> None:
             raise ValueError("shared_mode must be learned, fixed, or none")
         if not s.get("low_rank_enabled", True) and not s.get("sparse_enabled", True):
             raise ValueError("At least one residual component is required")
+        if aligned:
+            if set(s["projections"]) != {"gate", "up", "down"}:
+                raise ValueError("Channel alignment requires all three SwiGLU projections")
+            if s.get("shared_mode", "learned") != "learned":
+                raise ValueError("Channel alignment requires learned shared")
+            if s["state_initialization_step"] != 0 or s["structure_inner_steps"] != 1:
+                raise ValueError("Aligned training initializes at step zero and uses one structure sweep")
+            for key in ("match_every_optimizer_steps", "initialization_max_iterations", "reference_expert"):
+                if type(alignment.get(key)) is not int:
+                    raise ValueError(f"channel_alignment.{key} must be an integer")
+            interval = alignment["match_every_optimizer_steps"]
+            if interval < 0 or interval % s["guidance_period_optimizer_steps"]:
+                raise ValueError("Matching interval must be zero or a multiple of the structure period")
+            if alignment["initialization_max_iterations"] < 1:
+                raise ValueError("Alignment initialization needs at least one iteration")
+            if not 0 <= alignment["reference_expert"] < m["num_experts"]:
+                raise ValueError("Invalid channel-alignment reference expert")
+            tolerance = alignment.get("improvement_tolerance")
+            if not isinstance(tolerance, (int, float)) or not math.isfinite(tolerance) or tolerance < 0:
+                raise ValueError("Alignment improvement tolerance must be finite and nonnegative")
 
 
 def parameter_counts(c: dict) -> dict:

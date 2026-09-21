@@ -8,7 +8,8 @@ import torch
 
 from .checkpoint import atomic_save, checkpoint_metadata, load_torch
 from .model import MoELanguageModel
-from .solver import GroupState
+from .alignment import native_shared, validate_permutation
+from .solver import GroupState, validate_layer_states
 
 
 def tensor_bytes(value):
@@ -67,7 +68,7 @@ def decode_csr(state, device="cpu"):
 def export_group(state):
     # L is already a trained auxiliary matrix. Save it directly instead of
     # running another decomposition that could alter its small components.
-    return {
+    result = {
         "shared": state.shared.detach().cpu().clone(),
         "experts": [
             {
@@ -77,15 +78,31 @@ def export_group(state):
             for low, sparse in zip(state.low_rank, state.sparse)
         ],
     }
+    if state.permutation is not None:
+        result.update(
+            permutation=state.permutation.detach().cpu().clone(),
+            channel_axis=state.channel_axis,
+            permutation_convention="native_to_shared",
+        )
+    return result
 
 
 @torch.no_grad()
 def materialize_group(group, device="cpu"):
     shared = group["shared"].to(device=device)
+    permutation = group.get("permutation")
+    if permutation is not None:
+        axis = group.get("channel_axis")
+        if type(axis) is not int or axis not in (0, 1) or group.get("permutation_convention") != "native_to_shared":
+            raise ValueError("Unsupported exported channel-permutation convention")
+        validate_permutation(permutation, len(group["experts"]), shared.shape[axis])
+        mapped = native_shared(shared, permutation.to(device=device), axis)
+    else:
+        mapped = shared.expand(len(group["experts"]), -1, -1)
     # Use the same addition order as GroupState.reconstruction().
     return torch.stack([
-        shared + expert["low_rank"].to(device=device) + decode_csr(expert["sparse"], device)
-        for expert in group["experts"]
+        mapped[i] + expert["low_rank"].to(device=device) + decode_csr(expert["sparse"], device)
+        for i, expert in enumerate(group["experts"])
     ])
 
 
@@ -94,10 +111,13 @@ def checkpoint_states(path, device="cpu"):
     meta = checkpoint_metadata(path)
     payload = load_torch(path / "training.pt")
     states = {}
+    aligned = payload["config"]["salaad"].get("channel_alignment", {}).get("enabled", False)
     for i in range(meta["world_size"]):
         shard = load_torch(path / f"rank_{i:05d}.pt")["salaad"]
         if shard is None or not shard["initialized"]:
             raise ValueError("This checkpoint has no initialized SALAAD decomposition")
+        if shard.get("channel_alignment", False) != aligned:
+            raise ValueError("Checkpoint channel-alignment metadata is inconsistent")
         if set(states) & set(shard["states"]):
             raise ValueError("Duplicate auxiliary group")
         states.update(
@@ -106,6 +126,17 @@ def checkpoint_states(path, device="cpu"):
                 for name, value in shard["states"].items()
             }
         )
+    if any((state.permutation is not None) != aligned for state in states.values()):
+        raise ValueError("Checkpoint channel permutations are missing or unexpected")
+    expected = {
+        f"layers.{layer}.moe.experts.{projection}"
+        for layer in range(payload["config"]["model"]["num_layers"])
+        for projection in payload["config"]["salaad"]["projections"]
+    }
+    if set(states) != expected:
+        raise ValueError("Checkpoint decomposition groups do not match the model")
+    if aligned:
+        validate_layer_states(states, payload["config"]["salaad"]["channel_alignment"]["reference_expert"])
     return payload, states
 
 
@@ -113,7 +144,11 @@ def export_checkpoint(checkpoint, output, device="cpu"):
     payload, states = checkpoint_states(checkpoint, device)
     config = payload["config"]
     artifact = {
-        "format": "salaad_moe.export.v2",
+        "format": (
+            "salaad_moe.export.v3"
+            if config["salaad"].get("channel_alignment", {}).get("enabled", False)
+            else "salaad_moe.export.v2"
+        ),
         "config": config,
         "source_step": payload["step"],
         "source_config_hash": payload["config_hash"],
@@ -144,7 +179,7 @@ def export_checkpoint(checkpoint, output, device="cpu"):
             }
             for name, group in artifact["groups"].items()
         },
-        "inference_mode": "materialize saved shared + L + S at checkpoint precision",
+        "inference_mode": "materialize saved native_shared + L + S at checkpoint precision",
         "native_sparse_kernel_benchmarked": False,
     }
     output.with_suffix(output.suffix + ".json").write_text(json.dumps(report, indent=2) + "\n")
@@ -154,9 +189,32 @@ def export_checkpoint(checkpoint, output, device="cpu"):
 def load_evaluation_model(path, mode="raw", device="cpu"):
     if mode == "exported":
         artifact = load_torch(path)
-        if artifact["format"] != "salaad_moe.export.v2":
+        if artifact["format"] not in ("salaad_moe.export.v2", "salaad_moe.export.v3"):
             raise ValueError("Unsupported export")
         config = artifact["config"]
+        aligned = config["salaad"].get("channel_alignment", {}).get("enabled", False)
+        if aligned != (artifact["format"] == "salaad_moe.export.v3") or any(
+            ("permutation" in group) != aligned for group in artifact["groups"].values()
+        ):
+            raise ValueError("Export format and channel permutations disagree")
+        if aligned:
+            expected = {
+                f"layers.{layer}.moe.experts.{p}"
+                for layer in range(config["model"]["num_layers"]) for p in ("gate", "up", "down")
+            }
+            if set(artifact["groups"]) != expected:
+                raise ValueError("Aligned export requires complete SwiGLU triplets")
+            for layer in range(config["model"]["num_layers"]):
+                prefix = f"layers.{layer}.moe.experts."
+                permutation = artifact["groups"][prefix + "gate"]["permutation"]
+                for p in ("gate", "up", "down"):
+                    group = artifact["groups"][prefix + p]
+                    if group.get("channel_axis") != int(p == "down") or not torch.equal(group["permutation"], permutation):
+                        raise ValueError("Exported gate/up/down permutations or axes disagree")
+                validate_permutation(
+                    permutation, config["model"]["num_experts"], config["model"]["expert_ffn_hidden_size"],
+                    config["salaad"]["channel_alignment"]["reference_expert"],
+                )
         weights = dict(artifact["untouched"])
         weights.update(
             {name: materialize_group(group) for name, group in artifact["groups"].items()}

@@ -1,0 +1,14 @@
+# Eight CPU steps exercise initialization, repeated matching, and checkpoints.
+inherits: smoke.yaml
+experiment: moe_aligned_cpu_smoke
+is_wandb: false
+salaad:
+  initialization: aligned_shared_mean_L_zero_S_residual_dual_zero
+  auxiliary_owner: deterministic_layer_id_mod_dp
+  structure_order: [permutation, shared, low_rank, sparse, dual]
+  channel_alignment:
+    enabled: true
+    match_every_optimizer_steps: 4
+    initialization_max_iterations: 10
+    improvement_tolerance: 1.0e-6
+    reference_expert: 0

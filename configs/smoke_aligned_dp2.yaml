@@ -1,0 +1,7 @@
+inherits: smoke_aligned.yaml
+experiment: moe_aligned_cpu_dp2_smoke
+training:
+  accumulation_steps: 1
+parallel:
+  world_size: 2
+  data_parallel_size: 2

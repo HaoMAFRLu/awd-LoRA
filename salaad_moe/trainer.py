@@ -75,7 +75,7 @@ def evaluate_model(model, corpus, split, sequences, batch_size, config, device, 
 class Trainer:
     """Use one MoE training loop; salaad.enabled toggles structural constraints."""
 
-    def __init__(self, config, corpus, device):
+    def __init__(self, config, corpus, device, *, initialize_auxiliary=True):
         validate_config(config, world_size())
         self.config = copy.deepcopy(config)
         self.corpus = corpus
@@ -99,7 +99,7 @@ class Trainer:
             if config["salaad"]["enabled"]
             else None
         )
-        if self.manager and config["salaad"]["state_initialization_step"] == 0:
+        if initialize_auxiliary and self.manager and config["salaad"]["state_initialization_step"] == 0:
             self.manager.initialize(0)
 
     def _build_optimizer(self):
@@ -139,7 +139,7 @@ class Trainer:
             .sqrt()
             .item()
         )
-        # 3. Add rho * (X - Q) once for all experts, with Q = shared + L + S - U.
+        # 3. Add rho * (X - Q) once for all experts, with Q = native_shared + L + S - U.
         # Add it after DP averaging, never separately for each micro-batch.
         constraint_norm, gradient_cosine = (
             self.manager.inject_gradients(task_norm) if self.manager else (0.0, None)
@@ -169,7 +169,7 @@ class Trainer:
         )
         agree_or_raise(error, self.device, "Optimizer result")
 
-        # 5. Initialize auxiliary states or run the scheduled shared -> L -> S -> U
+        # 5. Initialize auxiliary states or run the scheduled (P) -> shared -> L -> S -> U
         # update, then broadcast the new Q. Reconstructed weights are not copied
         # back into the model parameters X.
         next_step = self.step + 1

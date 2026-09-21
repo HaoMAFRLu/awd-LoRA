@@ -1,4 +1,4 @@
-"""SALAAD structural constraints: X_i = shared + L_i + S_i within each expert group.
+"""SALAAD structural constraints: X_i = native_shared_i + L_i + S_i.
 
 The task trainer updates X with AdamW; this module updates separate auxiliary
 states with ADMM. The dual field stores the scaled dual U = Y / rho, and the
@@ -12,6 +12,10 @@ import torch
 import torch.distributed as dist
 
 from .distributed import agree_or_raise, all_finite, rank, world_size
+from .alignment import (
+    PROJECTIONS, aligned_mean, initialize_alignment, layer_groups, match_channels,
+    native_shared, validate_permutation,
+)
 
 
 def soft_threshold(x, threshold):
@@ -105,32 +109,62 @@ class GroupState:
     # Persistent QR basis: [experts, k, k], where k = min(out, in).
     # This is distinct from the training anchor Q and must survive checkpoints.
     svd_basis: torch.Tensor
+    # Optional native -> shared channel indices, shared by a layer's triplet.
+    # X/L/S/U/basis stay native; shared alone is in common coordinates.
+    permutation: torch.Tensor | None = None
+    channel_axis: int | None = None
+
+    def native_shared(self):
+        return native_shared(self.shared, self.permutation, self.channel_axis)
 
     def anchor(self):
         # The training target Q includes the dual term; reconstructed weights
         # used for evaluation exclude it.
-        return self.shared + self.low_rank + self.sparse - self.dual
+        return self.reconstruction() - self.dual
 
     def reconstruction(self):
-        return self.shared + self.low_rank + self.sparse
+        return self.native_shared() + self.low_rank + self.sparse
+
+    def tensors(self):
+        return [
+            value for f in fields(self)
+            if isinstance(value := getattr(self, f.name), torch.Tensor)
+        ]
 
     def state_dict(self):
-        return {f.name: getattr(self, f.name).detach().cpu().clone() for f in fields(self)}
+        return {
+            f.name: value.detach().cpu().clone() if isinstance(value, torch.Tensor) else value
+            for f in fields(self) if (value := getattr(self, f.name)) is not None
+        }
 
     @classmethod
     def from_state_dict(cls, state, device):
-        return cls(
-            **{f.name: state[f.name].to(device=device, dtype=torch.float32) for f in fields(cls)}
-        )
+        values = {
+            f.name: state[f.name].to(device=device, dtype=torch.float32)
+            for f in fields(cls) if f.name not in ("permutation", "channel_axis")
+        }
+        permutation = state.get("permutation")
+        axis = state.get("channel_axis")
+        if permutation is not None:
+            if axis not in (0, 1) or isinstance(axis, bool):
+                raise ValueError("Invalid auxiliary channel axis")
+            validate_permutation(
+                permutation, values["low_rank"].shape[0], values["shared"].shape[axis]
+            )
+            permutation = permutation.to(device=device)
+        elif axis is not None:
+            raise ValueError("Auxiliary channel permutation is missing")
+        return cls(**values, permutation=permutation, channel_axis=axis)
 
 
-def initial_state(x, config):
+def initial_state(x, config, *, shared=None, permutation=None, channel_axis=None):
     # By default: shared = expert mean, L = 0, S = X - shared, U = 0.
     # The initial constraint residual is zero, avoiding a sudden large penalty
     # gradient when the auxiliary states are initialized.
     s, ctl = config["salaad"], config["salaad"]["controller"]
-    shared = torch.zeros_like(x[0]) if s.get("shared_mode", "learned") == "none" else x.mean(0)
-    remainder = x - shared
+    if shared is None:
+        shared = torch.zeros_like(x[0]) if s.get("shared_mode", "learned") == "none" else x.mean(0)
+    remainder = x - native_shared(shared, permutation, channel_axis)
     use_sparse = s.get("sparse_enabled", True)
     low = torch.zeros_like(x) if use_sparse else remainder
     sparse = remainder if use_sparse else torch.zeros_like(x)
@@ -148,21 +182,27 @@ def initial_state(x, config):
         sparse.ne(0).float().mean((-1, -2)),
         sigma.gt(0).sum(-1).float(),
         basis,
+        permutation,
+        channel_axis,
     )
 
 
 @torch.no_grad()
-def structure_sweep(x, old, config):
+def structure_sweep(x, old, config, *, shared=None, permutation=None):
     """Hold the current model weights X fixed and run one shared -> L -> S -> U update."""
     s, ctl = config["salaad"], config["salaad"]["controller"]
     mode = s.get("shared_mode", "learned")
     # 1. Unregularized consensus: average over experts within this layer and
     # projection. Groups never mix layers or projection types.
-    shared = (x - old.low_rank - old.sparse + old.dual).mean(0) if mode == "learned" else old.shared
+    if shared is None:
+        if old.permutation is not None:
+            raise ValueError("Aligned shared must be updated jointly across gate/up/down")
+        shared = (x - old.low_rank - old.sparse + old.dual).mean(0) if mode == "learned" else old.shared
+    mapped_shared = native_shared(shared, permutation, old.channel_axis)
     # 2. Low-rank residual: threshold the spectrum of X - shared - S_old + U_old.
     if s.get("low_rank_enabled", True):
         low, spectrum, basis = svt(
-            x - shared - old.sparse + old.dual,
+            x - mapped_shared - old.sparse + old.dual,
             old.tau_l,
             old.svd_basis,
             s["svd_chunk_size"],
@@ -173,13 +213,13 @@ def structure_sweep(x, old, config):
         basis = old.svd_basis
     # 3. Sparse residual: threshold entries of X - shared - L_new + U_old.
     sparse = (
-        soft_threshold(x - shared - low + old.dual, old.tau_s[:, None, None])
+        soft_threshold(x - mapped_shared - low + old.dual, old.tau_s[:, None, None])
         if s.get("sparse_enabled", True)
         else torch.zeros_like(x)
     )
     # 4. Accumulate constraint violations so later structural updates keep
     # tracking the dense weights X.
-    dual = old.dual + x - shared - low - sparse
+    dual = old.dual + x - mapped_shared - low - sparse
     ratio = linear_mass_rank(spectrum, ctl["gamma"])
     density = sparse.ne(0).float().mean((-1, -2))
     tau_l, tau_s = old.tau_l.clone(), old.tau_s.clone()
@@ -191,11 +231,32 @@ def structure_sweep(x, old, config):
         tau_s = tau_s + ctl["gain_beta"] * (density - ctl["target_density"])
     new = GroupState(
         shared, low, sparse, dual, tau_l, tau_s, ratio, density,
-        spectrum.gt(0).sum(-1).float(), basis,
+        spectrum.gt(0).sum(-1).float(), basis, permutation, old.channel_axis,
     )
-    if not all_finite([getattr(new, f.name) for f in fields(new)]):
+    if not all_finite(new.tensors()):
         raise FloatingPointError("Nonfinite auxiliary update; old state was retained")
     return new
+
+
+@torch.no_grad()
+def aligned_structure_sweep(weights, old, config, rematch):
+    """One joint P/H step, followed by native-coordinate L/S/U/controller steps."""
+    residuals = {
+        p: weights[p] - old[p].low_rank - old[p].sparse + old[p].dual for p in PROJECTIONS
+    }
+    permutation = old["gate"].permutation
+    if rematch:
+        permutation = match_channels(
+            residuals, {p: old[p].shared for p in PROJECTIONS}, permutation,
+            config["salaad"]["channel_alignment"],
+        )
+    shared = {
+        p: aligned_mean(residuals[p], permutation, int(p == "down")) for p in PROJECTIONS
+    }
+    return {
+        p: structure_sweep(weights[p], old[p], config, shared=shared[p], permutation=permutation)
+        for p in PROJECTIONS
+    }
 
 
 class ConsensusManager:
@@ -205,13 +266,27 @@ class ConsensusManager:
         self.states, self.anchors = {}, {}
         self.initialized = False
         self.last_structure_step = None
+        self.last_matching_step = None
         self.sweeps = 0
         self.device = groups[0].weight().device
+        self.alignment = config["salaad"].get("channel_alignment", {})
+        self.aligned = self.alignment.get("enabled", False)
+        self.layers = layer_groups(groups) if self.aligned else {}
+        self.group_layers = {
+            group.name: layer for layer, triplet in self.layers.items() for group in triplet.values()
+        }
+
+    def owner(self, index):
+        key = self.group_layers[self.groups[index].name] if self.aligned else index
+        return key % world_size()
 
     def owned(self):
         # Owners split auxiliary storage and SVD work across ranks; every rank
         # still uses the full MoE model for forward passes.
-        return [(i, g) for i, g in enumerate(self.groups) if i % world_size() == rank()]
+        return [(i, g) for i, g in enumerate(self.groups) if self.owner(i) == rank()]
+
+    def owned_layers(self):
+        return [(layer, triplet) for layer, triplet in self.layers.items() if layer % world_size() == rank()]
 
     @torch.no_grad()
     def initialize(self, step):
@@ -219,21 +294,32 @@ class ConsensusManager:
             raise RuntimeError("SALAAD state is already initialized")
         staged, error = {}, None
         try:
-            for _, group in self.owned():
-                state = initial_state(group.weight(), self.config)
-                if not all_finite([state.anchor()]):
-                    raise FloatingPointError(f"Nonfinite initial state: {group.name}")
-                staged[group.name] = state
+            if self.aligned:
+                for _, triplet in self.owned_layers():
+                    weights = {p: triplet[p].weight() for p in PROJECTIONS}
+                    permutation, shared = initialize_alignment(weights, self.alignment)
+                    for p in PROJECTIONS:
+                        staged[triplet[p].name] = initial_state(
+                            weights[p], self.config, shared=shared[p],
+                            permutation=permutation, channel_axis=int(p == "down"),
+                        )
+            else:
+                for _, group in self.owned():
+                    staged[group.name] = initial_state(group.weight(), self.config)
+            for name, state in staged.items():
+                if not all_finite([*state.tensors(), state.anchor()]):
+                    raise FloatingPointError(f"Nonfinite initial state: {name}")
         except Exception as exc:
             error = exc
         agree_or_raise(error, self.device, "SALAAD initialization failed")
         self.states, self.initialized, self.last_structure_step = staged, True, step
+        self.last_matching_step = step if self.aligned else None
         self.refresh_anchors()
 
     @torch.no_grad()
     def refresh_anchors(self):
         for i, group in enumerate(self.groups):
-            owner = i % world_size()
+            owner = self.owner(i)
             if owner == rank():
                 value = self.states[group.name].anchor().contiguous()
             else:
@@ -267,18 +353,31 @@ class ConsensusManager:
     @torch.no_grad()
     def update(self, step):
         staged, error = {}, None
+        interval = self.alignment.get("match_every_optimizer_steps", 0)
+        rematch = self.aligned and interval > 0 and step % interval == 0 and step > self.last_matching_step
         try:
-            for _, group in self.owned():
-                x, state = group.weight(), self.states[group.name]
-                for _ in range(self.config["salaad"]["structure_inner_steps"]):
-                    state = structure_sweep(x, state, self.config)
-                staged[group.name] = state
+            if self.aligned:
+                for _, triplet in self.owned_layers():
+                    states = aligned_structure_sweep(
+                        {p: triplet[p].weight() for p in PROJECTIONS},
+                        {p: self.states[triplet[p].name] for p in PROJECTIONS},
+                        self.config, rematch,
+                    )
+                    staged.update({triplet[p].name: states[p] for p in PROJECTIONS})
+            else:
+                for _, group in self.owned():
+                    x, state = group.weight(), self.states[group.name]
+                    for _ in range(self.config["salaad"]["structure_inner_steps"]):
+                        state = structure_sweep(x, state, self.config)
+                    staged[group.name] = state
         except Exception as exc:
             error = exc
         # Nothing has modified the current states or anchors before consensus.
         agree_or_raise(error, self.device, "SALAAD sweep failed (no state committed)")
         self.states = staged
         self.last_structure_step = step
+        if rematch:
+            self.last_matching_step = step
         self.sweeps += self.config["salaad"]["structure_inner_steps"]
         self.refresh_anchors()
 
@@ -336,18 +435,33 @@ class ConsensusManager:
             "initialized": self.initialized,
             "last_structure_step": self.last_structure_step,
             "sweeps": self.sweeps,
+            "channel_alignment": self.aligned,
+            "last_matching_step": self.last_matching_step,
             "states": {name: state.state_dict() for name, state in self.states.items()},
         }
 
     def load_shards(self, shards):
-        """Read complete owner shards; reassign whole groups to the current DP."""
+        """Restore native states and P; assign complete layers to aligned DP owners."""
         error, staged, metadata = None, {}, None
         try:
             if not shards:
                 raise ValueError("No SALAAD state shards")
-            metadata = [(s["initialized"], s["last_structure_step"], s["sweeps"]) for s in shards]
+            metadata = [
+                (
+                    s["initialized"], s["last_structure_step"], s["sweeps"],
+                    s.get("channel_alignment", False), s.get("last_matching_step"),
+                )
+                for s in shards
+            ]
             if len(set(metadata)) != 1:
                 raise ValueError("Inconsistent SALAAD checkpoint shards")
+            initialized, last_structure, _, aligned, last_matching = metadata[0]
+            if aligned != self.aligned:
+                raise ValueError("Checkpoint channel-alignment mode differs from configuration")
+            if initialized and self.aligned and (
+                type(last_matching) is not int or not 0 <= last_matching <= last_structure
+            ):
+                raise ValueError("Invalid checkpoint channel-matching step")
             if metadata[0][0]:
                 available = {}
                 for shard in shards:
@@ -371,10 +485,10 @@ class ConsensusManager:
                             for key in ("tau_l", "tau_s", "rank_ratio", "density", "actual_rank")
                         )
                     )
-                    if not valid_shapes or not all_finite(
-                        [getattr(state, f.name) for f in fields(state)]
-                    ):
+                    if not valid_shapes or not all_finite(state.tensors()):
                         raise ValueError(f"Invalid auxiliary checkpoint: {group.name}")
+                    if (state.permutation is not None) != self.aligned:
+                        raise ValueError(f"Missing or unexpected channel permutation: {group.name}")
                     if (
                         (state.rank_ratio < 0).any()
                         or (state.rank_ratio > 1).any()
@@ -383,10 +497,35 @@ class ConsensusManager:
                     ):
                         raise ValueError(f"Invalid auxiliary controller state: {group.name}")
                     staged[group.name] = state
+                if self.aligned:
+                    validate_layer_states(staged, self.alignment["reference_expert"])
         except Exception as exc:
             error = exc
         agree_or_raise(error, self.device, "Auxiliary checkpoint load")
-        self.initialized, self.last_structure_step, self.sweeps = metadata[0]
+        self.initialized, self.last_structure_step, self.sweeps, _, self.last_matching_step = metadata[0]
         self.states = staged
         if self.initialized:
             self.refresh_anchors()
+
+
+def validate_layer_states(states, reference_expert):
+    """Check saved triplets and share one immutable P tensor within each layer."""
+    layers = {}
+    for name, state in states.items():
+        layer, projection = name.rsplit(".", 1)
+        layers.setdefault(layer, {})[projection] = state
+    for layer, triplet in layers.items():
+        if set(triplet) != set(PROJECTIONS):
+            raise ValueError(f"Incomplete channel-alignment checkpoint layer: {layer}")
+        permutation = triplet["gate"].permutation
+        for p, state in triplet.items():
+            if state.channel_axis != int(p == "down"):
+                raise ValueError(f"Wrong saved channel axis: {layer}.{p}")
+            validate_permutation(
+                state.permutation, len(state.low_rank), state.shared.shape[state.channel_axis],
+                reference_expert,
+            )
+            if not torch.equal(state.permutation, permutation):
+                raise ValueError(f"gate/up/down permutations disagree: {layer}")
+        for state in triplet.values():
+            state.permutation = permutation

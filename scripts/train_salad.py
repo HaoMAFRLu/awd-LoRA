@@ -124,7 +124,11 @@ def main(cfg_version='smoke_dclm_bf16', path_cfg=None, folder='salaad_moe',
 
         # 4. Trainer handles task optimization; its ConsensusManager handles
         # SALAAD structure. Set salaad.enabled=false for the vanilla MoE baseline.
-        trainer = Trainer(config, corpus, training_device)
+        # Restore P and the streaming basis directly on resume; do not rerun
+        # initial matching/SVD on a disposable random model.
+        trainer = Trainer(
+            config, corpus, training_device, initialize_auxiliary=not (resume or branch_from),
+        )
         return trainer.run(
             run_directory, resume=resume, stop_after=num_total_iters, branch_from=branch_from,
         )
