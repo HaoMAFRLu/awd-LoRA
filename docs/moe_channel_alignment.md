@@ -1,5 +1,9 @@
 # MoE 通道对齐训练
 
+Sinkhorn 软对应见 [实现与运行说明](moe_sinkhorn_alignment.md)，配置为
+`ns97m_sinkhorn`：vanilla 100 步后初始化，每 10 步随 L/S 更新 P，内部梯度步数为 8。
+下文描述原有硬置换算法。
+
 入口仍是 `scripts/train_salad.py`。选择 `--cfg_version ns97m_aligned` 启用已讨论的算法。
 `ns97m` 保留为不对齐的 consensus 对照，`ns97m_independent_ls` 保留为 independent L+S 对照。
 

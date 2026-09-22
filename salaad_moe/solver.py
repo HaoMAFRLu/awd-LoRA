@@ -16,6 +16,10 @@ from .alignment import (
     PROJECTIONS, aligned_mean, initialize_alignment, layer_groups, match_channels,
     native_shared, validate_permutation,
 )
+from .sinkhorn import (
+    initialize_soft_alignment, least_squares_shared, update_soft_alignment,
+    validate_soft_state, validate_transport,
+)
 
 
 def soft_threshold(x, threshold):
@@ -113,6 +117,8 @@ class GroupState:
     # X/L/S/U/basis stay native; shared alone is in common coordinates.
     permutation: torch.Tensor | None = None
     channel_axis: int | None = None
+    # Soft mode: permutation is FP32 [expert, shared, native], with these logits.
+    alignment_logits: torch.Tensor | None = None
 
     def native_shared(self):
         return native_shared(self.shared, self.permutation, self.channel_axis)
@@ -141,23 +147,32 @@ class GroupState:
     def from_state_dict(cls, state, device):
         values = {
             f.name: state[f.name].to(device=device, dtype=torch.float32)
-            for f in fields(cls) if f.name not in ("permutation", "channel_axis")
+            for f in fields(cls) if f.name not in ("permutation", "channel_axis", "alignment_logits")
         }
         permutation = state.get("permutation")
         axis = state.get("channel_axis")
+        logits = state.get("alignment_logits")
         if permutation is not None:
             if axis not in (0, 1) or isinstance(axis, bool):
                 raise ValueError("Invalid auxiliary channel axis")
-            validate_permutation(
+            validator = validate_transport if logits is not None else validate_permutation
+            validator(
                 permutation, values["low_rank"].shape[0], values["shared"].shape[axis]
             )
+            if logits is not None:
+                if (
+                    not isinstance(logits, torch.Tensor) or logits.dtype != torch.float32
+                    or logits.shape != permutation.shape or not torch.isfinite(logits).all()
+                ):
+                    raise ValueError("Invalid auxiliary Sinkhorn logits")
+                logits = logits.to(device=device)
             permutation = permutation.to(device=device)
-        elif axis is not None:
+        elif axis is not None or logits is not None:
             raise ValueError("Auxiliary channel permutation is missing")
-        return cls(**values, permutation=permutation, channel_axis=axis)
+        return cls(**values, permutation=permutation, channel_axis=axis, alignment_logits=logits)
 
 
-def initial_state(x, config, *, shared=None, permutation=None, channel_axis=None):
+def initial_state(x, config, *, shared=None, permutation=None, channel_axis=None, alignment_logits=None):
     # By default: shared = expert mean, L = 0, S = X - shared, U = 0.
     # The initial constraint residual is zero, avoiding a sudden large penalty
     # gradient when the auxiliary states are initialized.
@@ -184,11 +199,12 @@ def initial_state(x, config, *, shared=None, permutation=None, channel_axis=None
         basis,
         permutation,
         channel_axis,
+        alignment_logits,
     )
 
 
 @torch.no_grad()
-def structure_sweep(x, old, config, *, shared=None, permutation=None):
+def structure_sweep(x, old, config, *, shared=None, permutation=None, alignment_logits=None):
     """Hold the current model weights X fixed and run one shared -> L -> S -> U update."""
     s, ctl = config["salaad"], config["salaad"]["controller"]
     mode = s.get("shared_mode", "learned")
@@ -231,7 +247,7 @@ def structure_sweep(x, old, config, *, shared=None, permutation=None):
         tau_s = tau_s + ctl["gain_beta"] * (density - ctl["target_density"])
     new = GroupState(
         shared, low, sparse, dual, tau_l, tau_s, ratio, density,
-        spectrum.gt(0).sum(-1).float(), basis, permutation, old.channel_axis,
+        spectrum.gt(0).sum(-1).float(), basis, permutation, old.channel_axis, alignment_logits,
     )
     if not all_finite(new.tensors()):
         raise FloatingPointError("Nonfinite auxiliary update; old state was retained")
@@ -245,16 +261,27 @@ def aligned_structure_sweep(weights, old, config, rematch):
         p: weights[p] - old[p].low_rank - old[p].sparse + old[p].dual for p in PROJECTIONS
     }
     permutation = old["gate"].permutation
-    if rematch:
+    logits = old["gate"].alignment_logits
+    if logits is not None:
+        if rematch:
+            permutation, logits = update_soft_alignment(
+                residuals, {p: old[p].shared for p in PROJECTIONS}, permutation,
+                logits, config["salaad"]["channel_alignment"],
+            )
+        shared = least_squares_shared(residuals, permutation)
+    elif rematch:
         permutation = match_channels(
             residuals, {p: old[p].shared for p in PROJECTIONS}, permutation,
             config["salaad"]["channel_alignment"],
         )
-    shared = {
-        p: aligned_mean(residuals[p], permutation, int(p == "down")) for p in PROJECTIONS
-    }
+    if logits is None:
+        shared = {
+            p: aligned_mean(residuals[p], permutation, int(p == "down")) for p in PROJECTIONS
+        }
     return {
-        p: structure_sweep(weights[p], old[p], config, shared=shared[p], permutation=permutation)
+        p: structure_sweep(
+            weights[p], old[p], config, shared=shared[p], permutation=permutation, alignment_logits=logits,
+        )
         for p in PROJECTIONS
     }
 
@@ -271,6 +298,8 @@ class ConsensusManager:
         self.device = groups[0].weight().device
         self.alignment = config["salaad"].get("channel_alignment", {})
         self.aligned = self.alignment.get("enabled", False)
+        self.alignment_method = self.alignment.get("method", "hungarian") if self.aligned else "none"
+        self.soft_aligned = self.alignment_method == "sinkhorn"
         self.layers = layer_groups(groups) if self.aligned else {}
         self.group_layers = {
             group.name: layer for layer, triplet in self.layers.items() for group in triplet.values()
@@ -297,11 +326,16 @@ class ConsensusManager:
             if self.aligned:
                 for _, triplet in self.owned_layers():
                     weights = {p: triplet[p].weight() for p in PROJECTIONS}
-                    permutation, shared = initialize_alignment(weights, self.alignment)
+                    logits = None
+                    if self.soft_aligned:
+                        permutation, shared, logits = initialize_soft_alignment(weights, self.alignment)
+                    else:
+                        permutation, shared = initialize_alignment(weights, self.alignment)
                     for p in PROJECTIONS:
                         staged[triplet[p].name] = initial_state(
                             weights[p], self.config, shared=shared[p],
                             permutation=permutation, channel_axis=int(p == "down"),
+                            alignment_logits=logits,
                         )
             else:
                 for _, group in self.owned():
@@ -361,6 +395,9 @@ class ConsensusManager:
             self.aligned and interval > 0 and elapsed > 0
             and elapsed % interval == 0 and step > self.last_matching_step
         )
+        # Soft P follows every structure sweep, including an off-period final flush.
+        if self.soft_aligned:
+            rematch = step > self.last_matching_step
         try:
             if self.aligned:
                 for _, triplet in self.owned_layers():
@@ -442,6 +479,7 @@ class ConsensusManager:
             "last_structure_step": self.last_structure_step,
             "sweeps": self.sweeps,
             "channel_alignment": self.aligned,
+            "alignment_method": self.alignment_method,
             "last_matching_step": self.last_matching_step,
             "states": {name: state.state_dict() for name, state in self.states.items()},
         }
@@ -456,13 +494,14 @@ class ConsensusManager:
                 (
                     s["initialized"], s["last_structure_step"], s["sweeps"],
                     s.get("channel_alignment", False), s.get("last_matching_step"),
+                    s.get("alignment_method", "hungarian" if s.get("channel_alignment", False) else "none"),
                 )
                 for s in shards
             ]
             if len(set(metadata)) != 1:
                 raise ValueError("Inconsistent SALAAD checkpoint shards")
-            initialized, last_structure, _, aligned, last_matching = metadata[0]
-            if aligned != self.aligned:
+            initialized, last_structure, _, aligned, last_matching, method = metadata[0]
+            if aligned != self.aligned or method != self.alignment_method:
                 raise ValueError("Checkpoint channel-alignment mode differs from configuration")
             if initialized and self.aligned and (
                 type(last_matching) is not int or not 0 <= last_matching <= last_structure
@@ -495,6 +534,8 @@ class ConsensusManager:
                         raise ValueError(f"Invalid auxiliary checkpoint: {group.name}")
                     if (state.permutation is not None) != self.aligned:
                         raise ValueError(f"Missing or unexpected channel permutation: {group.name}")
+                    if (state.alignment_logits is not None) != self.soft_aligned:
+                        raise ValueError(f"Missing or unexpected Sinkhorn logits: {group.name}")
                     if (
                         (state.rank_ratio < 0).any()
                         or (state.rank_ratio > 1).any()
@@ -504,17 +545,17 @@ class ConsensusManager:
                         raise ValueError(f"Invalid auxiliary controller state: {group.name}")
                     staged[group.name] = state
                 if self.aligned:
-                    validate_layer_states(staged, self.alignment["reference_expert"])
+                    validate_layer_states(staged, self.alignment["reference_expert"], self.alignment)
         except Exception as exc:
             error = exc
         agree_or_raise(error, self.device, "Auxiliary checkpoint load")
-        self.initialized, self.last_structure_step, self.sweeps, _, self.last_matching_step = metadata[0]
+        self.initialized, self.last_structure_step, self.sweeps, _, self.last_matching_step, _ = metadata[0]
         self.states = staged
         if self.initialized:
             self.refresh_anchors()
 
 
-def validate_layer_states(states, reference_expert):
+def validate_layer_states(states, reference_expert, alignment=None):
     """Check saved triplets and share one immutable P tensor within each layer."""
     layers = {}
     for name, state in states.items():
@@ -524,14 +565,25 @@ def validate_layer_states(states, reference_expert):
         if set(triplet) != set(PROJECTIONS):
             raise ValueError(f"Incomplete channel-alignment checkpoint layer: {layer}")
         permutation = triplet["gate"].permutation
+        logits = triplet["gate"].alignment_logits
+        if logits is not None:
+            if alignment is None or alignment.get("method") != "sinkhorn":
+                raise ValueError("Missing soft alignment configuration")
+            validate_soft_state(permutation, logits, alignment)
         for p, state in triplet.items():
             if state.channel_axis != int(p == "down"):
                 raise ValueError(f"Wrong saved channel axis: {layer}.{p}")
-            validate_permutation(
+            validator = validate_transport if logits is not None else validate_permutation
+            validator(
                 state.permutation, len(state.low_rank), state.shared.shape[state.channel_axis],
                 reference_expert,
             )
             if not torch.equal(state.permutation, permutation):
                 raise ValueError(f"gate/up/down permutations disagree: {layer}")
+            if (state.alignment_logits is None) != (logits is None) or (
+                logits is not None and not torch.equal(state.alignment_logits, logits)
+            ):
+                raise ValueError(f"gate/up/down Sinkhorn logits disagree: {layer}")
         for state in triplet.values():
             state.permutation = permutation
+            state.alignment_logits = logits

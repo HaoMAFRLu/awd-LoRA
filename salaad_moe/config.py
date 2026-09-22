@@ -266,6 +266,9 @@ def validate_config(c: dict, world_size=None) -> None:
         if not s.get("low_rank_enabled", True) and not s.get("sparse_enabled", True):
             raise ValueError("At least one residual component is required")
         if aligned:
+            method = alignment.get("method", "hungarian")
+            if method not in ("hungarian", "sinkhorn"):
+                raise ValueError("Channel alignment method must be hungarian or sinkhorn")
             if set(s["projections"]) != {"gate", "up", "down"}:
                 raise ValueError("Channel alignment requires all three SwiGLU projections")
             if s.get("shared_mode", "learned") != "learned":
@@ -285,6 +288,26 @@ def validate_config(c: dict, world_size=None) -> None:
             tolerance = alignment.get("improvement_tolerance")
             if not isinstance(tolerance, (int, float)) or not math.isfinite(tolerance) or tolerance < 0:
                 raise ValueError("Alignment improvement tolerance must be finite and nonnegative")
+            if method == "sinkhorn":
+                if interval != s["guidance_period_optimizer_steps"]:
+                    raise ValueError("Sinkhorn P must update on every L/S structure sweep")
+                settings = alignment.get("sinkhorn")
+                if not isinstance(settings, dict):
+                    raise ValueError("Missing Sinkhorn settings")
+                for key in ("inner_steps", "max_iterations"):
+                    if type(settings.get(key)) is not int or settings[key] < 1:
+                        raise ValueError(f"sinkhorn.{key} must be a positive integer")
+                for key in ("temperature", "learning_rate", "initial_softening", "marginal_tolerance"):
+                    value = settings.get(key)
+                    if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
+                        raise ValueError(f"sinkhorn.{key} must be finite and positive")
+                if settings["initial_softening"] >= 1 or settings["marginal_tolerance"] > 1e-4:
+                    raise ValueError("Invalid Sinkhorn softening or marginal tolerance")
+                movement = settings.get("move_penalty_over_rho")
+                if type(movement) not in (int, float) or not math.isfinite(movement) or movement < 0:
+                    raise ValueError("Sinkhorn movement penalty must be finite and nonnegative")
+                if movement > 0 and settings["inner_steps"] < 2:
+                    raise ValueError("Movement penalty requires at least two P gradient steps")
 
 
 def parameter_counts(c: dict) -> dict:

@@ -1,0 +1,7 @@
+inherits: smoke_sinkhorn.yaml
+experiment: moe_sinkhorn_cpu_dp2_smoke
+training:
+  accumulation_steps: 1
+parallel:
+  world_size: 2
+  data_parallel_size: 2

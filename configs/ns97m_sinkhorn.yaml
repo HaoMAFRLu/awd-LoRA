@@ -1,0 +1,18 @@
+# Initialize before training; joint soft P/shared/L/S/U sweeps at 10, 20, ..., 2100.
+inherits: ns97m_aligned.yaml
+experiment: moe_ns97m_sinkhorn
+salaad:
+  state_initialization_step: 0
+  initialization: soft_aligned_shared_least_squares_L_zero_S_residual_dual_zero
+  channel_alignment:
+    method: sinkhorn
+    match_every_optimizer_steps: 10
+    sinkhorn:
+      inner_steps: 8
+      temperature: 1.0
+      # SGD on F/rho, not the model AdamW learning rate.
+      learning_rate: 1.0
+      move_penalty_over_rho: 1.0
+      initial_softening: 0.1
+      max_iterations: 100
+      marginal_tolerance: 1.0e-5

@@ -1,0 +1,66 @@
+{
+  "date": "2026-09-22",
+  "config": "ns97m_sinkhorn",
+  "state_initialization_step": 0,
+  "structure_and_p_period_optimizer_steps": 10,
+  "p_inner_gradient_steps": 8,
+  "task_training_hyperparameters_unchanged": true,
+  "submission_schedule_validation": {
+    "state_initialization_step": 0,
+    "small_model_optimizer_steps": 20,
+    "observed_joint_p_l_s_update_steps": [10, 20],
+    "constraint_active_before_first_structure_update": true,
+    "rho": 1e-5,
+    "p_inner_gradient_steps": 8,
+    "sinkhorn_tests_rerun_passed": 9,
+    "task_hyperparameters_and_submission_resources_unchanged": true
+  },
+  "unit_tests": {
+    "command": "myenv/bin/python -m unittest discover -s tests/moe -p 'test_*.py' -q",
+    "passed": 88,
+    "seconds": 14.672,
+    "note": "Final run outside the sandbox because an existing Gloo entrypoint test requires local socket access."
+  },
+  "dp2": {
+    "command": "myenv/bin/torchrun --standalone --nproc-per-node=2 tests/moe/alignment_distributed_worker.py /tmp/moe_sinkhorn_dp2_20260922 --sinkhorn",
+    "steps": 8,
+    "initialization_step": 3,
+    "resume_steps": [2, 3, 7],
+    "bitwise_model_optimizer_auxiliary_reader_rng_resume": "passed",
+    "empty_owner_rank": "passed",
+    "collective_failure_and_state_retention": "passed",
+    "corrupt_soft_permutation_rejection": "passed",
+    "joint_layer_ownership_and_anchor_broadcast": "passed"
+  },
+  "cuda_bfloat16_cli": {
+    "device": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+    "config": "smoke_sinkhorn with task_precision=bfloat16 and rho=1e-5",
+    "pause_step": 5,
+    "resumed_to_step": 8,
+    "result": "passed",
+    "output": "/tmp/moe_sinkhorn_cuda_cli_20260922"
+  },
+  "cuda_formal_matrix_dimensions": {
+    "scope": "One synthetic layer: initialization, eight P gradient steps, shared solve and saved A/P consistency; not a full training quality benchmark.",
+    "experts": 64,
+    "channels": 176,
+    "hidden_size": 256,
+    "objective_before": 432.40411376953125,
+    "objective_after": 432.4039306640625,
+    "p_change_frobenius": 0.0015538895968347788,
+    "maximum_marginal_error": 5.125999450683594e-6,
+    "peak_allocated_mib": 431.65087890625
+  },
+  "coverage": [
+    "True joint reconstruction gradient agrees with explicit autodiff for eight steps",
+    "Movement penalty uses the fixed outer-iteration P",
+    "Soft shared normal equations recover a known shared matrix",
+    "Vanilla prefix matches ordinary task training",
+    "P updates alongside L/S including the final off-period flush",
+    "FP32 auxiliary state under BF16 task computation",
+    "Soft checkpoint consistency and legacy hard checkpoint compatibility",
+    "v4 export preserves soft native reconstruction and excludes U",
+    "Existing unaligned and hard-alignment regression tests"
+  ],
+  "formal_sinkhorn_cluster_job_submitted_at_validation": false
+}

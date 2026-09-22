@@ -52,11 +52,20 @@ def validate_permutation(permutation, experts, channels, reference_expert=None):
 
 
 def native_shared(shared, permutation=None, channel_axis=None):
-    """Return P.T @ H for gate/up, or H @ P for down, without dense P matrices."""
+    """Map H to native channels: indexing for hard P, matrix products for soft P."""
     if permutation is None:
         if channel_axis is not None:
             raise ValueError("A channel axis requires a permutation")
         return shared
+    if permutation.ndim == 3:
+        # Soft P uses explicit [expert, shared, native] matrices.
+        from .sinkhorn import full_precision
+        with full_precision(shared.device):
+            if channel_axis == 0:
+                return permutation.mT @ shared
+            if channel_axis == 1:
+                return shared @ permutation
+        raise ValueError("Invalid soft channel axis")
     if channel_axis == 0:
         return shared[permutation]
     if channel_axis == 1:

@@ -10,6 +10,20 @@ from .checkpoint import atomic_save, checkpoint_metadata, load_torch
 from .model import MoELanguageModel
 from .alignment import native_shared, validate_permutation
 from .solver import GroupState, validate_layer_states
+from .sinkhorn import validate_transport
+
+
+def alignment_method(config):
+    alignment = config["salaad"].get("channel_alignment", {})
+    return alignment.get("method", "hungarian") if alignment.get("enabled", False) else "none"
+
+
+def export_format(config):
+    return {
+        "none": "salaad_moe.export.v2",
+        "hungarian": "salaad_moe.export.v3",
+        "sinkhorn": "salaad_moe.export.v4",
+    }[alignment_method(config)]
 
 
 def tensor_bytes(value):
@@ -82,7 +96,10 @@ def export_group(state):
         result.update(
             permutation=state.permutation.detach().cpu().clone(),
             channel_axis=state.channel_axis,
-            permutation_convention="native_to_shared",
+            permutation_convention=(
+                "shared_to_native_doubly_stochastic"
+                if state.alignment_logits is not None else "native_to_shared"
+            ),
         )
     return result
 
@@ -93,9 +110,13 @@ def materialize_group(group, device="cpu"):
     permutation = group.get("permutation")
     if permutation is not None:
         axis = group.get("channel_axis")
-        if type(axis) is not int or axis not in (0, 1) or group.get("permutation_convention") != "native_to_shared":
+        convention = group.get("permutation_convention")
+        if type(axis) is not int or axis not in (0, 1) or convention not in (
+            "native_to_shared", "shared_to_native_doubly_stochastic",
+        ):
             raise ValueError("Unsupported exported channel-permutation convention")
-        validate_permutation(permutation, len(group["experts"]), shared.shape[axis])
+        validator = validate_transport if convention == "shared_to_native_doubly_stochastic" else validate_permutation
+        validator(permutation, len(group["experts"]), shared.shape[axis])
         mapped = native_shared(shared, permutation.to(device=device), axis)
     else:
         mapped = shared.expand(len(group["experts"]), -1, -1)
@@ -112,12 +133,15 @@ def checkpoint_states(path, device="cpu"):
     payload = load_torch(path / "training.pt")
     states = {}
     aligned = payload["config"]["salaad"].get("channel_alignment", {}).get("enabled", False)
+    method = alignment_method(payload["config"])
     for i in range(meta["world_size"]):
         shard = load_torch(path / f"rank_{i:05d}.pt")["salaad"]
         if shard is None or not shard["initialized"]:
             raise ValueError("This checkpoint has no initialized SALAAD decomposition")
         if shard.get("channel_alignment", False) != aligned:
             raise ValueError("Checkpoint channel-alignment metadata is inconsistent")
+        if shard.get("alignment_method", "hungarian" if aligned else "none") != method:
+            raise ValueError("Checkpoint channel-alignment method is inconsistent")
         if set(states) & set(shard["states"]):
             raise ValueError("Duplicate auxiliary group")
         states.update(
@@ -128,6 +152,8 @@ def checkpoint_states(path, device="cpu"):
         )
     if any((state.permutation is not None) != aligned for state in states.values()):
         raise ValueError("Checkpoint channel permutations are missing or unexpected")
+    if any((state.alignment_logits is not None) != (method == "sinkhorn") for state in states.values()):
+        raise ValueError("Checkpoint Sinkhorn logits are missing or unexpected")
     expected = {
         f"layers.{layer}.moe.experts.{projection}"
         for layer in range(payload["config"]["model"]["num_layers"])
@@ -136,7 +162,8 @@ def checkpoint_states(path, device="cpu"):
     if set(states) != expected:
         raise ValueError("Checkpoint decomposition groups do not match the model")
     if aligned:
-        validate_layer_states(states, payload["config"]["salaad"]["channel_alignment"]["reference_expert"])
+        alignment = payload["config"]["salaad"]["channel_alignment"]
+        validate_layer_states(states, alignment["reference_expert"], alignment)
     return payload, states
 
 
@@ -144,11 +171,7 @@ def export_checkpoint(checkpoint, output, device="cpu"):
     payload, states = checkpoint_states(checkpoint, device)
     config = payload["config"]
     artifact = {
-        "format": (
-            "salaad_moe.export.v3"
-            if config["salaad"].get("channel_alignment", {}).get("enabled", False)
-            else "salaad_moe.export.v2"
-        ),
+        "format": export_format(config),
         "config": config,
         "source_step": payload["step"],
         "source_config_hash": payload["config_hash"],
@@ -189,11 +212,12 @@ def export_checkpoint(checkpoint, output, device="cpu"):
 def load_evaluation_model(path, mode="raw", device="cpu"):
     if mode == "exported":
         artifact = load_torch(path)
-        if artifact["format"] not in ("salaad_moe.export.v2", "salaad_moe.export.v3"):
+        if artifact["format"] not in ("salaad_moe.export.v2", "salaad_moe.export.v3", "salaad_moe.export.v4"):
             raise ValueError("Unsupported export")
         config = artifact["config"]
         aligned = config["salaad"].get("channel_alignment", {}).get("enabled", False)
-        if aligned != (artifact["format"] == "salaad_moe.export.v3") or any(
+        soft = alignment_method(config) == "sinkhorn"
+        if artifact["format"] != export_format(config) or any(
             ("permutation" in group) != aligned for group in artifact["groups"].values()
         ):
             raise ValueError("Export format and channel permutations disagree")
@@ -211,9 +235,15 @@ def load_evaluation_model(path, mode="raw", device="cpu"):
                     group = artifact["groups"][prefix + p]
                     if group.get("channel_axis") != int(p == "down") or not torch.equal(group["permutation"], permutation):
                         raise ValueError("Exported gate/up/down permutations or axes disagree")
-                validate_permutation(
+                    expected_convention = "shared_to_native_doubly_stochastic" if soft else "native_to_shared"
+                    if group.get("permutation_convention") != expected_convention:
+                        raise ValueError("Exported channel convention disagrees with the configuration")
+                validator = validate_transport if soft else validate_permutation
+                validator(
                     permutation, config["model"]["num_experts"], config["model"]["expert_ffn_hidden_size"],
                     config["salaad"]["channel_alignment"]["reference_expert"],
+                    **({"tolerance": config["salaad"]["channel_alignment"]["sinkhorn"]["marginal_tolerance"]}
+                       if soft else {}),
                 )
         weights = dict(artifact["untouched"])
         weights.update(
