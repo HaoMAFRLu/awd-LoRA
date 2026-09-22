@@ -1,0 +1,6 @@
+# Match before the first optimizer step; keep P fixed throughout H+L+S training.
+inherits: ns97m_aligned.yaml
+experiment: moe_ns97m_aligned_fixed
+salaad:
+  channel_alignment:
+    match_every_optimizer_steps: 0

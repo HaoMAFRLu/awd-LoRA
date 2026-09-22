@@ -184,6 +184,39 @@ class AlignmentTests(unittest.TestCase):
             self.assertFalse(manager.after_step(7, final=True))
             self.assertEqual(manager.sweeps, 4)
 
+    def test_delayed_matching_uses_initialization_offset_and_fixed_p_stays_fixed(self):
+        _, _, weights = permuted_experts()
+        self.c["salaad"]["state_initialization_step"] = 3
+        for interval, expected_last_match in ((4, 7), (0, 3)):
+            self.settings["match_every_optimizer_steps"] = interval
+            manager = ConsensusManager(groups_from(weights), self.c)
+            for step in (1, 2):
+                self.assertFalse(manager.after_step(step))
+                self.assertFalse(manager.initialized)
+                self.assertEqual(manager.states, {})
+                self.assertEqual(manager.anchors, {})
+                self.assertEqual(manager.inject_gradients(1), (0.0, None))
+            self.assertTrue(manager.after_step(3))
+            initial_p = manager.states[manager.groups[0].name].permutation.clone()
+            updates, matching_steps = [], []
+            with patch("salaad_moe.solver.match_channels", wraps=match_channels) as matching:
+                for step in range(4, 9):
+                    before = matching.call_count
+                    if manager.after_step(step, final=step == 8):
+                        updates.append(step)
+                    if matching.call_count != before:
+                        matching_steps.append(step)
+                    if interval == 0:
+                        torch.testing.assert_close(
+                            manager.states[manager.groups[0].name].permutation,
+                            initial_p, rtol=0, atol=0,
+                        )
+            self.assertEqual(updates, [5, 7, 8])
+            self.assertEqual(matching_steps, [7] if interval else [])
+            self.assertEqual(manager.last_matching_step, expected_last_match)
+            self.assertEqual(manager.sweeps, 3)
+            self.assertFalse(manager.after_step(8, final=True))
+
     def test_layer_owners_and_failed_matching_are_atomic(self):
         _, _, weights = permuted_experts()
         manager = ConsensusManager(groups_from(weights, layers=2), self.c)
@@ -273,7 +306,9 @@ class AlignmentTests(unittest.TestCase):
         validate_config(formal)
         self.assertEqual(formal["salaad"]["channel_alignment"]["match_every_optimizer_steps"], 100)
         for key, value in (
-            ("projections", ["down"]), ("shared_mode", "none"), ("state_initialization_step", 1),
+            ("projections", ["down"]), ("shared_mode", "none"),
+            ("state_initialization_step", -1), ("state_initialization_step", 1.5),
+            ("state_initialization_step", True), ("state_initialization_step", 8),
             ("structure_inner_steps", 2), ("auxiliary_owner", "deterministic_group_id_mod_dp"),
         ):
             invalid = copy.deepcopy(self.c)
@@ -290,6 +325,21 @@ class AlignmentTests(unittest.TestCase):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 validate_config(invalid)
 
+    def test_formal_schedule_ablations_preserve_all_other_settings(self):
+        baseline = load_config(ROOT / "configs/ns97m_aligned.yaml")
+        for name, start, interval in (
+            ("ns97m_aligned_fixed", 0, 0),
+            ("ns97m_aligned_warm100_fixed", 100, 0),
+            ("ns97m_aligned_warm100_every200", 100, 200),
+        ):
+            actual = load_config(ROOT / "configs" / (name + ".yaml"))
+            validate_config(actual, world_size=4)
+            expected = copy.deepcopy(baseline)
+            expected["experiment"] = "moe_" + name
+            expected["salaad"]["state_initialization_step"] = start
+            expected["salaad"]["channel_alignment"]["match_every_optimizer_steps"] = interval
+            self.assertEqual(actual, expected)
+
 
 class AlignedWorkflowTests(unittest.TestCase):
     def setUp(self):
@@ -300,6 +350,75 @@ class AlignedWorkflowTests(unittest.TestCase):
         self.c = load_config(ROOT / "configs/smoke_aligned.yaml")
         make_synthetic_corpus(self.c, self.path / "data", 64)
         self.corpus = TokenCorpus(self.path / "data/manifest.json", self.c)
+
+    def test_delayed_prefix_matches_vanilla_and_branch_preserves_training_state(self):
+        self.c["salaad"]["state_initialization_step"] = 3
+        vanilla_config = copy.deepcopy(self.c)
+        vanilla_config["salaad"]["enabled"] = False
+        vanilla_config["salaad"]["channel_alignment"]["enabled"] = False
+        vanilla = Trainer(vanilla_config, self.corpus, "cpu")
+        prefix = []
+        for _ in range(3):
+            record = vanilla.train_step()
+            prefix.append(copy.deepcopy((
+                vanilla.model.state_dict(), vanilla.optimizer.state_dict(),
+                vanilla.reader.state_dict(), record["lm_nll"],
+            )))
+        checkpoint = save_checkpoint(vanilla, self.path / "vanilla_prefix")
+        reference = Trainer(self.c, self.corpus, "cpu")
+        for step, expected in enumerate(prefix, 1):
+            record = reference.train_step()
+            self.assertEqual(record["constraint_gradient_norm"], 0)
+            assert_nested_equal(self, expected, (
+                reference.model.state_dict(), reference.optimizer.state_dict(),
+                reference.reader.state_dict(), record["lm_nll"],
+            ))
+            self.assertEqual(reference.manager.initialized, step == 3)
+        initial_auxiliary = reference.manager.local_state_dict()
+        for _ in range(5):
+            reference.train_step()
+        expected_rng = rng_state()
+        branched = Trainer(self.c, self.corpus, "cpu", initialize_auxiliary=False)
+        load_checkpoint(branched, checkpoint, branch_from_vanilla=True)
+        assert_nested_equal(self, initial_auxiliary, branched.manager.local_state_dict())
+        for _ in range(5):
+            branched.train_step()
+        for actual, expected in (
+            (branched.model.state_dict(), reference.model.state_dict()),
+            (branched.optimizer.state_dict(), reference.optimizer.state_dict()),
+            (branched.manager.local_state_dict(), reference.manager.local_state_dict()),
+            (branched.reader.state_dict(), reference.reader.state_dict()),
+            (rng_state(), expected_rng),
+        ):
+            assert_nested_equal(self, actual, expected)
+        self.assertEqual(branched.manager.last_matching_step, 7)
+
+    def test_delayed_resume_before_initialization_and_at_matching_boundary(self):
+        self.c["salaad"]["state_initialization_step"] = 3
+        reference = Trainer(self.c, self.corpus, "cpu")
+        checkpoints = {}
+        for step in range(1, 9):
+            reference.train_step()
+            if step in (2, 3, 7):
+                checkpoints[step] = save_checkpoint(reference, self.path / "delayed_resume")
+        expected_rng = rng_state()
+        for start, checkpoint in checkpoints.items():
+            with patch("salaad_moe.solver.initialize_alignment", wraps=initialize_alignment) as initialize:
+                resumed = Trainer(self.c, self.corpus, "cpu", initialize_auxiliary=False)
+                load_checkpoint(resumed, checkpoint)
+                self.assertEqual(initialize.call_count, 0)
+                for _ in range(start, 8):
+                    resumed.train_step()
+                self.assertEqual(initialize.call_count, self.c["model"]["num_layers"] if start < 3 else 0)
+            for actual, expected in (
+                (resumed.model.state_dict(), reference.model.state_dict()),
+                (resumed.optimizer.state_dict(), reference.optimizer.state_dict()),
+                (resumed.manager.local_state_dict(), reference.manager.local_state_dict()),
+                (resumed.reader.state_dict(), reference.reader.state_dict()),
+                (rng_state(), expected_rng),
+            ):
+                assert_nested_equal(self, actual, expected)
+            self.assertEqual(resumed.manager.last_matching_step, 7)
 
     def test_resume_between_updates_and_at_matching_boundary_is_bitwise_identical(self):
         reference = Trainer(self.c, self.corpus, "cpu")

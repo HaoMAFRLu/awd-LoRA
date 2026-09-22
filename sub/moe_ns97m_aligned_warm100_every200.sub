@@ -1,0 +1,47 @@
+# Aligned consensus; training hyperparameters/resources match job 17574041.0.
+# The inherited ns97m config is unchanged; only the alignment algorithm is added.
+universe        = vanilla
+executable      = /usr/bin/env
+arguments       = \
+    /lustre/home/hma2/projects/awd-LoRA/myenv/bin/python \
+    -u -m torch.distributed.run \
+    --standalone \
+    --nnodes=1 \
+    --nproc_per_node=4 \
+    scripts/train_salad.py \
+    --cfg_version ns97m_aligned_warm100_every200 \
+    --device cuda \
+    --cpu-threads 4 \
+    --data-manifest /lustre/home/hma2/projects/awd-LoRA/data/moe_corpora/dclm_20260916/tokens_ns97m/manifest.json \
+    --output /lustre/home/hma2/projects/awd-LoRA/data/moe/ns97m_aligned_warm100_every200/$(Cluster)_$(Process)
+
+initialdir      = /lustre/home/hma2/projects/awd-LoRA
+
+log             = jobs/moe_ns97m_aligned_warm100_every200_$(Cluster)_$(Process).log
+error           = jobs/moe_ns97m_aligned_warm100_every200_$(Cluster)_$(Process).err
+output          = jobs/moe_ns97m_aligned_warm100_every200_$(Cluster)_$(Process).out
+
+request_cpus    = 16
+request_memory  = 64000
+request_gpus    = 4
+
+# Preserve the H100 selection and hardware exclusions of the previous run.
+requirements = ( \
+    CUDACapability >= 9.0 && \
+    CUDACapability < 9.1 && \
+    CUDAGlobalMemoryMb >= 80000 && \
+    TARGET.Machine != "i106.internal.cluster.is.localnet" && \
+    TARGET.Machine != "i203.internal.cluster.is.localnet" && \
+    TARGET.Machine != "i205.internal.cluster.is.localnet" && \
+    !regexp("GPU-a82810cc", TARGET.DetectedGPUs) && \
+    !regexp("GPU-1f35d697", TARGET.DetectedGPUs) && \
+    !regexp("GPU-45d24b88", TARGET.DetectedGPUs) && \
+    !regexp("GPU-0e5a23fb", TARGET.DetectedGPUs) && \
+    !regexp("GPU-b211f480", TARGET.DetectedGPUs) \
+)
+
+should_transfer_files = NO
+getenv          = True
+environment     = "OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 WANDB_MODE=online PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+
+queue 1

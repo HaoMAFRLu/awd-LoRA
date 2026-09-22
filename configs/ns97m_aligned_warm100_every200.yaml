@@ -1,0 +1,7 @@
+# Vanilla steps 1-100; initialize at 100 and rematch at 300, 500, ..., 2100.
+inherits: ns97m_aligned.yaml
+experiment: moe_ns97m_aligned_warm100_every200
+salaad:
+  state_initialization_step: 100
+  channel_alignment:
+    match_every_optimizer_steps: 200

@@ -1,4 +1,5 @@
 """torchrun --standalone --nproc-per-node=2 this_file /tmp/new-output-directory"""
+import argparse
 import copy
 import json
 from pathlib import Path
@@ -35,6 +36,10 @@ def equal(first, second):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("output", type=Path)
+    parser.add_argument("--delayed-initialization", action="store_true")
+    args = parser.parse_args()
     torch.set_num_threads(1)
     dist.init_process_group("gloo")
     try:
@@ -81,7 +86,9 @@ def main():
             raise AssertionError("Corrupt P was accepted on a DP rank")
 
         # Two layers now exercise different owners and real task/Adam updates.
-        output = Path(sys.argv[1])
+        output = args.output
+        if args.delayed_initialization:
+            config["salaad"]["state_initialization_step"] = 3
         error = None
         if current_rank == 0:
             try:
@@ -91,25 +98,33 @@ def main():
         agree_or_raise(error, torch.device("cpu"), "Distributed alignment test data")
         corpus = TokenCorpus(output / "data/manifest.json", config)
         reference = Trainer(config, corpus, "cpu")
-        assert set(reference.manager.states) == {
+        owned_names = {
             f"layers.{current_rank}.moe.experts.{p}" for p in ("gate", "up", "down")
         }
-        for _ in range(4):
-            reference.train_step()
-        checkpoint = save_checkpoint(reference, output / "checkpoints")
-        for _ in range(4):
-            reference.train_step()
+        assert set(reference.manager.states) == (set() if args.delayed_initialization else owned_names)
+        checkpoints = {}
+        resume_steps = (2, 3, 7) if args.delayed_initialization else (4,)
+        for step in range(1, 9):
+            record = reference.train_step()
+            if args.delayed_initialization and step <= 3:
+                assert record["constraint_gradient_norm"] == 0
+                assert reference.manager.initialized == (step == 3)
+            if step in resume_steps:
+                checkpoints[step] = save_checkpoint(reference, output / "checkpoints")
+        assert set(reference.manager.states) == owned_names
         expected_rng = rng_state()
-        with patch("salaad_moe.solver.initialize_alignment", side_effect=AssertionError("must load P")):
-            resumed = Trainer(config, corpus, "cpu", initialize_auxiliary=False)
-            load_checkpoint(resumed, checkpoint)
-        for _ in range(4):
-            resumed.train_step()
-        equal(reference.model.state_dict(), resumed.model.state_dict())
-        equal(reference.optimizer.state_dict(), resumed.optimizer.state_dict())
-        equal(reference.manager.local_state_dict(), resumed.manager.local_state_dict())
-        equal(reference.reader.state_dict(), resumed.reader.state_dict())
-        equal(expected_rng, rng_state())
+        for start, checkpoint in checkpoints.items():
+            with patch("salaad_moe.solver.initialize_alignment", side_effect=AssertionError("must load P")):
+                resumed = Trainer(config, corpus, "cpu", initialize_auxiliary=False)
+                load_checkpoint(resumed, checkpoint)
+            for _ in range(start, 8):
+                resumed.train_step()
+            equal(reference.model.state_dict(), resumed.model.state_dict())
+            equal(reference.optimizer.state_dict(), resumed.optimizer.state_dict())
+            equal(reference.manager.local_state_dict(), resumed.manager.local_state_dict())
+            equal(reference.reader.state_dict(), resumed.reader.state_dict())
+            equal(expected_rng, rng_state())
+            assert resumed.manager.last_matching_step == (7 if args.delayed_initialization else 8)
         for value in resumed.manager.anchors.values():
             other = value.clone()
             dist.broadcast(other, src=0)
@@ -123,6 +138,9 @@ def main():
                 "joint_layer_owners": "passed",
                 "replicated_native_anchors": "passed",
                 "dp2_eight_step_training_and_bitwise_resume": "passed",
+                "state_initialization_step": config["salaad"]["state_initialization_step"],
+                "resume_steps": list(resume_steps),
+                "last_matching_step": resumed.manager.last_matching_step,
             }
             (output / "validation.json").write_text(json.dumps(result, indent=2) + "\n")
             print(json.dumps(result), flush=True)

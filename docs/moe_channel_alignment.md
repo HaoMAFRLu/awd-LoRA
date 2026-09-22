@@ -44,8 +44,23 @@ salaad:
 ```
 
 把 `match_every_optimizer_steps` 设为 0 可只做初始化对齐，随后固定 P；正数必须是
-结构间隔的整数倍。对齐要求全部三个投影和 learned shared，目前从 step 0 初始化，
-每次做一轮结构更新。SciPy 已加入 `requirements.txt`。距离使用 FP32 计算，指派在 CPU 求解。
+结构间隔的整数倍。`state_initialization_step` 可以设为 100：前 100 步是 vanilla，
+第 100 步 AdamW 完成后才创建 P/H/L/S/U 和迭代基。模型、Adam、LR 调度和数据游标继续使用，
+总训练预算不重启。匹配间隔从初始化步计起，例如 100 初始化、间隔 200，就在 300、500……更新。
+对齐要求全部三个投影和 learned shared，每次做一轮结构更新。SciPy 已加入 `requirements.txt`。
+距离使用 FP32 计算，指派在 CPU 求解。
+
+2026-09-22 的三组对照均保留 H+L+S、2100 步总预算及原训练超参数：
+
+| 配置 | vanilla 前缀 | 首次生成 P | 后续匹配步 |
+|---|---:|---:|---|
+| [ns97m_aligned_fixed](../configs/ns97m_aligned_fixed.yaml) | 0 | 0 | 无，P 固定 |
+| [ns97m_aligned_warm100_fixed](../configs/ns97m_aligned_warm100_fixed.yaml) | 100 | 100 | 无，P 固定 |
+| [ns97m_aligned_warm100_every200](../configs/ns97m_aligned_warm100_every200.yaml) | 100 | 100 | 300、500、……、2100 |
+
+固定 P 只固定通道对应关系，H/L/S/U 和控制器仍按原算法更新。延迟初始化两组从第 110 步
+开始每 10 步做一次结构 sweep，至 2100 共 200 次；第 0 步初始化组共 210 次。
+三个对应 `.sub` 文件位于 `sub/moe_<配置名>.sub`，保留原 4 H100 / DP4、CPU/内存和硬件排除设置。
 
 检查正式配置，不启动训练：
 
@@ -74,6 +89,9 @@ myenv/bin/python scripts/train_salad.py --cfg_version smoke_aligned \
 双进程配置为 [smoke_aligned_dp2.yaml](../configs/smoke_aligned_dp2.yaml)。Python API 恢复时，
 构造 `Trainer(..., initialize_auxiliary=False)`，随后调用 `load_checkpoint` 或
 `run(..., resume=...)`。CLI 会自动设置，直接恢复 P 和迭代基，不重做初始匹配或 SVD。
+若从 vanilla 前缀中间恢复，则继续前缀，到设定步数时才首次初始化。
+[smoke_aligned_warm.yaml](../configs/smoke_aligned_warm.yaml) 用第 3 步初始化、第 7 步重新匹配、
+第 8 步最终 flush 检查这一路径；使用非整倍数偏移，避免误把匹配间隔按全局步数计算。
 
 ## 保存、导出与验证
 
@@ -90,6 +108,8 @@ Checkpoint 保存完整 X、Adam、数据游标、RNG、H/L/S/U、阈值、迭�
 myenv/bin/python -m unittest discover -s tests/moe -p 'test_*.py' -q
 myenv/bin/torchrun --standalone --nproc-per-node=2 \
   tests/moe/alignment_distributed_worker.py /tmp/new_alignment_dp_test
+myenv/bin/torchrun --standalone --nproc-per-node=2 \
+  tests/moe/alignment_distributed_worker.py /tmp/new_alignment_delayed_dp_test --delayed-initialization
 ```
 
 测试覆盖已知排列恢复、穷举指派与显式置换矩阵、完整结构更新、BF16 任务计算下的
@@ -97,4 +117,6 @@ FP32 状态、恢复时不重新初始化、checkpoint/导出中的排列检查�
 CPU 单进程和双进程 8 步训练中，中途保存后继续训练与恢复训练的模型、Adam、
 辅助状态、数据游标和 RNG 逐位相同。双进程还覆盖空 owner、匹配失败传播和 Q 广播。
 
-当前环境没有可用 CUDA，尚未完成 H100 检查或正式 DCLM 训练；这些小模型检查用于验证实现。
+延迟初始化检查还覆盖与 vanilla 逐位相同的前缀、保留 Adam/数据进度的切换，以及在初始化前、
+初始化后和重新匹配步保存恢复。原 `ns97m_aligned` 正式 DCLM 作业 `17590593.0` 已在 H100 上
+完成 2100 步；小模型检查用于验证实现，不替代新对照组的正式训练结果。

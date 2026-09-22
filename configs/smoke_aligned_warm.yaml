@@ -1,0 +1,5 @@
+# Exercise a vanilla prefix, matching at step 3, rematching at 7, and final flush at 8.
+inherits: smoke_aligned.yaml
+experiment: moe_aligned_warm_cpu_smoke
+salaad:
+  state_initialization_step: 3

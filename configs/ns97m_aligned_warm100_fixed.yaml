@@ -1,0 +1,8 @@
+# The first 100 steps are vanilla, within the unchanged 2100-step budget.
+# Initialize P/H/L/S/U after step 100, then keep P fixed.
+inherits: ns97m_aligned.yaml
+experiment: moe_ns97m_aligned_warm100_fixed
+salaad:
+  state_initialization_step: 100
+  channel_alignment:
+    match_every_optimizer_steps: 0

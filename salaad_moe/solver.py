@@ -354,7 +354,13 @@ class ConsensusManager:
     def update(self, step):
         staged, error = {}, None
         interval = self.alignment.get("match_every_optimizer_steps", 0)
-        rematch = self.aligned and interval > 0 and step % interval == 0 and step > self.last_matching_step
+        # Count matching intervals from initialization, including a vanilla prefix.
+        # For initialization at 100 and interval 200, rematch at 300, 500, ... .
+        elapsed = step - self.config["salaad"]["state_initialization_step"]
+        rematch = (
+            self.aligned and interval > 0 and elapsed > 0
+            and elapsed % interval == 0 and step > self.last_matching_step
+        )
         try:
             if self.aligned:
                 for _, triplet in self.owned_layers():

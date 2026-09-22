@@ -229,7 +229,10 @@ def validate_config(c: dict, world_size=None) -> None:
         for key, value in required_salaad.items():
             if s[key] != value:
                 raise ValueError(f"Unsupported salaad.{key}={s[key]!r}")
-        if not 0 <= s["state_initialization_step"] < t["total_optimizer_steps"]:
+        if (
+            type(s["state_initialization_step"]) is not int
+            or not 0 <= s["state_initialization_step"] < t["total_optimizer_steps"]
+        ):
             raise ValueError("SALAAD initialization must precede the end of training")
         if (
             s["guidance_period_optimizer_steps"] < 1
@@ -267,8 +270,8 @@ def validate_config(c: dict, world_size=None) -> None:
                 raise ValueError("Channel alignment requires all three SwiGLU projections")
             if s.get("shared_mode", "learned") != "learned":
                 raise ValueError("Channel alignment requires learned shared")
-            if s["state_initialization_step"] != 0 or s["structure_inner_steps"] != 1:
-                raise ValueError("Aligned training initializes at step zero and uses one structure sweep")
+            if s["structure_inner_steps"] != 1:
+                raise ValueError("Aligned training uses one structure sweep")
             for key in ("match_every_optimizer_steps", "initialization_max_iterations", "reference_expert"):
                 if type(alignment.get(key)) is not int:
                     raise ValueError(f"channel_alignment.{key} must be an integer")
