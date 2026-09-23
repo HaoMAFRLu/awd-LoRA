@@ -8,7 +8,7 @@ salaad:
     method: sinkhorn
     match_every_optimizer_steps: 10
     sinkhorn:
-      inner_steps: 8
+      inner_steps: 128
       temperature: 1.0
       # SGD on F/rho, not the model AdamW learning rate.
       learning_rate: 1.0

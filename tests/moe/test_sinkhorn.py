@@ -178,7 +178,7 @@ class SinkhornNumericsTests(unittest.TestCase):
         expected["salaad"]["initialization"] = formal["salaad"]["initialization"]
         expected["salaad"]["channel_alignment"] = formal["salaad"]["channel_alignment"]
         self.assertEqual(formal, expected)
-        self.assertEqual(formal["salaad"]["channel_alignment"]["sinkhorn"]["inner_steps"], 8)
+        self.assertEqual(formal["salaad"]["channel_alignment"]["sinkhorn"]["inner_steps"], 128)
         self.assertEqual(formal["salaad"]["state_initialization_step"], 0)
         for key, value in (
             ("inner_steps", 1), ("inner_steps", True), ("temperature", 0),

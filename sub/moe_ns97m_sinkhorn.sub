@@ -1,5 +1,5 @@
 # Sinkhorn consensus; training hyperparameters/resources match job 17593586.0.
-# Initialize before training; P follows L/S every 10 steps with K_P=8.
+# Initialize before training; P follows L/S every 10 steps with K_P=128.
 universe        = vanilla
 executable      = /usr/bin/env
 arguments       = \
