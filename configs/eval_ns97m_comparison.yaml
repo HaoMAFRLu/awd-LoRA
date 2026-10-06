@@ -1,0 +1,27 @@
+# Paths are relative to --repo-root (the checkout containing the script by default).
+# Evaluate the four completed runs with their original, raw forward-pass weights.
+format: salaad_moe.comparison.v1
+checkpoint_step: 2100
+data_manifest: data/moe_corpora/dclm_20260916/tokens_ns97m/manifest.json
+corpus_identity: af6ff01895161e92706b337e8c306a92f81936e1cc4cfa0b1ff17514b8775034
+runs:
+  - name: vanilla_wd0
+    checkpoint: data/moe/ns97m_vanilla/17573606_0/checkpoints/step_00002100
+    config_hash: 9b523207ddafcd11781952b561cbe01f28e44df39f38df647532361396efd855
+    weight_decay: 0.0
+    salaad_enabled: false
+  - name: vanilla_wd01
+    checkpoint: data/moe/ns97m_vanilla_wd01/17676080_0/checkpoints/step_00002100
+    config_hash: bd5c83de6f69686e1a9ddd357787fc833c82a2862a2a83b71ac764e8167c493b
+    weight_decay: 0.1
+    salaad_enabled: false
+  - name: sinkhorn_wd0
+    checkpoint: data/moe/ns97m_sinkhorn/17675385_0/checkpoints/step_00002100
+    config_hash: da31026887bdb9e622aba2a62daf3d6b15a61f650b2d3c3550f0b98b4608a776
+    weight_decay: 0.0
+    salaad_enabled: true
+  - name: sinkhorn_wd01
+    checkpoint: data/moe/ns97m_sinkhorn_wd01/17675621_0/checkpoints/step_00002100
+    config_hash: 49ff071a45ad05b631124701aea6cc480a15beeec600682c196ec2f61ff3accf
+    weight_decay: 0.1
+    salaad_enabled: true

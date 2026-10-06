@@ -119,6 +119,9 @@ BF16 配置使用 autocast；参数、梯度、Adam 和结构辅助状态保持 
 模型导出使用 scripts/export_moe.py；NLL/PPL 和下游任务分别使用
 scripts/evaluate_moe.py 与 scripts/evaluate_moe_tasks.py。完整命令和验证边界见
 [运行说明](docs/moe_salaad.md)。
+四组 vanilla / Sinkhorn、weight decay 0 / 0.1 的最终 checkpoint 可通过
+[evaluate_moe_comparison.py](scripts/evaluate_moe_comparison.py) 统一评测并输出 JSON/CSV；
+运行清单见 [eval_ns97m_comparison.yaml](configs/eval_ns97m_comparison.yaml)。
 导出保留训练得到的 shared/L/S 原值和精度，S 仅无损转换为 CSR；没有额外的秩或密度上限。
 
 ## 测试

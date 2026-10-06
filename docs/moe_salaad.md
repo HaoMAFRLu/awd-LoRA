@@ -413,6 +413,57 @@ zero-shot，seed 42；报告 acc、可用时的 acc_norm，以及六任务不加
 `--limit` 仅用于调试，会写入结果。正式质量门槛仍是待验证目标：raw 相对 vanilla
 ≤0.02 nats/token，exported 相对 raw ≤0.03，总计 ≤0.05。
 
+## 四组最终 checkpoint 的统一评测
+
+`scripts/evaluate_moe_comparison.py` 使用
+`configs/eval_ns97m_comparison.yaml` 中的四组已完成运行：vanilla / Sinkhorn ADMM，
+各含 weight decay 0 和 0.1，均固定第 2100 步。默认用训练前向实际使用的 `raw`
+权重，在完整 validation 上报告 token 加权 NLL（nats/token）和 `exp(NLL)`。
+NLL 不含 load-balancing、z-loss 或结构约束项。模型保持训练时的 FP32 参数和
+BF16 autocast；单 GPU 依次加载，语料只校验一次。现有单模型脚本仍可评估
+`reconstructed` / `exported` 权重。
+
+在集群仓库根目录运行（checkpoint 和完整语料保留在集群）：
+
+```bash
+# 仅检查四组 checkpoint marker、配置和 corpus identity，不读取权重、不使用 GPU。
+myenv/bin/python scripts/evaluate_moe_comparison.py --dry-run
+
+# 完整 validation：每组 8192 个序列、16,777,216 个预测 tokens。
+myenv/bin/python -u scripts/evaluate_moe_comparison.py \
+  --device cuda --output data/moe_evaluation/ns97m_validation
+
+# validation 加六个 zero-shot 任务；也可 --suite tasks 仅跑下游任务。
+myenv/bin/python -u scripts/evaluate_moe_comparison.py \
+  --suite all --device cuda \
+  --tokenizer-directory data/moe_corpora/dclm_20260916/sources_local/tokenizer \
+  --output data/moe_evaluation/ns97m_validation_tasks
+
+# 少量样本检查通路，输出明确标记 debug=true。
+myenv/bin/python -u scripts/evaluate_moe_comparison.py \
+  --suite all --sequences 8 --task-limit 8 --device cuda \
+  --output data/moe_evaluation/ns97m_debug
+```
+
+`--split test` 改为完整 test；`--runs vanilla_wd01 sinkhorn_wd01` 可选择运行子集。
+`--batch-size` 只控制 NLL 批量，六任务 adapter 保持 batch size 1、zero-shot、seed 42，
+输出各任务 acc / 可用时的 acc_norm 和不加权 mean acc。下游任务需要
+`lm-eval==0.4.9.1`；首次运行可能下载任务数据，省略 `--tokenizer-directory` 时从
+固定 revision 获取 tokenizer。NLL-only 不需要加载 harness 或下载任务数据。
+
+每次使用新的输出目录，避免覆盖既有结果。输出包括：
+
+- `plan.json`：checkpoint 路径/配置哈希、语料身份、精度、样本数和运行环境。
+- `<run>.json`：每组结果、运行状态与耗时。
+- `<run>.tasks.json`：开启 tasks 时的完整 harness 结果，包括逐样本记录。
+- `summary.json`、`summary.csv`：四组汇总，每完成一阶段更新；后续失败时保留已得到的 NLL。
+
+脚本在加载模型前核对四组训练设置仅在 SALAAD / weight decay 等实验标识上存在
+预期差异，并验证实际 checkpoint 内的配置与预检查一致。`--dry-run` 只检查元数据，
+正式 NLL 评测才核对所有 token shard 的哈希。调试限制不会被当作完整评测。
+`sub/moe_ns97m_evaluation.sub` 已配置单 H100、4 CPU、32 GB 主存，默认只跑完整
+validation NLL/PPL；任务提交仍使用集群的 `condor_submit_bid` 工作流。
+
 ## 测试
 
 ```bash
