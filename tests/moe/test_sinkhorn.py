@@ -14,7 +14,7 @@ from salaad_moe.data import TokenCorpus, make_synthetic_corpus
 from salaad_moe.export import export_checkpoint, load_evaluation_model
 from salaad_moe.sinkhorn import (
     initialize_soft_alignment, least_squares_shared, log_sinkhorn,
-    update_soft_alignment, validate_transport,
+    update_soft_alignment, validate_soft_state, validate_transport,
 )
 from salaad_moe.solver import ConsensusManager
 from salaad_moe.trainer import Trainer
@@ -23,11 +23,25 @@ from test_alignment import assert_nested_equal, dense_permutations, groups_from,
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def legacy_sinkhorn_config():
+    """Continue checking the pre-existing L/S mode and its saved-state contract."""
+    config = load_config(ROOT / "configs/smoke_sinkhorn.yaml")
+    legacy = load_config(ROOT / "configs/smoke_aligned.yaml")["salaad"]
+    config["salaad"].update(
+        residual_mode="low_rank_sparse", low_rank_enabled=True, sparse_enabled=True,
+        controller=legacy["controller"], structure_order=legacy["structure_order"],
+        initialization="soft_aligned_shared_least_squares_L_zero_S_residual_dual_zero",
+    )
+    config["salaad"]["channel_alignment"]["fix_reference"] = True
+    config["salaad"]["channel_alignment"]["sinkhorn"]["initial_softening"] = 0.1
+    return config
+
+
 class SinkhornNumericsTests(unittest.TestCase):
     def setUp(self):
         torch.set_num_threads(2)
         torch.manual_seed(71)
-        self.c = load_config(ROOT / "configs/smoke_sinkhorn.yaml")
+        self.c = legacy_sinkhorn_config()
         self.alignment = self.c["salaad"]["channel_alignment"]
         self.settings = self.alignment["sinkhorn"]
 
@@ -70,40 +84,69 @@ class SinkhornNumericsTests(unittest.TestCase):
         for name in PROJECTIONS:
             torch.testing.assert_close(fitted[name], aligned_mean(residuals[name], indices, int(name == "down")))
 
-    def test_eight_steps_match_literal_joint_loss_and_penalty_uses_outer_anchor(self):
-        shared, _, residuals = permuted_experts()
-        shared = {p: value * 0.2 for p, value in shared.items()}
-        residuals = {p: value * 0.2 + 0.1 * torch.randn_like(value) for p, value in residuals.items()}
-        logits = torch.randn(3, 4, 4) * 0.2
-        logits[0].zero_()
-        old_p = log_sinkhorn(logits, self.settings, 0).detach()
-        before = (logits.clone(), old_p.clone())
-        expected = logits.clone()
-        def loss(p):
-            reconstruction = sum(
-                (residuals[name] - native_shared(shared[name], p, int(name == "down"))).square().sum()
-                for name in PROJECTIONS
-            ) / 2
-            return reconstruction + self.settings["move_penalty_over_rho"] * (p - old_p).square().sum() / 2
-        for _ in range(8):
-            expected.requires_grad_()
-            candidate = log_sinkhorn(expected, self.settings, 0)
-            gradient, = torch.autograd.grad(loss(candidate), expected)
-            expected = expected.detach() - self.settings["learning_rate"] * gradient
-            expected[0].zero_()
-        with patch("salaad_moe.sinkhorn.torch.autograd.grad", wraps=torch.autograd.grad) as gradients:
-            p, actual = update_soft_alignment(residuals, shared, old_p, logits, self.alignment)
-        self.assertEqual(gradients.call_count, 8)
-        torch.testing.assert_close(actual, expected, rtol=2e-5, atol=2e-7)
-        self.assertLess(loss(p).item(), loss(old_p).item())
-        self.assertGreater((p - old_p).norm().item(), 1e-4)
-        without_penalty = copy.deepcopy(self.alignment)
-        without_penalty["sinkhorn"]["move_penalty_over_rho"] = 0
-        _, unpenalized = update_soft_alignment(residuals, shared, old_p, logits, without_penalty)
-        self.assertGreater((actual - unpenalized).norm().item(), 1e-5)
-        assert_nested_equal(self, before, (logits, old_p))
-        self.assertFalse(actual.requires_grad)
+    def test_closed_form_clips_joint_solution_then_balances_once(self):
+        shared, _, _ = permuted_experts()
+        solution = 0.5 + torch.rand(3, 4, 4)
+        solution[1, 0, 2] = -0.4
+        solution[2, 3, 1] = -0.7
+        residuals = {
+            name: native_shared(shared[name], solution, int(name == "down"))
+            + 0.01 * torch.randn(3, *shared[name].shape)
+            for name in PROJECTIONS
+        }
+        before = copy.deepcopy((shared, residuals))
+        design = torch.cat((shared["gate"].mT, shared["up"].mT, shared["down"]), 0).double()
+        targets = torch.cat((residuals["gate"].mT, residuals["up"].mT, residuals["down"]), -2).double()
+        # An independent FP64 least-squares solve checks all three orientations.
+        expected = torch.linalg.lstsq(design.expand(len(targets), -1, -1), targets, driver="gelsd").solution
+        self.assertLess(expected[1, 0, 2], 0)
+        kernel = expected.clamp_min(self.settings["clip_min"])
+        balanced = kernel.clone()
+        for _ in range(200):
+            balanced /= balanced.sum(-1, keepdim=True)
+            balanced /= balanced.sum(-2, keepdim=True)
+        balanced[0] = torch.eye(4)
+        # Encoding A=T*log(Q) must balance Q even when T is not one.
+        self.settings["temperature"] = 0.37
+        with (
+            patch("salaad_moe.sinkhorn.torch.autograd.grad", side_effect=AssertionError("no gradient update")),
+            patch("salaad_moe.sinkhorn.log_sinkhorn", wraps=log_sinkhorn) as balancing,
+        ):
+            p, logits = update_soft_alignment(residuals, shared, self.alignment)
+        self.assertEqual(balancing.call_count, 1)
+        torch.testing.assert_close(
+            (logits[1:] / self.settings["temperature"]).exp(), kernel[1:].float(), rtol=3e-6, atol=1e-6,
+        )
+        torch.testing.assert_close(p, balanced.float(), rtol=0, atol=1e-5)
+        validate_soft_state(p, logits, self.alignment)
+        assert_nested_equal(self, before, (shared, residuals))
+        self.assertFalse(logits.requires_grad)
         self.assertFalse(p.requires_grad)
+
+    def test_closed_form_rank_deficient_and_zero_shared(self):
+        shared = {"gate": torch.ones(2, 3), "up": torch.zeros(2, 3), "down": torch.zeros(3, 2)}
+        coefficients = torch.tensor([[1., 2.], [3., 4.], [2., 1.]])
+        residuals = {
+            "gate": coefficients[..., None].expand(3, 2, 3).clone(),
+            "up": torch.zeros(3, 2, 3), "down": torch.zeros(3, 3, 2),
+        }
+        p, logits = update_soft_alignment(residuals, shared, self.alignment)
+        minimum_norm = coefficients[:, None, :].expand(3, 2, 2) / 2
+        torch.testing.assert_close(logits[1:].exp(), minimum_norm[1:])
+        torch.testing.assert_close(p[1:], torch.full((2, 2, 2), 0.5))
+        validate_soft_state(p, logits, self.alignment)
+        for value in shared.values():
+            value.zero_()
+        p, logits = update_soft_alignment(residuals, shared, self.alignment)
+        torch.testing.assert_close(logits[1:].exp(), torch.full((2, 2, 2), self.settings["clip_min"]))
+        torch.testing.assert_close(p[1:], torch.full((2, 2, 2), 0.5))
+        validate_soft_state(p, logits, self.alignment)
+
+    def test_closed_form_rejects_nonfinite_inputs(self):
+        shared, _, residuals = permuted_experts()
+        residuals["gate"][1, 0, 0] = float("nan")
+        with self.assertRaisesRegex(FloatingPointError, "Nonfinite"):
+            update_soft_alignment(residuals, shared, self.alignment)
 
     def test_initialization_schedules_and_failed_update_are_atomic(self):
         _, _, weights = permuted_experts()
@@ -177,13 +220,19 @@ class SinkhornNumericsTests(unittest.TestCase):
         expected["salaad"]["state_initialization_step"] = 0
         expected["salaad"]["initialization"] = formal["salaad"]["initialization"]
         expected["salaad"]["channel_alignment"] = formal["salaad"]["channel_alignment"]
+        for key in ("residual_mode", "low_rank_enabled", "sparse_enabled", "controller", "structure_order"):
+            expected["salaad"][key] = formal["salaad"][key]
         self.assertEqual(formal, expected)
-        self.assertEqual(formal["salaad"]["channel_alignment"]["sinkhorn"]["inner_steps"], 128)
+        settings = formal["salaad"]["channel_alignment"]["sinkhorn"]
+        self.assertEqual(settings["update_rule"], "closed_form_clip_sinkhorn")
+        self.assertEqual(settings["clip_min"], 1e-8)
         self.assertEqual(formal["salaad"]["state_initialization_step"], 0)
         for key, value in (
-            ("inner_steps", 1), ("inner_steps", True), ("temperature", 0),
-            ("learning_rate", float("nan")), ("initial_softening", 1),
-            ("move_penalty_over_rho", -1), ("max_iterations", 0), ("marginal_tolerance", 0.1),
+            ("update_rule", "gradient"), ("inner_steps", 128), ("temperature", 0),
+            ("learning_rate", 1.0), ("initial_softening", 1),
+            ("move_penalty_over_rho", 0), ("max_iterations", 0), ("max_iterations", True),
+            ("clip_min", 0), ("clip_min", -1), ("clip_min", float("nan")),
+            ("clip_min", float("inf")), ("clip_min", True), ("marginal_tolerance", 0.1),
         ):
             invalid = copy.deepcopy(self.c)
             invalid["salaad"]["channel_alignment"]["sinkhorn"][key] = value
@@ -192,7 +241,7 @@ class SinkhornNumericsTests(unittest.TestCase):
         for interval in (0, 4):
             invalid = copy.deepcopy(self.c)
             invalid["salaad"]["channel_alignment"]["match_every_optimizer_steps"] = interval
-            with self.assertRaisesRegex(ValueError, "every L/S"):
+            with self.assertRaisesRegex(ValueError, "every structure"):
                 validate_config(invalid)
 
     def test_legacy_hard_checkpoint_without_method_metadata_still_loads(self):
@@ -214,7 +263,7 @@ class SinkhornWorkflowTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.path = Path(self.tmp.name)
-        self.c = load_config(ROOT / "configs/smoke_sinkhorn.yaml")
+        self.c = legacy_sinkhorn_config()
         make_synthetic_corpus(self.c, self.path / "data", 64)
         self.corpus = TokenCorpus(self.path / "data/manifest.json", self.c)
 

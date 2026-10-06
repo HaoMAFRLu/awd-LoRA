@@ -45,10 +45,12 @@ def flatten_metrics(record):
             for name, metrics in value.items():
                 _, layer, _, _, projection, expert = name.split(".")
                 matrix = f"layer_{layer}_{projection}_{expert}"
-                for metric in ("diff", "density", "effective_rank_ratio"):
-                    result[f"salaad_structure/{matrix}_{metric}"] = metrics[metric]
+                for metric in ("diff", "density", "effective_rank_ratio", "residual_norm", "multiplier_norm"):
+                    if metric in metrics:
+                        result[f"salaad_structure/{matrix}_{metric}"] = metrics[metric]
                 for metric in ("alpha", "beta"):
-                    result[f"salaad_hyperparameters/{matrix}_{metric}"] = metrics[metric]
+                    if metric in metrics:
+                        result[f"salaad_hyperparameters/{matrix}_{metric}"] = metrics[metric]
                 # Rho is global and fixed; emit one metric shared by all layers.
                 result["salaad_hyperparameters/rho"] = metrics["rho"]
         elif key != "step":

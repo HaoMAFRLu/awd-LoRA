@@ -92,7 +92,7 @@ class Trainer:
         self.step = 0  # Successfully completed optimizer steps, not micro-batches.
 
         # One SALAAD group contains all experts for one projection in one layer.
-        # The manager handles shared/L/S/dual, constraint gradients, and periodic
+        # The manager handles shared/residual/dual, constraint gradients, and periodic
         # alternating direction method of multipliers (ADMM) updates.
         self.manager = (
             ConsensusManager(native_groups(self.model, config["salaad"]["projections"]), config)
@@ -139,7 +139,7 @@ class Trainer:
             .sqrt()
             .item()
         )
-        # 3. Add rho * (X - Q) once for all experts, with Q = native_shared + L + S - U.
+        # 3. Add rho * (W - Q) once, with Q = native_shared + expert_residual - U.
         # Add it after DP averaging, never separately for each micro-batch.
         constraint_norm, gradient_cosine = (
             self.manager.inject_gradients(task_norm) if self.manager else (0.0, None)
@@ -169,9 +169,9 @@ class Trainer:
         )
         agree_or_raise(error, self.device, "Optimizer result")
 
-        # 5. Initialize auxiliary states or run the scheduled (P) -> shared -> L -> S -> U
+        # 5. Initialize or run the scheduled (P) -> shared -> residual(s) -> U
         # update, then broadcast the new Q. Reconstructed weights are not copied
-        # back into the model parameters X.
+        # back into the model parameters W.
         next_step = self.step + 1
         changed = (
             self.manager.after_step(next_step, final=next_step == t["total_optimizer_steps"])

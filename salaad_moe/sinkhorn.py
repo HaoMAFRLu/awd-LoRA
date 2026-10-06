@@ -9,6 +9,11 @@ import torch.nn.functional as F
 from .alignment import PROJECTIONS, initialize_alignment
 
 
+def fixed_reference(alignment):
+    """The initialization reference need not remain fixed during optimization."""
+    return alignment["reference_expert"] if alignment.get("fix_reference", True) else None
+
+
 @contextmanager
 def full_precision(device):
     previous = torch.backends.cuda.matmul.allow_tf32
@@ -44,8 +49,9 @@ def validate_transport(p, experts, channels, reference_expert=None, tolerance=1e
 def log_sinkhorn(logits, settings, reference_expert):
     """Differentiable log-domain balancing; fail rather than commit invalid P.
 
-    The reference has constant identity P and zero logits. It is not represented
-    by infinite logits, so neither exponentials nor gradients encounter inf/nan.
+    With reference_expert=None all experts are balanced. A fixed reference in
+    the legacy mode instead has constant identity P and zero logits, without
+    representing that identity with infinite logits.
     """
     z = logits / settings["temperature"]
     converged = False
@@ -63,17 +69,21 @@ def log_sinkhorn(logits, settings, reference_expert):
             if converged:
                 break
     if not converged:
-        raise FloatingPointError("Sinkhorn did not reach the configured marginal tolerance")
+        raise FloatingPointError(
+            f"Sinkhorn did not reach the configured marginal tolerance after {settings['max_iterations']} iterations: "
+            f"maximum row/column sum error={error.item():.8g}, tolerance={settings['marginal_tolerance']:.8g}"
+        )
     result = z.exp().clone()
-    result[reference_expert] = torch.eye(
-        logits.shape[-1], device=logits.device, dtype=logits.dtype,
-    )
+    if reference_expert is not None:
+        result[reference_expert] = torch.eye(
+            logits.shape[-1], device=logits.device, dtype=logits.dtype,
+        )
     return result
 
 
 @torch.no_grad()
-def least_squares_shared(residuals, permutation):
-    """Solve all three shared normal equations with one SPD factorization."""
+def least_squares_shared(residuals, permutation, *, allow_singular=False):
+    """Solve the shared normal equations, including singular unanchored maps."""
     with full_precision(permutation.device):
         matrix = (permutation @ permutation.mT).sum(0)
         rhs = {
@@ -81,9 +91,14 @@ def least_squares_shared(residuals, permutation):
             for p in PROJECTIONS
         }
         widths = [rhs[p].shape[1] for p in PROJECTIONS]
-        # P_reference=I ensures matrix >= I; no ridge or explicit inverse.
-        factor = torch.linalg.cholesky(matrix)
-        solution = torch.cholesky_solve(torch.cat([rhs[p] for p in PROJECTIONS], -1), factor)
+        targets = torch.cat([rhs[p] for p in PROJECTIONS], -1)
+        if allow_singular:
+            # Minimum-Frobenius-norm consensus, as in the documented X update.
+            solution = torch.linalg.pinv(matrix, hermitian=True) @ targets
+        else:
+            # A fixed P_reference=I ensures matrix >= I in the legacy mode.
+            factor = torch.linalg.cholesky(matrix)
+            solution = torch.cholesky_solve(targets, factor)
         return {
             p: (value.mT if p == "down" else value).contiguous()
             for p, value in zip(PROJECTIONS, solution.split(widths, dim=-1))
@@ -91,52 +106,55 @@ def least_squares_shared(residuals, permutation):
 
 
 @torch.no_grad()
-def initialize_soft_alignment(weights, alignment):
-    """Warm-start from joint hard matching, soften once, and refit shared."""
+def initialize_soft_alignment(weights, alignment, *, identity=False):
+    """Initialize exact identity maps/means, or use the legacy softened match."""
+    if identity:
+        experts, channels, _ = weights["gate"].shape
+        p = torch.eye(channels, device=weights["gate"].device, dtype=torch.float32)
+        p = p.expand(experts, -1, -1).clone()
+        shared = {projection: weights[projection].mean(0) for projection in PROJECTIONS}
+        # Exact zero entries need no finite log representation. The first
+        # closed-form P update will create logits from its positive clipped Q.
+        return p, shared, None
     indices, _ = initialize_alignment(weights, alignment)
     settings = alignment["sinkhorn"]
     channels = indices.shape[-1]
     p = F.one_hot(indices, channels).float().mT
     p = (1 - settings["initial_softening"]) * p + settings["initial_softening"] / channels
     logits = settings["temperature"] * p.log()
-    reference = alignment["reference_expert"]
-    logits[reference].zero_()
+    reference = fixed_reference(alignment)
+    if reference is not None:
+        logits[reference].zero_()
     with full_precision(logits.device):
         p = log_sinkhorn(logits, settings, reference)
-        shared = least_squares_shared(weights, p)
+        shared = least_squares_shared(weights, p, allow_singular=reference is None)
     return p, shared, logits
 
 
 @torch.no_grad()
-def update_soft_alignment(residuals, shared, old_p, old_logits, alignment):
-    """K_P SGD steps on the true joint reconstruction plus movement penalty.
+def update_soft_alignment(residuals, shared, alignment):
+    """Closed-form joint least squares, positive clipping, then Sinkhorn.
 
-    Optimize F/rho, with move_penalty_over_rho = lambda_move/rho. This rescales
-    the whole subproblem, preserving its minimizer and leaving task rho intact.
-    The Gram/cross products give the exact derivative of the three projection
-    losses without retaining a dense expert-weight graph in every inner step.
+    With H=[X_gate, X_up, X_down.T] and D=[R_gate, R_up, R_down.T],
+    solve H.T @ P ~= D.T for every expert using one shared pseudoinverse.
+    This also defines the minimum-norm solution when H is rank deficient,
+    without squaring its condition number through the normal equations.
+    Saved logits encode the clipped solution; they are not optimized.
     """
     settings = alignment["sinkhorn"]
-    reference = alignment["reference_expert"]
-    with full_precision(old_p.device):
+    reference = fixed_reference(alignment)
+    with full_precision(shared["gate"].device):
         template = torch.cat((shared["gate"], shared["up"], shared["down"].mT), -1)
         target = torch.cat((residuals["gate"], residuals["up"], residuals["down"].mT), -1)
-        gram = template @ template.mT
-        cross = template @ target.mT
-        logits = old_logits.detach().clone()
-        for _ in range(settings["inner_steps"]):
-            with torch.enable_grad():
-                current = logits.detach().requires_grad_(True)
-                p = log_sinkhorn(current, settings, reference)
-                derivative = (
-                    gram @ p.detach() - cross
-                    + settings["move_penalty_over_rho"] * (p.detach() - old_p)
-                )
-                gradient, = torch.autograd.grad(p, current, grad_outputs=derivative)
-            logits = current.detach() - settings["learning_rate"] * gradient
+        if not torch.isfinite(template).all() or not torch.isfinite(target).all():
+            raise FloatingPointError("Nonfinite closed-form alignment inputs")
+        solution = torch.linalg.pinv(template.mT) @ target.mT
+        if not torch.isfinite(solution).all():
+            raise FloatingPointError("Nonfinite closed-form alignment solution")
+        clipped = solution.clamp_min(settings["clip_min"])
+        logits = settings["temperature"] * clipped.log()
+        if reference is not None:
             logits[reference].zero_()
-            if not torch.isfinite(logits).all():
-                raise FloatingPointError("Nonfinite Sinkhorn logits update")
         p = log_sinkhorn(logits, settings, reference)
     validate_transport(
         p, len(p), p.shape[-1], reference, settings["marginal_tolerance"],
@@ -145,13 +163,19 @@ def update_soft_alignment(residuals, shared, old_p, old_logits, alignment):
 
 
 @torch.no_grad()
-def validate_soft_state(p, logits, alignment):
+def validate_soft_state(p, logits, alignment, *, allow_identity=False):
     settings = alignment["sinkhorn"]
-    reference = alignment["reference_expert"]
+    reference = fixed_reference(alignment)
     validate_transport(p, len(p), p.shape[-1], reference, settings["marginal_tolerance"])
+    if logits is None:
+        identity = torch.eye(p.shape[-1], device=p.device, dtype=p.dtype).expand_as(p)
+        if not allow_identity or not torch.equal(p, identity):
+            raise ValueError("Missing Sinkhorn logits outside exact identity initialization")
+        return
     if (
-        logits is None or logits.dtype != torch.float32 or logits.shape != p.shape
-        or not torch.isfinite(logits).all() or torch.count_nonzero(logits[reference])
+        logits.dtype != torch.float32 or logits.shape != p.shape
+        or not torch.isfinite(logits).all()
+        or (reference is not None and torch.count_nonzero(logits[reference]))
     ):
         raise ValueError("Invalid saved Sinkhorn logits")
     with full_precision(p.device):

@@ -1,5 +1,5 @@
 # Sinkhorn consensus; training hyperparameters/resources match job 17593586.0.
-# Initialize before training; P follows L/S every 10 steps with K_P=128.
+# Five-step dense-residual ADMM; all P update by closed-form/clip/Sinkhorn every 10 steps.
 universe        = vanilla
 executable      = /usr/bin/env
 arguments       = \

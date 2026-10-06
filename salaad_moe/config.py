@@ -11,6 +11,7 @@ import yaml
 
 
 CONFIG_ROOT = Path(__file__).resolve().parents[1] / "configs"
+IDENTITY_INITIALIZATION = "identity_shared_mean_residual_dual_zero"
 
 
 def config_for_version(version):
@@ -215,12 +216,18 @@ def validate_config(c: dict, world_size=None) -> None:
     if s["enabled"]:
         if not math.isfinite(s["rho"]) or s["rho"] <= 0:
             raise ValueError("A single finite positive rho is required")
+        residual_mode = s.get("residual_mode", "low_rank_sparse")
+        if residual_mode not in ("low_rank_sparse", "dense"):
+            raise ValueError("residual_mode must be low_rank_sparse or dense")
+        dense_residual = residual_mode == "dense"
         required_salaad = {
             "consensus_scope": "same_layer_same_projection_all_experts",
             "rho_scope": "global_fixed_all_experts_all_layers",
             "penalty_reduction": "sum_all_entries_all_expert_matrices",
             "gradient_injection": "after_dp_reduce_and_prepare_grads_before_global_clip",
-            "structure_order": (["permutation"] if aligned else []) + ["shared", "low_rank", "sparse", "dual"],
+            "structure_order": (["permutation"] if aligned else []) + (
+                ["shared", "residual", "dual"] if dense_residual else ["shared", "low_rank", "sparse", "dual"]
+            ),
             "refresh_anchor_after_structure": True,
             "auxiliary_dtype": "float32",
             "auxiliary_owner": "deterministic_layer_id_mod_dp" if aligned else "deterministic_group_id_mod_dp",
@@ -237,7 +244,7 @@ def validate_config(c: dict, world_size=None) -> None:
         if (
             s["guidance_period_optimizer_steps"] < 1
             or s["structure_inner_steps"] < 1
-            or s["svd_chunk_size"] < 1
+            or (not dense_residual and s["svd_chunk_size"] < 1)
         ):
             raise ValueError("SALAAD periods and SVD chunk size must be positive")
         if (
@@ -246,29 +253,39 @@ def validate_config(c: dict, world_size=None) -> None:
             or not set(s["projections"]) <= {"gate", "up", "down"}
         ):
             raise ValueError("Invalid SALAAD projections")
-        ctl = s["controller"]
-        if ctl["rank_statistic"] != "linear_singular_value_mass" or not 0 < ctl["gamma"] <= 1:
-            raise ValueError("SALAAD uses linear singular-value mass, with gamma in (0,1]")
-        if (
-            ctl["zero_matrix_rank_ratio"] != 0
-            or ctl["nonnegative_projection"] is not False
-            or ctl["threshold_gain_convention"] != "tau_alpha_delta_equals_gain_times_rank_error"
-        ):
-            raise ValueError("Unsupported controller conventions")
-        for key in ("target_rank_ratio", "target_density"):
-            if not 0 <= ctl[key] <= 1:
-                raise ValueError(f"Invalid controller.{key}")
-        for key in ("alpha_init", "beta_init", "gain_alpha", "gain_beta"):
-            if not math.isfinite(ctl[key]) or ctl[key] < 0:
-                raise ValueError(f"controller.{key} must be finite and nonnegative")
+        if dense_residual:
+            if s.get("low_rank_enabled", True) or s.get("sparse_enabled", True) or s.get("controller") is not None:
+                raise ValueError("Dense residuals require low_rank_enabled=false, sparse_enabled=false, controller=null")
+            if not aligned or alignment.get("method") != "sinkhorn" or alignment.get("fix_reference", True):
+                raise ValueError("Dense residual ADMM requires Sinkhorn with fix_reference=false")
+        else:
+            ctl = s["controller"]
+            if ctl["rank_statistic"] != "linear_singular_value_mass" or not 0 < ctl["gamma"] <= 1:
+                raise ValueError("SALAAD uses linear singular-value mass, with gamma in (0,1]")
+            if (
+                ctl["zero_matrix_rank_ratio"] != 0
+                or ctl["nonnegative_projection"] is not False
+                or ctl["threshold_gain_convention"] != "tau_alpha_delta_equals_gain_times_rank_error"
+            ):
+                raise ValueError("Unsupported controller conventions")
+            for key in ("target_rank_ratio", "target_density"):
+                if not 0 <= ctl[key] <= 1:
+                    raise ValueError(f"Invalid controller.{key}")
+            for key in ("alpha_init", "beta_init", "gain_alpha", "gain_beta"):
+                if not math.isfinite(ctl[key]) or ctl[key] < 0:
+                    raise ValueError(f"controller.{key} must be finite and nonnegative")
         if s.get("shared_mode", "learned") not in ("learned", "fixed", "none"):
             raise ValueError("shared_mode must be learned, fixed, or none")
-        if not s.get("low_rank_enabled", True) and not s.get("sparse_enabled", True):
+        if not dense_residual and not s.get("low_rank_enabled", True) and not s.get("sparse_enabled", True):
             raise ValueError("At least one residual component is required")
         if aligned:
             method = alignment.get("method", "hungarian")
             if method not in ("hungarian", "sinkhorn"):
                 raise ValueError("Channel alignment method must be hungarian or sinkhorn")
+            if not isinstance(alignment.get("fix_reference", True), bool):
+                raise ValueError("channel_alignment.fix_reference must be a boolean")
+            if method == "hungarian" and not alignment.get("fix_reference", True):
+                raise ValueError("Hungarian alignment requires a fixed reference")
             if set(s["projections"]) != {"gate", "up", "down"}:
                 raise ValueError("Channel alignment requires all three SwiGLU projections")
             if s.get("shared_mode", "learned") != "learned":
@@ -289,25 +306,36 @@ def validate_config(c: dict, world_size=None) -> None:
             if not isinstance(tolerance, (int, float)) or not math.isfinite(tolerance) or tolerance < 0:
                 raise ValueError("Alignment improvement tolerance must be finite and nonnegative")
             if method == "sinkhorn":
+                initializations = (
+                    {IDENTITY_INITIALIZATION, "soft_aligned_shared_least_squares_residual_dual_zero"}
+                    if dense_residual else {"soft_aligned_shared_least_squares_L_zero_S_residual_dual_zero"}
+                )
+                if s.get("initialization") not in initializations:
+                    raise ValueError("Unsupported Sinkhorn initialization for the residual mode")
                 if interval != s["guidance_period_optimizer_steps"]:
-                    raise ValueError("Sinkhorn P must update on every L/S structure sweep")
+                    raise ValueError("Sinkhorn P must update on every structure sweep")
                 settings = alignment.get("sinkhorn")
                 if not isinstance(settings, dict):
                     raise ValueError("Missing Sinkhorn settings")
-                for key in ("inner_steps", "max_iterations"):
-                    if type(settings.get(key)) is not int or settings[key] < 1:
-                        raise ValueError(f"sinkhorn.{key} must be a positive integer")
-                for key in ("temperature", "learning_rate", "initial_softening", "marginal_tolerance"):
+                if settings.get("update_rule") != "closed_form_clip_sinkhorn":
+                    raise ValueError("Sinkhorn requires the closed_form_clip_sinkhorn update rule")
+                if any(key in settings for key in ("inner_steps", "learning_rate", "move_penalty_over_rho")):
+                    raise ValueError("Closed-form Sinkhorn has no gradient steps, learning rate, or movement penalty")
+                if type(settings.get("max_iterations")) is not int or settings["max_iterations"] < 1:
+                    raise ValueError("sinkhorn.max_iterations must be a positive integer")
+                for key in ("temperature", "clip_min", "marginal_tolerance"):
                     value = settings.get(key)
                     if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
                         raise ValueError(f"sinkhorn.{key} must be finite and positive")
-                if settings["initial_softening"] >= 1 or settings["marginal_tolerance"] > 1e-4:
-                    raise ValueError("Invalid Sinkhorn softening or marginal tolerance")
-                movement = settings.get("move_penalty_over_rho")
-                if type(movement) not in (int, float) or not math.isfinite(movement) or movement < 0:
-                    raise ValueError("Sinkhorn movement penalty must be finite and nonnegative")
-                if movement > 0 and settings["inner_steps"] < 2:
-                    raise ValueError("Movement penalty requires at least two P gradient steps")
+                if settings["marginal_tolerance"] > 1e-4:
+                    raise ValueError("Invalid Sinkhorn marginal tolerance")
+                if s["initialization"] == IDENTITY_INITIALIZATION:
+                    if "initial_softening" in settings:
+                        raise ValueError("Identity initialization does not use initial_softening")
+                else:
+                    value = settings.get("initial_softening")
+                    if type(value) not in (int, float) or not math.isfinite(value) or not 0 < value < 1:
+                        raise ValueError("sinkhorn.initial_softening must be finite and in (0, 1)")
 
 
 def parameter_counts(c: dict) -> dict:

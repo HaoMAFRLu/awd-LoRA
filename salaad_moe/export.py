@@ -1,4 +1,4 @@
-"""Export trained shared/L/S values without truncation or precision conversion."""
+"""Export shared and expert residuals without truncation or precision conversion."""
 from __future__ import annotations
 
 import json
@@ -7,10 +7,11 @@ from pathlib import Path
 import torch
 
 from .checkpoint import atomic_save, checkpoint_metadata, load_torch
+from .config import IDENTITY_INITIALIZATION, fingerprint
 from .model import MoELanguageModel
 from .alignment import native_shared, validate_permutation
-from .solver import GroupState, validate_layer_states
-from .sinkhorn import validate_transport
+from .solver import DenseResidualState, GroupState, validate_layer_states
+from .sinkhorn import fixed_reference, validate_transport
 
 
 def alignment_method(config):
@@ -19,6 +20,8 @@ def alignment_method(config):
 
 
 def export_format(config):
+    if config["salaad"].get("residual_mode", "low_rank_sparse") == "dense":
+        return "salaad_moe.export.v5"
     return {
         "none": "salaad_moe.export.v2",
         "hungarian": "salaad_moe.export.v3",
@@ -84,7 +87,8 @@ def export_group(state):
     # running another decomposition that could alter its small components.
     result = {
         "shared": state.shared.detach().cpu().clone(),
-        "experts": [
+        "experts": [{"residual": value.detach().cpu().clone()} for value in state.residual]
+        if isinstance(state, DenseResidualState) else [
             {
                 "low_rank": low.detach().cpu().clone(),
                 "sparse": encode_csr(sparse),
@@ -98,7 +102,7 @@ def export_group(state):
             channel_axis=state.channel_axis,
             permutation_convention=(
                 "shared_to_native_doubly_stochastic"
-                if state.alignment_logits is not None else "native_to_shared"
+                if state.permutation.ndim == 3 else "native_to_shared"
             ),
         )
     return result
@@ -122,18 +126,36 @@ def materialize_group(group, device="cpu"):
         mapped = shared.expand(len(group["experts"]), -1, -1)
     # Use the same addition order as GroupState.reconstruction().
     return torch.stack([
+        mapped[i] + expert["residual"].to(device=device) if "residual" in expert else
         mapped[i] + expert["low_rank"].to(device=device) + decode_csr(expert["sparse"], device)
         for i, expert in enumerate(group["experts"])
     ])
 
 
-def checkpoint_states(path, device="cpu"):
+def _checkpoint_payload(path):
+    """Apply the same metadata consistency checks used by training resume."""
     path = Path(path)
     meta = checkpoint_metadata(path)
     payload = load_torch(path / "training.pt")
+    if payload.get("format") not in ("salaad_moe.training.v1", "salaad_moe.megatron_evaluation.v1"):
+        raise ValueError("Unsupported checkpoint metadata format")
+    if (
+        payload.get("step") != meta["step"]
+        or payload.get("config_hash") != meta["config_hash"]
+        or fingerprint(payload["config"]) != meta["config_hash"]
+    ):
+        raise ValueError("Inconsistent checkpoint metadata")
+    return meta, payload
+
+
+def checkpoint_states(path, device="cpu"):
+    path = Path(path)
+    meta, payload = _checkpoint_payload(path)
     states = {}
     aligned = payload["config"]["salaad"].get("channel_alignment", {}).get("enabled", False)
     method = alignment_method(payload["config"])
+    residual_mode = payload["config"]["salaad"].get("residual_mode", "low_rank_sparse")
+    allow_identity = payload["config"]["salaad"].get("initialization") == IDENTITY_INITIALIZATION
     for i in range(meta["world_size"]):
         shard = load_torch(path / f"rank_{i:05d}.pt")["salaad"]
         if shard is None or not shard["initialized"]:
@@ -142,6 +164,9 @@ def checkpoint_states(path, device="cpu"):
             raise ValueError("Checkpoint channel-alignment metadata is inconsistent")
         if shard.get("alignment_method", "hungarian" if aligned else "none") != method:
             raise ValueError("Checkpoint channel-alignment method is inconsistent")
+        if shard.get("residual_mode", "low_rank_sparse") != residual_mode:
+            raise ValueError("Checkpoint residual mode is inconsistent")
+        allow_identity = allow_identity and shard.get("sweeps") == 0
         if set(states) & set(shard["states"]):
             raise ValueError("Duplicate auxiliary group")
         states.update(
@@ -152,8 +177,14 @@ def checkpoint_states(path, device="cpu"):
         )
     if any((state.permutation is not None) != aligned for state in states.values()):
         raise ValueError("Checkpoint channel permutations are missing or unexpected")
-    if any((state.alignment_logits is not None) != (method == "sinkhorn") for state in states.values()):
-        raise ValueError("Checkpoint Sinkhorn logits are missing or unexpected")
+    if any(state.residual_mode != residual_mode for state in states.values()):
+        raise ValueError("Checkpoint residual state disagrees with configuration")
+    if any(
+        (state.permutation is not None and state.permutation.ndim == 3) != (method == "sinkhorn")
+        or (state.alignment_logits is not None and method != "sinkhorn")
+        for state in states.values()
+    ):
+        raise ValueError("Checkpoint channel-permutation representation disagrees with configuration")
     expected = {
         f"layers.{layer}.moe.experts.{projection}"
         for layer in range(payload["config"]["model"]["num_layers"])
@@ -163,7 +194,7 @@ def checkpoint_states(path, device="cpu"):
         raise ValueError("Checkpoint decomposition groups do not match the model")
     if aligned:
         alignment = payload["config"]["salaad"]["channel_alignment"]
-        validate_layer_states(states, alignment["reference_expert"], alignment)
+        validate_layer_states(states, alignment["reference_expert"], alignment, allow_identity=allow_identity)
     return payload, states
 
 
@@ -197,12 +228,18 @@ def export_checkpoint(checkpoint, output, device="cpu"):
         "compression_ratio_tensor_bytes": raw_bytes / max(tensor_bytes(artifact), 1),
         "groups": {
             name: {
+                "residual_shapes": [list(e["residual"].shape) for e in group["experts"]],
+            } if config["salaad"].get("residual_mode", "low_rank_sparse") == "dense" else {
                 "low_rank_shapes": [list(e["low_rank"].shape) for e in group["experts"]],
                 "sparse_nnz": [len(e["sparse"]["values"]) for e in group["experts"]],
             }
             for name, group in artifact["groups"].items()
         },
-        "inference_mode": "materialize saved native_shared + L + S at checkpoint precision",
+        "inference_mode": (
+            "materialize saved native_shared + residual at checkpoint precision"
+            if config["salaad"].get("residual_mode", "low_rank_sparse") == "dense" else
+            "materialize saved native_shared + L + S at checkpoint precision"
+        ),
         "native_sparse_kernel_benchmarked": False,
     }
     output.with_suffix(output.suffix + ".json").write_text(json.dumps(report, indent=2) + "\n")
@@ -212,11 +249,32 @@ def export_checkpoint(checkpoint, output, device="cpu"):
 def load_evaluation_model(path, mode="raw", device="cpu"):
     if mode == "exported":
         artifact = load_torch(path)
-        if artifact["format"] not in ("salaad_moe.export.v2", "salaad_moe.export.v3", "salaad_moe.export.v4"):
+        if artifact["format"] not in ("salaad_moe.export.v2", "salaad_moe.export.v3", "salaad_moe.export.v4", "salaad_moe.export.v5"):
             raise ValueError("Unsupported export")
         config = artifact["config"]
         aligned = config["salaad"].get("channel_alignment", {}).get("enabled", False)
         soft = alignment_method(config) == "sinkhorn"
+        dense_residual = config["salaad"].get("residual_mode", "low_rank_sparse") == "dense"
+        for group in artifact["groups"].values():
+            shared = group.get("shared")
+            if (
+                not isinstance(shared, torch.Tensor) or shared.ndim != 2
+                or not torch.isfinite(shared).all()
+            ):
+                raise ValueError("Invalid exported shared matrix")
+            if len(group["experts"]) != config["model"]["num_experts"]:
+                raise ValueError("Exported expert count differs from configuration")
+            for expert in group["experts"]:
+                expected_keys = {"residual"} if dense_residual else {"low_rank", "sparse"}
+                if set(expert) != expected_keys:
+                    raise ValueError("Exported residual format differs from configuration")
+                if dense_residual and (
+                    not isinstance(expert["residual"], torch.Tensor)
+                    or expert["residual"].shape != group["shared"].shape
+                    or expert["residual"].dtype != group["shared"].dtype
+                    or not torch.isfinite(expert["residual"]).all()
+                ):
+                    raise ValueError("Invalid exported dense residual")
         if artifact["format"] != export_format(config) or any(
             ("permutation" in group) != aligned for group in artifact["groups"].values()
         ):
@@ -241,7 +299,8 @@ def load_evaluation_model(path, mode="raw", device="cpu"):
                 validator = validate_transport if soft else validate_permutation
                 validator(
                     permutation, config["model"]["num_experts"], config["model"]["expert_ffn_hidden_size"],
-                    config["salaad"]["channel_alignment"]["reference_expert"],
+                    (fixed_reference(config["salaad"]["channel_alignment"]) if soft else
+                     config["salaad"]["channel_alignment"]["reference_expert"]),
                     **({"tolerance": config["salaad"]["channel_alignment"]["sinkhorn"]["marginal_tolerance"]}
                        if soft else {}),
                 )
@@ -251,8 +310,7 @@ def load_evaluation_model(path, mode="raw", device="cpu"):
         )
     elif mode in ("raw", "reconstructed"):
         if mode == "raw":
-            checkpoint_metadata(path)
-            payload = load_torch(Path(path) / "training.pt")
+            _, payload = _checkpoint_payload(path)
             states = {}
         else:
             payload, states = checkpoint_states(path)
@@ -268,6 +326,9 @@ def load_evaluation_model(path, mode="raw", device="cpu"):
             weights = {name: value.bfloat16() for name, value in weights.items()}
     else:
         raise ValueError(f"Unknown evaluation mode: {mode}")
+    for name, value in weights.items():
+        if not isinstance(value, torch.Tensor) or not torch.isfinite(value).all():
+            raise ValueError(f"Nonfinite or invalid evaluation weight: {name}")
     model = MoELanguageModel(config, initialize=False)
     model.load_state_dict(weights, strict=True)
     return model.to(device).eval(), config

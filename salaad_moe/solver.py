@@ -1,8 +1,8 @@
-"""SALAAD structural constraints: X_i = native_shared_i + L_i + S_i.
+"""ADMM with either an unrestricted expert residual or legacy L/S residuals.
 
-The task trainer updates X with AdamW; this module updates separate auxiliary
-states with ADMM. The dual field stores the scaled dual U = Y / rho, and the
-anchor is Q = shared + L + S - U.
+The task trainer updates network weights W; this module updates the auxiliaries.
+The dual field stores U = Y_hat / rho. The training anchor is the reconstructed
+weight minus U. PyTorch stores weights transposed relative to the LaTeX notes.
 """
 from __future__ import annotations
 
@@ -11,13 +11,14 @@ from dataclasses import dataclass, fields
 import torch
 import torch.distributed as dist
 
+from .config import IDENTITY_INITIALIZATION
 from .distributed import agree_or_raise, all_finite, rank, world_size
 from .alignment import (
     PROJECTIONS, aligned_mean, initialize_alignment, layer_groups, match_channels,
     native_shared, validate_permutation,
 )
 from .sinkhorn import (
-    initialize_soft_alignment, least_squares_shared, update_soft_alignment,
+    fixed_reference, initialize_soft_alignment, least_squares_shared, update_soft_alignment,
     validate_soft_state, validate_transport,
 )
 
@@ -96,30 +97,7 @@ def svt(x, thresholds, basis, chunk_size=8):
     return low, spectra, next_basis
 
 
-@dataclass
-class GroupState:
-    # shared: [out, in]; low_rank/sparse/dual: [experts, out, in].
-    # tau_l/tau_s: [experts], equal to alpha/rho and beta/rho, respectively.
-    shared: torch.Tensor
-    low_rank: torch.Tensor
-    sparse: torch.Tensor
-    dual: torch.Tensor
-    tau_l: torch.Tensor
-    tau_s: torch.Tensor
-    rank_ratio: torch.Tensor
-    density: torch.Tensor
-    # Positive streaming components; this is an approximate rank diagnostic.
-    actual_rank: torch.Tensor
-    # Persistent QR basis: [experts, k, k], where k = min(out, in).
-    # This is distinct from the training anchor Q and must survive checkpoints.
-    svd_basis: torch.Tensor
-    # Optional native -> shared channel indices, shared by a layer's triplet.
-    # X/L/S/U/basis stay native; shared alone is in common coordinates.
-    permutation: torch.Tensor | None = None
-    channel_axis: int | None = None
-    # Soft mode: permutation is FP32 [expert, shared, native], with these logits.
-    alignment_logits: torch.Tensor | None = None
-
+class AuxiliaryState:
     def native_shared(self):
         return native_shared(self.shared, self.permutation, self.channel_axis)
 
@@ -127,9 +105,6 @@ class GroupState:
         # The training target Q includes the dual term; reconstructed weights
         # used for evaluation exclude it.
         return self.reconstruction() - self.dual
-
-    def reconstruction(self):
-        return self.native_shared() + self.low_rank + self.sparse
 
     def tensors(self):
         return [
@@ -145,23 +120,35 @@ class GroupState:
 
     @classmethod
     def from_state_dict(cls, state, device):
+        if "residual" in state:
+            if any(key in state for key in ("low_rank", "sparse", "svd_basis", "tau_l", "tau_s")):
+                raise ValueError("Mixed dense and low-rank/sparse auxiliary state")
+            cls = DenseResidualState
         values = {
             f.name: state[f.name].to(device=device, dtype=torch.float32)
             for f in fields(cls) if f.name not in ("permutation", "channel_axis", "alignment_logits")
         }
+        if cls is DenseResidualState and (
+            values["residual"].ndim != 3
+            or values["dual"].shape != values["residual"].shape
+            or values["shared"].shape != values["residual"].shape[1:]
+            or not all_finite(values.values())
+        ):
+            raise ValueError("Invalid dense residual checkpoint tensors")
         permutation = state.get("permutation")
         axis = state.get("channel_axis")
         logits = state.get("alignment_logits")
         if permutation is not None:
             if axis not in (0, 1) or isinstance(axis, bool):
                 raise ValueError("Invalid auxiliary channel axis")
-            validator = validate_transport if logits is not None else validate_permutation
+            soft = isinstance(permutation, torch.Tensor) and permutation.ndim == 3
+            validator = validate_transport if soft else validate_permutation
             validator(
-                permutation, values["low_rank"].shape[0], values["shared"].shape[axis]
+                permutation, values["dual"].shape[0], values["shared"].shape[axis]
             )
             if logits is not None:
                 if (
-                    not isinstance(logits, torch.Tensor) or logits.dtype != torch.float32
+                    not soft or not isinstance(logits, torch.Tensor) or logits.dtype != torch.float32
                     or logits.shape != permutation.shape or not torch.isfinite(logits).all()
                 ):
                     raise ValueError("Invalid auxiliary Sinkhorn logits")
@@ -172,14 +159,57 @@ class GroupState:
         return cls(**values, permutation=permutation, channel_axis=axis, alignment_logits=logits)
 
 
+@dataclass
+class GroupState(AuxiliaryState):
+    """Legacy shared + low-rank + sparse state, with its threshold controller."""
+    residual_mode = "low_rank_sparse"
+    shared: torch.Tensor
+    low_rank: torch.Tensor
+    sparse: torch.Tensor
+    dual: torch.Tensor
+    tau_l: torch.Tensor
+    tau_s: torch.Tensor
+    rank_ratio: torch.Tensor
+    density: torch.Tensor
+    actual_rank: torch.Tensor
+    svd_basis: torch.Tensor
+    permutation: torch.Tensor | None = None
+    channel_axis: int | None = None
+    alignment_logits: torch.Tensor | None = None
+
+    def reconstruction(self):
+        return self.native_shared() + self.low_rank + self.sparse
+
+
+@dataclass
+class DenseResidualState(AuxiliaryState):
+    """Documented X, X_e and U=Y_hat/rho; no L/S or threshold-controller state."""
+    residual_mode = "dense"
+    shared: torch.Tensor
+    residual: torch.Tensor
+    dual: torch.Tensor
+    permutation: torch.Tensor | None = None
+    channel_axis: int | None = None
+    alignment_logits: torch.Tensor | None = None
+
+    def reconstruction(self):
+        return self.native_shared() + self.residual
+
+
 def initial_state(x, config, *, shared=None, permutation=None, channel_axis=None, alignment_logits=None):
-    # By default: shared = expert mean, L = 0, S = X - shared, U = 0.
+    # Initialize shared, an exact expert remainder, and U=0. The legacy mode
+    # represents that remainder with L/S and also initializes its SVD basis.
     # The initial constraint residual is zero, avoiding a sudden large penalty
     # gradient when the auxiliary states are initialized.
-    s, ctl = config["salaad"], config["salaad"]["controller"]
+    s = config["salaad"]
     if shared is None:
         shared = torch.zeros_like(x[0]) if s.get("shared_mode", "learned") == "none" else x.mean(0)
     remainder = x - native_shared(shared, permutation, channel_axis)
+    if s.get("residual_mode", "low_rank_sparse") == "dense":
+        return DenseResidualState(
+            shared, remainder, torch.zeros_like(x), permutation, channel_axis, alignment_logits,
+        )
+    ctl = s["controller"]
     use_sparse = s.get("sparse_enabled", True)
     low = torch.zeros_like(x) if use_sparse else remainder
     sparse = remainder if use_sparse else torch.zeros_like(x)
@@ -205,8 +235,26 @@ def initial_state(x, config, *, shared=None, permutation=None, channel_axis=None
 
 @torch.no_grad()
 def structure_sweep(x, old, config, *, shared=None, permutation=None, alignment_logits=None):
-    """Hold the current model weights X fixed and run one shared -> L -> S -> U update."""
-    s, ctl = config["salaad"], config["salaad"]["controller"]
+    """Hold W fixed and update consensus, expert residual(s), then U."""
+    s = config["salaad"]
+    if s.get("residual_mode", "low_rank_sparse") == "dense":
+        if shared is None:
+            if old.permutation is not None:
+                raise ValueError("Aligned shared must be updated jointly across gate/up/down")
+            shared = (x - old.residual + old.dual).mean(0)
+        mapped = native_shared(shared, permutation, old.channel_axis)
+        # Step 4: X_e(new) = W(new) - mapped X(new) + Y_hat(old)/rho.
+        residual = x - mapped + old.dual
+        # Step 5 in scaled units. For a free residual, U(new) is zero up to
+        # roundoff; calculate the update rather than silently resetting U.
+        dual = old.dual + (x - mapped - residual)
+        new = DenseResidualState(
+            shared, residual, dual, permutation, old.channel_axis, alignment_logits,
+        )
+        if not all_finite([*new.tensors(), mapped + residual - dual]):
+            raise FloatingPointError("Nonfinite auxiliary update; old state was retained")
+        return new
+    ctl = s["controller"]
     mode = s.get("shared_mode", "learned")
     # 1. Unregularized consensus: average over experts within this layer and
     # projection. Groups never mix layers or projection types.
@@ -249,32 +297,39 @@ def structure_sweep(x, old, config, *, shared=None, permutation=None, alignment_
         shared, low, sparse, dual, tau_l, tau_s, ratio, density,
         spectrum.gt(0).sum(-1).float(), basis, permutation, old.channel_axis, alignment_logits,
     )
-    if not all_finite(new.tensors()):
+    if not all_finite([*new.tensors(), mapped_shared + low + sparse - dual]):
         raise FloatingPointError("Nonfinite auxiliary update; old state was retained")
     return new
 
 
 @torch.no_grad()
 def aligned_structure_sweep(weights, old, config, rematch):
-    """One joint P/H step, followed by native-coordinate L/S/U/controller steps."""
+    """Update P, consensus, native expert residual(s), and the dual in order."""
+    dense = config["salaad"].get("residual_mode", "low_rank_sparse") == "dense"
     residuals = {
-        p: weights[p] - old[p].low_rank - old[p].sparse + old[p].dual for p in PROJECTIONS
+        p: (weights[p] - old[p].residual + old[p].dual if dense else
+            weights[p] - old[p].low_rank - old[p].sparse + old[p].dual)
+        for p in PROJECTIONS
     }
     permutation = old["gate"].permutation
     logits = old["gate"].alignment_logits
-    if logits is not None:
+    soft = config["salaad"]["channel_alignment"].get("method") == "sinkhorn"
+    if soft:
         if rematch:
             permutation, logits = update_soft_alignment(
-                residuals, {p: old[p].shared for p in PROJECTIONS}, permutation,
-                logits, config["salaad"]["channel_alignment"],
+                residuals, {p: old[p].shared for p in PROJECTIONS},
+                config["salaad"]["channel_alignment"],
             )
-        shared = least_squares_shared(residuals, permutation)
+        shared = least_squares_shared(
+            residuals, permutation,
+            allow_singular=fixed_reference(config["salaad"]["channel_alignment"]) is None,
+        )
     elif rematch:
         permutation = match_channels(
             residuals, {p: old[p].shared for p in PROJECTIONS}, permutation,
             config["salaad"]["channel_alignment"],
         )
-    if logits is None:
+    if not soft:
         shared = {
             p: aligned_mean(residuals[p], permutation, int(p == "down")) for p in PROJECTIONS
         }
@@ -290,6 +345,7 @@ class ConsensusManager:
     """Connect task training and ADMM through group states, gradients, scheduling, and DP owners."""
     def __init__(self, groups, config):
         self.groups, self.config = groups, config
+        self.residual_mode = config["salaad"].get("residual_mode", "low_rank_sparse")
         self.states, self.anchors = {}, {}
         self.initialized = False
         self.last_structure_step = None
@@ -328,7 +384,10 @@ class ConsensusManager:
                     weights = {p: triplet[p].weight() for p in PROJECTIONS}
                     logits = None
                     if self.soft_aligned:
-                        permutation, shared, logits = initialize_soft_alignment(weights, self.alignment)
+                        permutation, shared, logits = initialize_soft_alignment(
+                            weights, self.alignment,
+                            identity=self.config["salaad"]["initialization"] == IDENTITY_INITIALIZATION,
+                        )
                     else:
                         permutation, shared = initialize_alignment(weights, self.alignment)
                     for p in PROJECTIONS:
@@ -452,6 +511,17 @@ class ConsensusManager:
             state, x = self.states[group.name], group.weight()
             # Include the shared matrix in the MoE reconstruction residual.
             diff = (x - state.reconstruction()).flatten(1).norm(dim=1)
+            if self.residual_mode == "dense":
+                values = torch.stack((
+                    diff, state.residual.flatten(1).norm(dim=1),
+                    rho * state.dual.flatten(1).norm(dim=1),
+                ), dim=1).tolist()
+                for expert, (error, residual_norm, multiplier_norm) in enumerate(values):
+                    records[f"{group.name}.expert_{expert}"] = {
+                        "diff": error, "residual_norm": residual_norm,
+                        "multiplier_norm": multiplier_norm, "rho": rho,
+                    }
+                continue
             # Report alpha/beta in their original units: tau = coefficient / rho.
             values = torch.stack(
                 (diff, state.density, state.rank_ratio, rho * state.tau_l, rho * state.tau_s),
@@ -480,6 +550,7 @@ class ConsensusManager:
             "sweeps": self.sweeps,
             "channel_alignment": self.aligned,
             "alignment_method": self.alignment_method,
+            "residual_mode": self.residual_mode,
             "last_matching_step": self.last_matching_step,
             "states": {name: state.state_dict() for name, state in self.states.items()},
         }
@@ -495,12 +566,15 @@ class ConsensusManager:
                     s["initialized"], s["last_structure_step"], s["sweeps"],
                     s.get("channel_alignment", False), s.get("last_matching_step"),
                     s.get("alignment_method", "hungarian" if s.get("channel_alignment", False) else "none"),
+                    s.get("residual_mode", "low_rank_sparse"),
                 )
                 for s in shards
             ]
             if len(set(metadata)) != 1:
                 raise ValueError("Inconsistent SALAAD checkpoint shards")
-            initialized, last_structure, _, aligned, last_matching, method = metadata[0]
+            initialized, last_structure, sweeps, aligned, last_matching, method, residual_mode = metadata[0]
+            if residual_mode != self.residual_mode:
+                raise ValueError("Checkpoint residual mode differs from configuration")
             if aligned != self.aligned or method != self.alignment_method:
                 raise ValueError("Checkpoint channel-alignment mode differs from configuration")
             if initialized and self.aligned and (
@@ -519,24 +593,35 @@ class ConsensusManager:
                     state = GroupState.from_state_dict(available[group.name], self.device)
                     shape = group.weight().shape
                     valid_shapes = (
-                        state.shared.shape == shape[1:]
-                        and state.svd_basis.shape == (shape[0], min(shape[1:]), min(shape[1:]))
-                        and all(
-                            getattr(state, key).shape == shape
-                            for key in ("low_rank", "sparse", "dual")
-                        )
-                        and all(
-                            getattr(state, key).shape == (shape[0],)
-                            for key in ("tau_l", "tau_s", "rank_ratio", "density", "actual_rank")
-                        )
+                        state.residual_mode == self.residual_mode
+                        and state.shared.shape == shape[1:]
+                        and state.dual.shape == shape
                     )
-                    if not valid_shapes or not all_finite(state.tensors()):
+                    if self.residual_mode == "dense":
+                        valid_shapes = (
+                            valid_shapes and isinstance(state, DenseResidualState)
+                            and state.residual.shape == shape
+                        )
+                    else:
+                        valid_shapes = valid_shapes and isinstance(state, GroupState) and (
+                            state.svd_basis.shape == (shape[0], min(shape[1:]), min(shape[1:]))
+                            and all(
+                                getattr(state, key).shape == shape
+                                for key in ("low_rank", "sparse")
+                            )
+                            and all(
+                                getattr(state, key).shape == (shape[0],)
+                                for key in ("tau_l", "tau_s", "rank_ratio", "density", "actual_rank")
+                            )
+                        )
+                    if not valid_shapes or not all_finite([*state.tensors(), state.anchor()]):
                         raise ValueError(f"Invalid auxiliary checkpoint: {group.name}")
                     if (state.permutation is not None) != self.aligned:
                         raise ValueError(f"Missing or unexpected channel permutation: {group.name}")
-                    if (state.alignment_logits is not None) != self.soft_aligned:
-                        raise ValueError(f"Missing or unexpected Sinkhorn logits: {group.name}")
-                    if (
+                    soft = state.permutation is not None and state.permutation.ndim == 3
+                    if soft != self.soft_aligned or (state.alignment_logits is not None and not soft):
+                        raise ValueError(f"Unexpected channel-permutation representation: {group.name}")
+                    if self.residual_mode != "dense" and (
                         (state.rank_ratio < 0).any()
                         or (state.rank_ratio > 1).any()
                         or (state.density < 0).any()
@@ -545,17 +630,22 @@ class ConsensusManager:
                         raise ValueError(f"Invalid auxiliary controller state: {group.name}")
                     staged[group.name] = state
                 if self.aligned:
-                    validate_layer_states(staged, self.alignment["reference_expert"], self.alignment)
+                    validate_layer_states(
+                        staged, self.alignment["reference_expert"], self.alignment,
+                        allow_identity=(
+                            sweeps == 0 and self.config["salaad"]["initialization"] == IDENTITY_INITIALIZATION
+                        ),
+                    )
         except Exception as exc:
             error = exc
         agree_or_raise(error, self.device, "Auxiliary checkpoint load")
-        self.initialized, self.last_structure_step, self.sweeps, _, self.last_matching_step, _ = metadata[0]
+        self.initialized, self.last_structure_step, self.sweeps, _, self.last_matching_step, _, _ = metadata[0]
         self.states = staged
         if self.initialized:
             self.refresh_anchors()
 
 
-def validate_layer_states(states, reference_expert, alignment=None):
+def validate_layer_states(states, reference_expert, alignment=None, *, allow_identity=False):
     """Check saved triplets and share one immutable P tensor within each layer."""
     layers = {}
     for name, state in states.items():
@@ -566,16 +656,18 @@ def validate_layer_states(states, reference_expert, alignment=None):
             raise ValueError(f"Incomplete channel-alignment checkpoint layer: {layer}")
         permutation = triplet["gate"].permutation
         logits = triplet["gate"].alignment_logits
-        if logits is not None:
-            if alignment is None or alignment.get("method") != "sinkhorn":
-                raise ValueError("Missing soft alignment configuration")
-            validate_soft_state(permutation, logits, alignment)
+        soft = alignment is not None and alignment.get("method") == "sinkhorn"
+        if soft:
+            validate_soft_state(permutation, logits, alignment, allow_identity=allow_identity)
+            reference_expert = fixed_reference(alignment)
+        elif logits is not None:
+            raise ValueError("Missing soft alignment configuration")
         for p, state in triplet.items():
             if state.channel_axis != int(p == "down"):
                 raise ValueError(f"Wrong saved channel axis: {layer}.{p}")
-            validator = validate_transport if logits is not None else validate_permutation
+            validator = validate_transport if soft else validate_permutation
             validator(
-                state.permutation, len(state.low_rank), state.shared.shape[state.channel_axis],
+                state.permutation, len(state.dual), state.shared.shape[state.channel_axis],
                 reference_expert,
             )
             if not torch.equal(state.permutation, permutation):
