@@ -1,0 +1,5 @@
+# Vanilla weight-decay comparison; retain all other baseline settings.
+inherits: ns97m_vanilla.yaml
+experiment: moe_ns97m_vanilla_wd01
+training:
+  weight_decay: 0.1
