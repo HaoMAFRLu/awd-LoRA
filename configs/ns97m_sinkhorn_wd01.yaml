@@ -1,0 +1,5 @@
+# Weight-decay comparison: all other settings inherit from the current run.
+inherits: ns97m_sinkhorn.yaml
+experiment: moe_ns97m_sinkhorn_wd01
+training:
+  weight_decay: 0.1
