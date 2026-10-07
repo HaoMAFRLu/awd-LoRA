@@ -1,0 +1,8 @@
+# Eight steps include delayed initialization and an off-period final update.
+inherits: smoke_sinkhorn.yaml
+experiment: moe_sinkhorn_hungarian_cpu_smoke
+salaad:
+  channel_alignment:
+    method: sinkhorn_hungarian
+    sinkhorn:
+      max_iterations: 10000

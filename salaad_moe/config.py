@@ -284,8 +284,12 @@ def validate_config(c: dict, world_size=None) -> None:
             raise ValueError("At least one residual component is required")
         if aligned:
             method = alignment.get("method", "hungarian")
-            if method not in ("hungarian", "sinkhorn"):
-                raise ValueError("Channel alignment method must be hungarian or sinkhorn")
+            if method not in ("hungarian", "sinkhorn", "sinkhorn_hungarian"):
+                raise ValueError("Channel alignment method must be hungarian, sinkhorn, or sinkhorn_hungarian")
+            if method == "sinkhorn_hungarian" and (
+                not dense_residual or s.get("initialization") != IDENTITY_INITIALIZATION
+            ):
+                raise ValueError("Sinkhorn hard projection requires dense residuals and identity/shared-mean initialization")
             if not isinstance(alignment.get("fix_reference", True), bool):
                 raise ValueError("channel_alignment.fix_reference must be a boolean")
             if method == "hungarian" and not dense_residual and not alignment.get("fix_reference", True):
@@ -314,7 +318,7 @@ def validate_config(c: dict, world_size=None) -> None:
                     raise ValueError("Dense Hungarian alignment requires identity/shared-mean initialization")
                 if interval != s["guidance_period_optimizer_steps"]:
                     raise ValueError("Dense Hungarian P must update on every structure sweep")
-            if method == "sinkhorn":
+            if method in ("sinkhorn", "sinkhorn_hungarian"):
                 initializations = (
                     {IDENTITY_INITIALIZATION, "soft_aligned_shared_least_squares_residual_dual_zero"}
                     if dense_residual else {"soft_aligned_shared_least_squares_L_zero_S_residual_dual_zero"}

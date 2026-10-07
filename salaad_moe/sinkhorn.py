@@ -6,7 +6,7 @@ from contextlib import contextmanager
 import torch
 import torch.nn.functional as F
 
-from .alignment import PROJECTIONS, initialize_alignment
+from .alignment import PROJECTIONS, initialize_alignment, validate_permutation
 
 
 def fixed_reference(alignment):
@@ -160,6 +160,35 @@ def update_soft_alignment(residuals, shared, alignment):
         p, len(p), p.shape[-1], reference, settings["marginal_tolerance"],
     )
     return p.detach(), logits.detach()
+
+
+@torch.no_grad()
+def project_transport_to_permutation(transport, previous):
+    """Nearest hard P in Frobenius norm; indices map native to shared channels.
+
+    Maximize the sum of selected *transport entries*, not their logarithms or
+    a reconstruction objective. Keep the previous permutation only on a tie;
+    the legacy reconstruction improvement tolerance does not apply here.
+    """
+    from scipy.optimize import linear_sum_assignment
+
+    if transport.ndim != 3:
+        raise ValueError("Expected a batch of square soft permutations")
+    experts, channels, _ = transport.shape
+    validate_transport(transport, experts, channels)
+    validate_permutation(previous, experts, channels)
+    scores = transport.detach().to(device="cpu", dtype=torch.float64).numpy()
+    result = previous.detach().cpu().clone()
+    native = torch.arange(channels).numpy()
+    for expert in range(experts):
+        shared_rows, native_columns = linear_sum_assignment(scores[expert], maximize=True)
+        candidate = result[expert].clone()
+        candidate[torch.from_numpy(native_columns)] = torch.from_numpy(shared_rows)
+        old_score = scores[expert, result[expert].numpy(), native].sum()
+        new_score = scores[expert, candidate.numpy(), native].sum()
+        if new_score > old_score:
+            result[expert] = candidate
+    return result.to(device=transport.device)
 
 
 @torch.no_grad()

@@ -1,0 +1,8 @@
+# Original training settings; allow more balancing iterations after hard projection.
+inherits: ns97m_sinkhorn.yaml
+experiment: moe_ns97m_sinkhorn_hungarian
+salaad:
+  channel_alignment:
+    method: sinkhorn_hungarian
+    sinkhorn:
+      max_iterations: 10000

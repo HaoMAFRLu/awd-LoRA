@@ -7,6 +7,16 @@ W → P → 共享矩阵 X → 自由残差 X_e → 乘子 Y。
 代码保存缩放乘子 `U = Y / rho`，与文中未缩放的乘子更新等价。
 PyTorch 权重使用 `[expert, output, input]` 布局，是文中权重矩阵的转置布局。
 
+另有可选配置 `ns97m_sinkhorn_hungarian`，在每次 Sinkhorn 更新后投影成硬置换；
+实现和使用方式见本文末尾“Sinkhorn 后投影为硬置换”。上面的入口继续使用软 P。
+
+2026-10-08 新增纯软配置 [ns97m_sinkhorn_10k.yaml](../configs/ns97m_sinkhorn_10k.yaml)：
+`method: sinkhorn`，`marginal_tolerance: 1e-5`，`max_iterations: 10000`。
+每轮保留 Sinkhorn 的软 P，再执行原共享最小二乘更新，不调用最后的 Hungarian 硬投影。
+原正式软配置的容差已是 1e-5；除实验名称外，这个配置仅把求解上限从 150 提高至 10000。
+达标提前停止，weight decay=0、其余训练参数及原配置均保留。
+提交入口为 [moe_ns97m_sinkhorn_10k.sub](../sub/moe_ns97m_sinkhorn_10k.sub)，资源仍为四张 H100。
+
 正式配置在训练开始前初始化分解和 P，不保留 vanilla 前缀。
 从第 10 步开始，每 10 步依次更新 P、shared、residual、U。
 2026-10-05 固定 P 的更新规则为 **无约束闭式解 → 正下限截断 → Sinkhorn**，每轮执行一次。
@@ -176,3 +186,70 @@ P 的表示、初始化时机、更新频率以及专家残差模型。
 2026-09-22 的旧梯度版本验证：88 项单元测试、DP2 训练及逐位恢复、CUDA BF16 CLI 暂停恢复均通过；
 另检查了 64 专家、176 通道、256 hidden size 的单层 CUDA 数值更新。
 详细记录见 [验证结果](moe_sinkhorn_validation.json)。这些检查验证实现，不代表正式训练质量。
+
+## Sinkhorn 后投影为硬置换
+
+使用 [ns97m_sinkhorn_hungarian.yaml](../configs/ns97m_sinkhorn_hungarian.yaml)，
+设置 `salaad.channel_alignment.method: sinkhorn_hungarian`。
+沿用 X（consensus）、X_e（expert-specific）、P_e（实际通道映射）的符号，
+仅用 P_tilde_e 表示本轮临时的软候选。顺序保持为：
+
+~~~text
+W_e → 闭式解 / 截断 / Sinkhorn 得到 P_tilde_e → 硬 P_e → X → X_e → Y_hat_e
+~~~
+
+固定本轮 `R_e = W_e(new) - X_e(old) + U_e(old)`，用旧 X 执行原来的
+`update_soft_alignment`，再解 `min_P ||P - P_tilde_e||_F²`。
+等价于最大化软矩阵中选中的元素之和，调用
+`linear_sum_assignment(P_tilde_e, maximize=True)`。不使用对数分数，也不使用
+原硬匹配模式的重构误差作为指派代价；因此 Sinkhorn 的输出实际参与配对。
+若旧排列与求得的最优排列分数恰好相等，保留旧排列；任何严格改善均接收。
+继承的 `improvement_tolerance` 是旧重构匹配的参数，不用于这个投影。
+
+硬 P_e 确定后，用对齐后的 R_e 均值更新 X，再更新 X_e 和乘子。
+同层 gate/up/down 共用一份排列，全部奇异值为 1，映射保持 X 的 Frobenius 范数。
+这与 `ns97m_hungarian` 的“先 X、后按重构代价匹配 P_e”是不同模式。
+原 Sinkhorn、原 Hungarian 和旧 L/S 模式的执行方式不变。
+
+初始化保持 P_e=I、X 为专家均值、X_e=W_e−X、乘子为零。
+Checkpoint 只保存 int64 `[expert, native_channel]` 硬索引和辅助状态；
+`permutation[e, b]=a` 表示共享行 a 对应原生列 b。
+临时软候选和 logits 不作为状态保存。恢复及 v5 导出验证三投影一致性与排列双射；
+新模式必须用自身配置续训，不能直接用原软模式的 checkpoint 续训。
+
+新正式配置保持原模型、数据、训练预算、优化器、学习率、weight decay=0、rho 和更新频率。
+另将本模式的 `sinkhorn.max_iterations` 从 150 提高到 **10000**，
+容差仍为 **1e-5**，每 5 次检查并在收敛后提前结束。
+原因是硬化后的后续软求解可能更慢：CPU 八步测试中，第 7 步在 150 次时仍有
+约 3.9e-4～4.0e-4 的行列和误差；最后的单步补更新最多需要 1625 次才达标，
+1000 次也不足。原软模式仍保持 150，不放宽容差或接受未收敛候选。
+10000 是上限，并非每次固定迭代次数或对任意输入的收敛保证；到上限仍不达标会报错。
+
+每次结构更新记录 `permutation_nonidentity_channels` 和
+`permutation_nonidentity_fraction`，分别表示相对 I 改变的通道数与比例。
+三个投影共用 P_e，故只在每层 gate 的各专家条目下记录一次，进入 metrics.jsonl 与 W&B
+的 `salaad_structure` 区。这两个指标描述相对 I 的差异，不是相对上一轮的变化量。
+
+检查配置、小模型和实际 DP2 训练：
+
+~~~bash
+myenv/bin/python scripts/train_salad.py --cfg_version ns97m_sinkhorn_hungarian --dry-run
+myenv/bin/python scripts/train_salad.py --cfg_version smoke_sinkhorn_hungarian \
+  --device cpu --allow-synthetic --output /tmp/new_sinkhorn_hungarian_smoke
+myenv/bin/torchrun --standalone --nproc-per-node=2 \
+  tests/moe/alignment_distributed_worker.py /tmp/new_sinkhorn_hungarian_dp2 --sinkhorn-hungarian
+~~~
+
+集群提交文件是 [moe_ns97m_sinkhorn_hungarian.sub](../sub/moe_ns97m_sinkhorn_hungarian.sub)，
+沿用四张 H100 的资源和语料设置；本次代码修改没有提交正式训练。
+
+2026-10-07 验证：新增 9 项测试，完整 MoE 测试共 131 项全部通过；正式配置 dry-run 通过。
+新增检查覆盖小矩阵穷举最优性、非自逆排列方向、并列最优、微小改善、先硬 P_e 后 X、
+两阶段失败时状态保留、原 150 次上限的真实不收敛、BF16 逐位恢复、非单位 P_e 的导出和日志。
+实际 CPU DP2 八步训练与第 2/3/7 步恢复通过，还检查了空 owner、跨 rank 失败传播、
+损坏排列拒绝和所有 rank 的训练目标一致性。本次未进行正式规模的 GPU 训练。
+
+CPU 小模型八步的 FP32、BF16 检查中，16 个 P_e 最终仍为 I；
+另用构造的非单位配对验证了转换、共享更新、保存和导出的正确性。
+硬化可消除软映射对范数的压缩，但不保证离开 I，也没有消除自由 X_e 对共享项的补偿。
+不能从这些实现检查推断正式训练表现。

@@ -18,7 +18,8 @@ from .alignment import (
     native_shared, validate_permutation,
 )
 from .sinkhorn import (
-    fixed_reference, initialize_soft_alignment, least_squares_shared, update_soft_alignment,
+    fixed_reference, initialize_soft_alignment, least_squares_shared,
+    project_transport_to_permutation, update_soft_alignment,
     validate_soft_state, validate_transport,
 )
 
@@ -313,9 +314,10 @@ def aligned_structure_sweep(weights, old, config, rematch):
     }
     permutation = old["gate"].permutation
     logits = old["gate"].alignment_logits
-    soft = config["salaad"]["channel_alignment"].get("method") == "sinkhorn"
+    alignment = config["salaad"]["channel_alignment"]
+    method = alignment.get("method", "hungarian")
     shared_first = config["salaad"]["structure_order"][:2] == ["shared", "permutation"]
-    if soft:
+    if method == "sinkhorn":
         if rematch:
             permutation, logits = update_soft_alignment(
                 residuals, {p: old[p].shared for p in PROJECTIONS},
@@ -325,6 +327,18 @@ def aligned_structure_sweep(weights, old, config, rematch):
             residuals, permutation,
             allow_singular=fixed_reference(config["salaad"]["channel_alignment"]) is None,
         )
+    elif method == "sinkhorn_hungarian":
+        if rematch:
+            transport, _ = update_soft_alignment(
+                residuals, {p: old[p].shared for p in PROJECTIONS}, alignment,
+            )
+            permutation = project_transport_to_permutation(transport, permutation)
+        # Only the hard P persists. Recompute X with that P before X_e/U;
+        # soft logits would describe a different matrix and must not be saved.
+        logits = None
+        shared = {
+            p: aligned_mean(residuals[p], permutation, int(p == "down")) for p in PROJECTIONS
+        }
     elif shared_first:
         # Freeze R = W(new) - X_e(old) + U(old) for both updates. Average
         # using P(old), then match against X(new); do not average again.
@@ -528,6 +542,10 @@ class ConsensusManager:
             # Include the shared matrix in the MoE reconstruction residual.
             diff = (x - state.reconstruction()).flatten(1).norm(dim=1)
             if self.residual_mode == "dense":
+                nonidentity_channels = None
+                if self.alignment_method == "sinkhorn_hungarian" and group.name.endswith(".gate"):
+                    identity = torch.arange(state.permutation.shape[1], device=state.permutation.device)
+                    nonidentity_channels = (state.permutation != identity).sum(-1).tolist()
                 values = torch.stack((
                     diff, state.residual.flatten(1).norm(dim=1),
                     rho * state.dual.flatten(1).norm(dim=1),
@@ -537,6 +555,11 @@ class ConsensusManager:
                         "diff": error, "residual_norm": residual_norm,
                         "multiplier_norm": multiplier_norm, "rho": rho,
                     }
+                    if nonidentity_channels is not None:
+                        records[f"{group.name}.expert_{expert}"].update({
+                            "permutation_nonidentity_channels": nonidentity_channels[expert],
+                            "permutation_nonidentity_fraction": nonidentity_channels[expert] / state.permutation.shape[1],
+                        })
                 continue
             # Report alpha/beta in their original units: tau = coefficient / rho.
             values = torch.stack(

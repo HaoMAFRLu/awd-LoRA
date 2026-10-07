@@ -45,7 +45,10 @@ def flatten_metrics(record):
             for name, metrics in value.items():
                 _, layer, _, _, projection, expert = name.split(".")
                 matrix = f"layer_{layer}_{projection}_{expert}"
-                for metric in ("diff", "density", "effective_rank_ratio", "residual_norm", "multiplier_norm"):
+                for metric in (
+                    "diff", "density", "effective_rank_ratio", "residual_norm", "multiplier_norm",
+                    "permutation_nonidentity_channels", "permutation_nonidentity_fraction",
+                ):
                     if metric in metrics:
                         result[f"salaad_structure/{matrix}_{metric}"] = metrics[metric]
                 for metric in ("alpha", "beta"):

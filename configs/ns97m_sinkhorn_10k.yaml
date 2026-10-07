@@ -1,0 +1,9 @@
+# Pure soft Sinkhorn; retain P without a Hungarian/permutation projection.
+inherits: ns97m_sinkhorn.yaml
+experiment: moe_ns97m_sinkhorn_10k
+salaad:
+  channel_alignment:
+    method: sinkhorn
+    sinkhorn:
+      marginal_tolerance: 1.0e-5
+      max_iterations: 10000

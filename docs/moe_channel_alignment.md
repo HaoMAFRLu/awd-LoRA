@@ -1,8 +1,11 @@
 # MoE 通道对齐训练
 
-自由残差模式有两个独立入口：
+自由残差模式的独立入口包括：
 [Sinkhorn 软对应](moe_sinkhorn_alignment.md)使用 `ns97m_sinkhorn`，
 [先更新 consensus 的匈牙利硬匹配](moe_hungarian_alignment.md)使用 `ns97m_hungarian`。
+在原 Sinkhorn 后投影成硬置换的模式使用 `ns97m_sinkhorn_hungarian`，见
+[Sinkhorn 文档末节](moe_sinkhorn_alignment.md#sinkhorn-后投影为硬置换)。
+纯软 Sinkhorn、容差 1e-5、上限 10000 次的独立实验使用 `ns97m_sinkhorn_10k`。
 下文描述原有 L/S 残差、先匹配再更新 consensus 的硬置换算法。
 
 入口仍是 `scripts/train_salad.py`。选择 `--cfg_version ns97m_aligned` 启用已讨论的算法。
