@@ -1,0 +1,11 @@
+# Raw checkpoint evaluation with the same full validation split as the prior comparison.
+format: salaad_moe.comparison.v1
+checkpoint_step: 2100
+data_manifest: data/moe_corpora/dclm_20260916/tokens_ns97m/manifest.json
+corpus_identity: af6ff01895161e92706b337e8c306a92f81936e1cc4cfa0b1ff17514b8775034
+runs:
+  - name: hungarian_wd0
+    checkpoint: data/moe/ns97m_hungarian/17682842_0/checkpoints/step_00002100
+    config_hash: f89cbb706b80427046196dda5fe79e27709a78142b104ce4d3e0a226a3212d02
+    weight_decay: 0.0
+    salaad_enabled: true

@@ -43,6 +43,7 @@ class ComparisonTests(unittest.TestCase):
                 if not enabled:
                     c["salaad"] = load_config(ROOT / "configs/smoke.yaml")["salaad"]
                 c["salaad"]["enabled"] = enabled
+                c["salaad"]["state_initialization_step"] = 0
                 c["training"]["weight_decay"] = wd
                 name = ("sinkhorn" if enabled else "vanilla") + ("_wd01" if wd else "_wd0")
                 c["experiment"] = name
@@ -157,6 +158,28 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(result["status"], "failed")
         self.assertGreater(result["nll_metrics"]["nll"], 0)
         self.assertIn("dataset unavailable", result["error"])
+
+    def test_norm_inspection_happens_after_evaluation_and_keeps_nll_on_failure(self):
+        def fail_norms(*args, **kwargs):
+            saved = json.loads((self.output / "summary.json").read_text())
+            self.assertTrue(all(record["status"] == "complete" for record in saved["results"]))
+            self.assertTrue(all("nll_metrics" in record for record in saved["results"]))
+            raise RuntimeError("norm analysis interrupted")
+
+        with patch("scripts.analyze_moe_matrix_norms.analyze_checkpoint", side_effect=fail_norms):
+            with self.assertRaisesRegex(RuntimeError, "norm analysis interrupted"):
+                self.run_evaluation("--matrix-norms", "--sequences", "1")
+        saved = json.loads((self.output / "summary.json").read_text())
+        self.assertEqual(len(saved["results"]), 4)
+        self.assertTrue(saved["matrix_norms_requested"])
+
+    def test_evaluation_with_norms_writes_real_checkpoint_report(self):
+        result = self.run_evaluation("--matrix-norms", "--sequences", "1", "--runs", "sinkhorn_wd0")
+        metadata = result["results"][0]["matrix_norms"]
+        report = json.loads(Path(metadata["report"]).read_text())
+        self.assertEqual(metadata["status"], "complete")
+        self.assertEqual(report["config_hash"], result["results"][0]["config_hash"])
+        self.assertEqual(report["checkpoint_step"], 1)
 
     def test_tasks_use_shared_adapter_and_save_all_six_metrics(self):
         config = load_config(ROOT / "configs/smoke_sinkhorn.yaml")

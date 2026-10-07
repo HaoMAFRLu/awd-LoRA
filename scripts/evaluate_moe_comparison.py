@@ -77,6 +77,9 @@ def preflight(args):
             raise ValueError(f"{name}: weight decay differs from run label")
         if config["salaad"]["enabled"] != entry["salaad_enabled"]:
             raise ValueError(f"{name}: SALAAD setting differs from run label")
+        if (args.matrix_norms and entry["salaad_enabled"]
+                and config["salaad"].get("residual_mode") != "dense"):
+            raise ValueError(f"{name}: matrix norm inspection requires dense expert-specific X_e")
         # SALAAD and weight decay are the intended experimental variables.
         common = {k: config[k] for k in ("seed", "model", "data", "parallel", "evaluation")}
         common["training"] = {k: v for k, v in config["training"].items() if k != "weight_decay"}
@@ -110,6 +113,7 @@ def preflight(args):
         "tokenizer_directory": args.tokenizer_directory,
         "task_precision": config["training"]["task_precision"],
         "device": args.device,
+        "matrix_norms_requested": args.matrix_norms,
         "debug": bool((nll_enabled and args.sequences) or args.task_limit),
         "runs": runs,
     }
@@ -213,6 +217,25 @@ def run_comparison(args, plan, configs):
             gc.collect()
             if device.type == "cuda":
                 torch.cuda.empty_cache()
+    # Complete all held-out evaluations before inspecting auxiliary matrices.
+    # Completed NLL results remain saved even if this optional analysis fails.
+    if args.matrix_norms:
+        from scripts.analyze_moe_matrix_norms import analyze_checkpoint
+
+        for record in records:
+            if not record["salaad_enabled"]:
+                continue
+            norm_output = output / "matrix_norms" / record["name"]
+            print(f"{record['name']}: inspecting checkpoint matrix norms", flush=True)
+            report = analyze_checkpoint(
+                record["checkpoint"], norm_output,
+                expected_config_hash=record["config_hash"], expected_step=record["checkpoint_step"],
+            )
+            record["matrix_norms"] = {
+                "status": "complete", "report": str(norm_output / "matrix_norms.json"),
+                "groups_count": report["groups_count"], "per_expert_rows": report["per_expert_rows"],
+            }
+            save_results(output, plan, records)
     print(f"Saved {output / 'summary.csv'}", flush=True)
     return {**plan, "results": records}
 
@@ -231,6 +254,8 @@ def main(argv=None):
     parser.add_argument("--tokenizer-directory", help="Optional local pinned Pythia tokenizer")
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cuda")
     parser.add_argument("--cpu-threads", type=int, default=4)
+    parser.add_argument("--matrix-norms", action="store_true",
+                        help="After evaluation, inspect X/X_e/W_e/P_e for dense SALAAD runs")
     parser.add_argument("--dry-run", action="store_true", help="Check metadata only; no tensors or GPU")
     args = parser.parse_args(argv)
     if args.sequences < 0 or args.batch_size < 1 or args.cpu_threads < 1:
