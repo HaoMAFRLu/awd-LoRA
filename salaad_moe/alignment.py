@@ -1,7 +1,7 @@
 """Joint SwiGLU channel matching; permutations map native -> shared indices.
 
-X, L, S, U and the streaming basis never leave the expert's native coordinates.
-Only H uses shared coordinates. One permutation is used by all three projections.
+Network weights, expert residuals and multipliers stay in native coordinates.
+The consensus uses shared coordinates. All three projections use the same P.
 """
 from __future__ import annotations
 
@@ -113,7 +113,7 @@ def match_channels(residuals, shared, permutation, settings):
     candidate = permutation.detach().cpu().clone()
     tolerance = settings["improvement_tolerance"]
     for expert in range(len(candidate)):
-        if expert == settings["reference_expert"]:
+        if settings.get("fix_reference", True) and expert == settings["reference_expert"]:
             continue
         rows, columns = linear_sum_assignment(cost[expert])
         old_cost = cost[expert, rows, candidate[expert].numpy()].sum(dtype="float64")
@@ -135,13 +135,18 @@ def matching_error(weights, shared, permutation):
 
 
 @torch.no_grad()
-def initialize_alignment(weights, settings):
+def initialize_alignment(weights, settings, *, identity=False):
     experts, channels, _ = weights["gate"].shape
     permutation = torch.arange(channels, device=weights["gate"].device).expand(experts, -1).clone()
+    if identity:
+        return permutation, {p: weights[p].mean(0) for p in PROJECTIONS}
+    # Preserve the legacy reference-based initializer, including soft runs
+    # that release the reference only during subsequent structure updates.
+    initialization_settings = {**settings, "fix_reference": True}
     shared = {p: weights[p][settings["reference_expert"]].clone() for p in PROJECTIONS}
     for _ in range(settings["initialization_max_iterations"]):
         old_error = matching_error(weights, shared, permutation)
-        permutation = match_channels(weights, shared, permutation, settings)
+        permutation = match_channels(weights, shared, permutation, initialization_settings)
         shared = {
             p: aligned_mean(weights[p], permutation, int(p == "down")) for p in PROJECTIONS
         }

@@ -220,14 +220,18 @@ def validate_config(c: dict, world_size=None) -> None:
         if residual_mode not in ("low_rank_sparse", "dense"):
             raise ValueError("residual_mode must be low_rank_sparse or dense")
         dense_residual = residual_mode == "dense"
+        hard_dense = dense_residual and aligned and alignment.get("method", "hungarian") == "hungarian"
+        structure_order = (["permutation"] if aligned else []) + (
+            ["shared", "residual", "dual"] if dense_residual else ["shared", "low_rank", "sparse", "dual"]
+        )
+        if hard_dense:
+            structure_order = ["shared", "permutation", "residual", "dual"]
         required_salaad = {
             "consensus_scope": "same_layer_same_projection_all_experts",
             "rho_scope": "global_fixed_all_experts_all_layers",
             "penalty_reduction": "sum_all_entries_all_expert_matrices",
             "gradient_injection": "after_dp_reduce_and_prepare_grads_before_global_clip",
-            "structure_order": (["permutation"] if aligned else []) + (
-                ["shared", "residual", "dual"] if dense_residual else ["shared", "low_rank", "sparse", "dual"]
-            ),
+            "structure_order": structure_order,
             "refresh_anchor_after_structure": True,
             "auxiliary_dtype": "float32",
             "auxiliary_owner": "deterministic_layer_id_mod_dp" if aligned else "deterministic_group_id_mod_dp",
@@ -256,8 +260,8 @@ def validate_config(c: dict, world_size=None) -> None:
         if dense_residual:
             if s.get("low_rank_enabled", True) or s.get("sparse_enabled", True) or s.get("controller") is not None:
                 raise ValueError("Dense residuals require low_rank_enabled=false, sparse_enabled=false, controller=null")
-            if not aligned or alignment.get("method") != "sinkhorn" or alignment.get("fix_reference", True):
-                raise ValueError("Dense residual ADMM requires Sinkhorn with fix_reference=false")
+            if not aligned or alignment.get("fix_reference", True):
+                raise ValueError("Dense residual ADMM requires channel alignment with fix_reference=false")
         else:
             ctl = s["controller"]
             if ctl["rank_statistic"] != "linear_singular_value_mass" or not 0 < ctl["gamma"] <= 1:
@@ -284,8 +288,8 @@ def validate_config(c: dict, world_size=None) -> None:
                 raise ValueError("Channel alignment method must be hungarian or sinkhorn")
             if not isinstance(alignment.get("fix_reference", True), bool):
                 raise ValueError("channel_alignment.fix_reference must be a boolean")
-            if method == "hungarian" and not alignment.get("fix_reference", True):
-                raise ValueError("Hungarian alignment requires a fixed reference")
+            if method == "hungarian" and not dense_residual and not alignment.get("fix_reference", True):
+                raise ValueError("Legacy low-rank/sparse Hungarian alignment requires a fixed reference")
             if set(s["projections"]) != {"gate", "up", "down"}:
                 raise ValueError("Channel alignment requires all three SwiGLU projections")
             if s.get("shared_mode", "learned") != "learned":
@@ -305,6 +309,11 @@ def validate_config(c: dict, world_size=None) -> None:
             tolerance = alignment.get("improvement_tolerance")
             if not isinstance(tolerance, (int, float)) or not math.isfinite(tolerance) or tolerance < 0:
                 raise ValueError("Alignment improvement tolerance must be finite and nonnegative")
+            if hard_dense:
+                if s.get("initialization") != IDENTITY_INITIALIZATION:
+                    raise ValueError("Dense Hungarian alignment requires identity/shared-mean initialization")
+                if interval != s["guidance_period_optimizer_steps"]:
+                    raise ValueError("Dense Hungarian P must update on every structure sweep")
             if method == "sinkhorn":
                 initializations = (
                     {IDENTITY_INITIALIZATION, "soft_aligned_shared_least_squares_residual_dual_zero"}

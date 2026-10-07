@@ -299,8 +299,7 @@ def load_evaluation_model(path, mode="raw", device="cpu"):
                 validator = validate_transport if soft else validate_permutation
                 validator(
                     permutation, config["model"]["num_experts"], config["model"]["expert_ffn_hidden_size"],
-                    (fixed_reference(config["salaad"]["channel_alignment"]) if soft else
-                     config["salaad"]["channel_alignment"]["reference_expert"]),
+                    fixed_reference(config["salaad"]["channel_alignment"]),
                     **({"tolerance": config["salaad"]["channel_alignment"]["sinkhorn"]["marginal_tolerance"]}
                        if soft else {}),
                 )

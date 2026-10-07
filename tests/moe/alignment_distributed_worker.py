@@ -39,15 +39,18 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     parser.add_argument("--delayed-initialization", action="store_true")
-    parser.add_argument("--sinkhorn", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--sinkhorn", action="store_true")
+    mode.add_argument("--hungarian-dense", action="store_true")
     args = parser.parse_args()
-    if args.sinkhorn:
+    if args.sinkhorn or args.hungarian_dense:
         args.delayed_initialization = True
     torch.set_num_threads(1)
     dist.init_process_group("gloo")
     try:
         current_rank = dist.get_rank()
-        config_name = "smoke_sinkhorn_dp2.yaml" if args.sinkhorn else "smoke_aligned_dp2.yaml"
+        config_name = ("smoke_hungarian_dp2.yaml" if args.hungarian_dense else
+                       "smoke_sinkhorn_dp2.yaml" if args.sinkhorn else "smoke_aligned_dp2.yaml")
         config = load_config(Path(__file__).resolve().parents[2] / "configs" / config_name)
         torch.manual_seed(12)
         # A complete layer belongs to rank 0; rank 1 has no auxiliary state.
@@ -129,7 +132,7 @@ def main():
             equal(reference.manager.local_state_dict(), resumed.manager.local_state_dict())
             equal(reference.reader.state_dict(), resumed.reader.state_dict())
             equal(expected_rng, rng_state())
-            expected_matching = 8 if args.sinkhorn else (7 if args.delayed_initialization else 8)
+            expected_matching = 8 if args.sinkhorn or args.hungarian_dense else (7 if args.delayed_initialization else 8)
             assert resumed.manager.last_matching_step == expected_matching
         for value in resumed.manager.anchors.values():
             other = value.clone()

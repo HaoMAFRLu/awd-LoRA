@@ -304,7 +304,7 @@ def structure_sweep(x, old, config, *, shared=None, permutation=None, alignment_
 
 @torch.no_grad()
 def aligned_structure_sweep(weights, old, config, rematch):
-    """Update P, consensus, native expert residual(s), and the dual in order."""
+    """Update consensus/P in the configured order, then expert residual(s) and U."""
     dense = config["salaad"].get("residual_mode", "low_rank_sparse") == "dense"
     residuals = {
         p: (weights[p] - old[p].residual + old[p].dual if dense else
@@ -314,6 +314,7 @@ def aligned_structure_sweep(weights, old, config, rematch):
     permutation = old["gate"].permutation
     logits = old["gate"].alignment_logits
     soft = config["salaad"]["channel_alignment"].get("method") == "sinkhorn"
+    shared_first = config["salaad"]["structure_order"][:2] == ["shared", "permutation"]
     if soft:
         if rematch:
             permutation, logits = update_soft_alignment(
@@ -324,12 +325,22 @@ def aligned_structure_sweep(weights, old, config, rematch):
             residuals, permutation,
             allow_singular=fixed_reference(config["salaad"]["channel_alignment"]) is None,
         )
-    elif rematch:
-        permutation = match_channels(
-            residuals, {p: old[p].shared for p in PROJECTIONS}, permutation,
-            config["salaad"]["channel_alignment"],
-        )
-    if not soft:
+    elif shared_first:
+        # Freeze R = W(new) - X_e(old) + U(old) for both updates. Average
+        # using P(old), then match against X(new); do not average again.
+        shared = {
+            p: aligned_mean(residuals[p], permutation, int(p == "down")) for p in PROJECTIONS
+        }
+        if rematch:
+            permutation = match_channels(
+                residuals, shared, permutation, config["salaad"]["channel_alignment"],
+            )
+    else:
+        if rematch:
+            permutation = match_channels(
+                residuals, {p: old[p].shared for p in PROJECTIONS}, permutation,
+                config["salaad"]["channel_alignment"],
+            )
         shared = {
             p: aligned_mean(residuals[p], permutation, int(p == "down")) for p in PROJECTIONS
         }
@@ -389,7 +400,11 @@ class ConsensusManager:
                             identity=self.config["salaad"]["initialization"] == IDENTITY_INITIALIZATION,
                         )
                     else:
-                        permutation, shared = initialize_alignment(weights, self.alignment)
+                        permutation, shared = initialize_alignment(
+                            weights, self.alignment,
+                            identity=(self.residual_mode == "dense" and
+                                      self.config["salaad"]["initialization"] == IDENTITY_INITIALIZATION),
+                        )
                     for p in PROJECTIONS:
                         staged[triplet[p].name] = initial_state(
                             weights[p], self.config, shared=shared[p],
@@ -454,8 +469,9 @@ class ConsensusManager:
             self.aligned and interval > 0 and elapsed > 0
             and elapsed % interval == 0 and step > self.last_matching_step
         )
-        # Soft P follows every structure sweep, including an off-period final flush.
-        if self.soft_aligned:
+        # Dense ADMM and legacy soft P match on every structure sweep,
+        # including an off-period final flush. Legacy hard schedules stay intact.
+        if self.soft_aligned or (self.aligned and self.residual_mode == "dense"):
             rematch = step > self.last_matching_step
         try:
             if self.aligned:
@@ -647,6 +663,8 @@ class ConsensusManager:
 
 def validate_layer_states(states, reference_expert, alignment=None, *, allow_identity=False):
     """Check saved triplets and share one immutable P tensor within each layer."""
+    if alignment is not None:
+        reference_expert = fixed_reference(alignment)
     layers = {}
     for name, state in states.items():
         layer, projection = name.rsplit(".", 1)
@@ -659,7 +677,6 @@ def validate_layer_states(states, reference_expert, alignment=None, *, allow_ide
         soft = alignment is not None and alignment.get("method") == "sinkhorn"
         if soft:
             validate_soft_state(permutation, logits, alignment, allow_identity=allow_identity)
-            reference_expert = fixed_reference(alignment)
         elif logits is not None:
             raise ValueError("Missing soft alignment configuration")
         for p, state in triplet.items():

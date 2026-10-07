@@ -1,0 +1,16 @@
+# Delayed initialization and an off-period final flush exercise resume/scheduling.
+inherits: smoke_aligned.yaml
+experiment: moe_hungarian_cpu_smoke
+salaad:
+  state_initialization_step: 3
+  residual_mode: dense
+  low_rank_enabled: false
+  sparse_enabled: false
+  controller: null
+  structure_order: [shared, permutation, residual, dual]
+  initialization: identity_shared_mean_residual_dual_zero
+  channel_alignment:
+    method: hungarian
+    fix_reference: false
+    match_every_optimizer_steps: 2
+    improvement_tolerance: 0.0
