@@ -145,7 +145,7 @@ class CosineInitializationTests(unittest.TestCase):
 
     def test_formal_config_preserves_training_settings_and_old_modes(self):
         formal = load_config(ROOT / "configs/ns97m_sinkhorn_cosine_init.yaml")
-        baseline = load_config(ROOT / "configs/ns97m_sinkhorn_10k_first_update.yaml")
+        baseline = load_config(ROOT / "configs/ns97m_sinkhorn_10k.yaml")
         validate_config(formal, 4)
         expected = copy.deepcopy(baseline)
         expected["experiment"] = formal["experiment"]

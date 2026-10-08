@@ -2,7 +2,7 @@
 # Recompute aligned X and exact residual X_e; subsequent P updates remain soft.
 inherits: ns97m_sinkhorn.yaml
 experiment: moe_ns97m_sinkhorn_cosine_init
-is_wandb: false
+is_wandb: true
 salaad:
   initialization: mean_cosine_hungarian_residual_dual_zero
   channel_alignment:
