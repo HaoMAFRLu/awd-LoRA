@@ -48,6 +48,11 @@ class MatrixNormTests(unittest.TestCase):
         self.assertEqual([row["is_identity"] for row in rows], [False, True])
         self.assertEqual([row["moved_channels"] for row in rows], [3, 0])
         self.assertAlmostEqual(rows[0]["permutation_fro"], math.sqrt(3))
+        self.assertAlmostEqual(rows[0]["identity_distance_fro"], math.sqrt(6))
+        self.assertAlmostEqual(rows[0]["relative_identity_distance_fro"], math.sqrt(2))
+        self.assertEqual(rows[0]["diagonal_mean"], 0)
+        self.assertEqual(rows[1]["identity_distance_fro"], 0)
+        self.assertEqual(rows[1]["diagonal_mean"], 1)
         self.assertNotAlmostEqual(rows[0]["permutation_fro"], float(indices[0].float().norm()))
         with self.assertRaisesRegex(ValueError, "bijection"):
             permutation_rows(0, torch.tensor([[0, 0, 2]]))
@@ -64,7 +69,11 @@ class MatrixNormTests(unittest.TestCase):
         self.assertIsNone(rows[1]["specific_over_full"])
         self.assertEqual(rows[0]["specific_over_full"], 1)
         json.dumps({"group": group, "rows": rows}, allow_nan=False)
-        self.assertEqual(permutation_rows(0, permutation)[0]["permutation_fro"], 1)
+        row = permutation_rows(0, permutation)[0]
+        self.assertEqual(row["permutation_fro"], 1)
+        self.assertEqual(row["identity_distance_fro"], 1)
+        self.assertAlmostEqual(row["relative_identity_distance_fro"], 1 / math.sqrt(2))
+        self.assertEqual(row["diagonal_mean"], 0.5)
 
     def test_hungarian_checkpoint_reports_every_expert_and_deduplicates_permutations(self):
         with tempfile.TemporaryDirectory() as temporary:

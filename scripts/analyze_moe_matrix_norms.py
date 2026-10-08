@@ -53,14 +53,22 @@ def permutation_rows(layer, permutation):
             moved = int((value != identity).sum())
             row = {"permutation_fro": math.sqrt(channels), "is_identity": moved == 0,
                    "moved_channels": moved, "moved_fraction": moved / channels,
-                   "row_sum_error_max": 0.0, "column_sum_error_max": 0.0}
+                   "row_sum_error_max": 0.0, "column_sum_error_max": 0.0,
+                   "identity_distance_fro": math.sqrt(2 * moved),
+                   "relative_identity_distance_fro": math.sqrt(2 * moved / channels),
+                   "diagonal_mean": 1 - moved / channels}
         else:
             value = value.double()
+            difference = value - torch.eye(channels, device=value.device, dtype=value.dtype)
+            distance = float(fro(difference))
             row = {"permutation_fro": float(fro(value)),
                    "is_identity": torch.equal(value, torch.eye(channels, device=value.device)),
                    "moved_channels": None, "moved_fraction": None,
                    "row_sum_error_max": float((value.sum(-1) - 1).abs().max()),
-                   "column_sum_error_max": float((value.sum(-2) - 1).abs().max())}
+                   "column_sum_error_max": float((value.sum(-2) - 1).abs().max()),
+                   "identity_distance_fro": distance,
+                   "relative_identity_distance_fro": distance / math.sqrt(channels),
+                   "diagonal_mean": float(value.diagonal().mean())}
         rows.append({"layer": layer, "expert": expert, "channels": channels,
                      "representation": "hard" if hard else "soft", **row})
     return rows
@@ -176,6 +184,8 @@ def analyze_checkpoint(checkpoint, output, *, expected_config_hash=None, expecte
         "permutation_summary": {
             "count": len(permutations), "identity_count": sum(row["is_identity"] for row in permutations),
             "permutation_fro": stats(row["permutation_fro"] for row in permutations),
+            **{key: stats(row[key] for row in permutations) for key in
+               ("identity_distance_fro", "relative_identity_distance_fro", "diagonal_mean")},
             "moved_fraction": stats(row["moved_fraction"] for row in permutations),
             "hard_permutation_singular_values": "All 1, implied by validated bijections" if
                 permutations and all(row["representation"] == "hard" for row in permutations) else None,
