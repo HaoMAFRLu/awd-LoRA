@@ -1,0 +1,4 @@
+# Keep the original 2100-step schedule; the launch pauses after step 10.
+inherits: ns97m_sinkhorn_10k.yaml
+experiment: moe_ns97m_sinkhorn_10k_first_update
+is_wandb: false

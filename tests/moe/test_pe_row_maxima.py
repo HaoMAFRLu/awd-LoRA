@@ -1,6 +1,8 @@
 """Check diagonal maxima, ties, and the row/column orientation independently."""
 import unittest
+from unittest.mock import patch
 
+import numpy as np
 import torch
 
 from scripts.analyze_moe_pe_row_maxima import project_hungarian, projection_summary, row_maxima, summarize
@@ -50,6 +52,19 @@ class PeRowMaximaTests(unittest.TestCase):
         self.assertAlmostEqual(rows[0]["optimal_score"], 2.7, places=6)
         self.assertAlmostEqual(rows[0]["score_gain_over_identity"], 2.55, places=6)
         self.assertEqual(projection_summary(rows)["non_identity_count"], 1)
+
+    def test_direct_solver_tie_choice_is_not_replaced_by_identity(self):
+        p = torch.full((1, 3, 3), 1 / 3)
+        with patch("scripts.evaluate_moe_hard_projection.linear_sum_assignment",
+                   return_value=(np.arange(3), np.array([1, 2, 0]))) as solve:
+            rows, indices = project_hungarian(0, p, tie_rule="solver")
+        self.assertTrue(solve.call_args.kwargs["maximize"])
+        torch.testing.assert_close(indices, torch.tensor([[2, 0, 1]]), rtol=0, atol=0)
+        self.assertFalse(rows[0]["is_identity"])
+        self.assertEqual(rows[0]["moved_channels"], 3)
+        self.assertEqual(rows[0]["score_gain_over_identity"], 0)
+        old_rows, _ = project_hungarian(0, p)
+        self.assertTrue(old_rows[0]["is_identity"])
 
 
 if __name__ == "__main__":

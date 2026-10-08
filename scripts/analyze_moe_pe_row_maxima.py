@@ -70,11 +70,18 @@ def summarize(rows):
 
 
 @torch.no_grad()
-def project_hungarian(layer, permutation):
-    """Project saved soft entries directly, preferring identity only on an exact tie."""
+def project_hungarian(layer, permutation, *, tie_rule="identity"):
+    """Project soft entries, optionally accepting the solver's choice on exact ties."""
     experts, channels, _ = permutation.shape
     identity = torch.arange(channels, device=permutation.device).expand(experts, -1).clone()
-    indices = project_transport_to_permutation(permutation, identity)
+    if tie_rule == "solver":
+        from scripts.evaluate_moe_hard_projection import direct_hungarian
+
+        indices = direct_hungarian(permutation).to(permutation.device)
+    elif tie_rule == "identity":
+        indices = project_transport_to_permutation(permutation, identity)
+    else:
+        raise ValueError(f"Unknown Hungarian tie rule: {tie_rule}")
     validate_permutation(indices, experts, channels)
     scores = permutation.double()
     expert_ids = torch.arange(experts, device=permutation.device)[:, None]
@@ -113,7 +120,8 @@ def projection_summary(matrices):
 
 
 @torch.no_grad()
-def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None, with_hungarian=False):
+def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None,
+            with_hungarian=False, hungarian_tie_rule="identity"):
     started = time.perf_counter()
     output = Path(output)
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
@@ -129,7 +137,8 @@ def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None
         # checkpoint_states checks that gate/up/down share exactly the same P_e.
         state = states[f"layers.{layer}.moe.experts.gate"]
         if with_hungarian:
-            projected_rows, projected_indices = project_hungarian(layer, state.permutation)
+            projected_rows, projected_indices = project_hungarian(
+                layer, state.permutation, tie_rule=hungarian_tie_rule)
             hard_rows.extend(projected_rows)
             hard_indices.append(projected_indices)
         layer_rows = row_maxima(layer, state.permutation)
@@ -167,7 +176,8 @@ def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None
             raise AssertionError("Hard matrices must have exactly one 1 per row and column")
         projection = {
             "objective": "Maximize sum of selected saved soft P_e entries; no logarithms",
-            "tie_rule": "Keep identity if it is also optimal",
+            "tie_rule": ("Accept solver result directly; no identity fallback" if hungarian_tie_rule == "solver"
+                         else "Keep identity if it is also optimal"),
             "indices_convention": "P_e[native_to_shared[b], b] = 1; all other entries are zero",
             "matrix_array": "hard_permutations.npz:P_e; uint8 [layer, expert, shared_row, native_column]",
             "summary": projection_summary(hard_rows),
@@ -200,12 +210,15 @@ def main():
     parser.add_argument("--expected-config-hash")
     parser.add_argument("--project-hungarian", action="store_true",
                         help="Also save the closest hard permutations and compare them with identity")
+    parser.add_argument("--hungarian-tie-rule", choices=("identity", "solver"), default="identity",
+                        help="Preserve the existing identity tie preference or accept the direct solver result")
     args = parser.parse_args()
     if args.cpu_threads < 1:
         parser.error("--cpu-threads must be >= 1")
     torch.set_num_threads(args.cpu_threads)
     analyze(args.checkpoint, args.output, expected_step=args.expected_step,
-            expected_config_hash=args.expected_config_hash, with_hungarian=args.project_hungarian)
+            expected_config_hash=args.expected_config_hash, with_hungarian=args.project_hungarian,
+            hungarian_tie_rule=args.hungarian_tie_rule)
 
 
 if __name__ == "__main__":
