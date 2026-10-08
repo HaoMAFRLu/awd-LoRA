@@ -13,7 +13,9 @@ sys.path.insert(0, str(ROOT))
 
 import torch
 
+from salaad_moe.alignment import validate_permutation
 from salaad_moe.export import checkpoint_states
+from salaad_moe.sinkhorn import project_transport_to_permutation
 from scripts.analyze_moe_matrix_norms import stats, write_csv, write_json
 
 
@@ -68,7 +70,50 @@ def summarize(rows):
 
 
 @torch.no_grad()
-def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None):
+def project_hungarian(layer, permutation):
+    """Project saved soft entries directly, preferring identity only on an exact tie."""
+    experts, channels, _ = permutation.shape
+    identity = torch.arange(channels, device=permutation.device).expand(experts, -1).clone()
+    indices = project_transport_to_permutation(permutation, identity)
+    validate_permutation(indices, experts, channels)
+    scores = permutation.double()
+    expert_ids = torch.arange(experts, device=permutation.device)[:, None]
+    native_ids = torch.arange(channels, device=permutation.device)[None, :]
+    optimal = scores[expert_ids, indices, native_ids].sum(-1)
+    identity_score = scores.diagonal(dim1=-2, dim2=-1).sum(-1)
+    independent_row_max = scores.amax(-1).sum(-1)
+    moved = (indices != identity).sum(-1)
+    rows = []
+    for expert in range(experts):
+        gain = float(optimal[expert] - identity_score[expert])
+        if gain < 0:
+            raise AssertionError("Projected assignment scores below identity")
+        rows.append({
+            "layer": layer, "expert": expert, "channels": channels,
+            "is_identity": int(moved[expert]) == 0,
+            "moved_channels": int(moved[expert]),
+            "moved_fraction": float(moved[expert]) / channels,
+            "identity_score": float(identity_score[expert]),
+            "optimal_score": float(optimal[expert]), "score_gain_over_identity": gain,
+            "independent_row_max_upper_bound": float(independent_row_max[expert]),
+        })
+    return rows, indices.cpu()
+
+
+def projection_summary(matrices):
+    return {
+        "matrix_count": len(matrices),
+        "identity_count": sum(row["is_identity"] for row in matrices),
+        "non_identity_count": sum(not row["is_identity"] for row in matrices),
+        "total_channels": sum(row["channels"] for row in matrices),
+        "total_moved_channels": sum(row["moved_channels"] for row in matrices),
+        **{key: stats(row[key] for row in matrices) for key in
+           ("moved_channels", "moved_fraction", "identity_score", "optimal_score", "score_gain_over_identity")},
+    }
+
+
+@torch.no_grad()
+def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None, with_hungarian=False):
     started = time.perf_counter()
     output = Path(output)
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
@@ -79,9 +124,14 @@ def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None
     if expected_config_hash is not None and payload["config_hash"] != expected_config_hash:
         raise ValueError("Unexpected checkpoint configuration")
     rows, matrices, layers = [], [], []
+    hard_rows, hard_indices = [], []
     for layer in range(payload["config"]["model"]["num_layers"]):
         # checkpoint_states checks that gate/up/down share exactly the same P_e.
         state = states[f"layers.{layer}.moe.experts.gate"]
+        if with_hungarian:
+            projected_rows, projected_indices = project_hungarian(layer, state.permutation)
+            hard_rows.extend(projected_rows)
+            hard_indices.append(projected_indices)
         layer_rows = row_maxima(layer, state.permutation)
         rows.extend(layer_rows)
         layer_matrices = []
@@ -108,6 +158,30 @@ def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None
         "elapsed_seconds": time.perf_counter() - started,
     }
     output.mkdir(parents=True, exist_ok=True)
+    if with_hungarian:
+        import numpy as np
+
+        indices = torch.stack(hard_indices).numpy()
+        hard_matrices = np.eye(indices.shape[-1], dtype=np.uint8)[indices].swapaxes(-1, -2)
+        if not ((hard_matrices.sum(-1) == 1).all() and (hard_matrices.sum(-2) == 1).all()):
+            raise AssertionError("Hard matrices must have exactly one 1 per row and column")
+        projection = {
+            "objective": "Maximize sum of selected saved soft P_e entries; no logarithms",
+            "tie_rule": "Keep identity if it is also optimal",
+            "indices_convention": "P_e[native_to_shared[b], b] = 1; all other entries are zero",
+            "matrix_array": "hard_permutations.npz:P_e; uint8 [layer, expert, shared_row, native_column]",
+            "summary": projection_summary(hard_rows),
+            "layers": [{"layer": layer["layer"], **projection_summary(
+                [row for row in hard_rows if row["layer"] == layer["layer"]])} for layer in layers],
+            "matrices": hard_rows,
+        }
+        report["hungarian_projection"] = projection
+        np.savez_compressed(output / "hard_permutations.npz",
+                            P_e=hard_matrices, native_to_shared=indices,
+                            shared_to_native=indices.argsort(axis=-1))
+        write_json(output / "hungarian_projection.json", projection)
+        write_csv(output / "hungarian_per_matrix.csv", hard_rows)
+        print("Hungarian projection:", projection["summary"], flush=True)
     write_json(output / "pe_row_maxima.json", report)
     write_csv(output / "per_matrix.csv", matrices)
     write_csv(output / "per_layer.csv", layers)
@@ -124,12 +198,14 @@ def main():
     parser.add_argument("--cpu-threads", type=int, default=4)
     parser.add_argument("--expected-step", type=int)
     parser.add_argument("--expected-config-hash")
+    parser.add_argument("--project-hungarian", action="store_true",
+                        help="Also save the closest hard permutations and compare them with identity")
     args = parser.parse_args()
     if args.cpu_threads < 1:
         parser.error("--cpu-threads must be >= 1")
     torch.set_num_threads(args.cpu_threads)
     analyze(args.checkpoint, args.output, expected_step=args.expected_step,
-            expected_config_hash=args.expected_config_hash)
+            expected_config_hash=args.expected_config_hash, with_hungarian=args.project_hungarian)
 
 
 if __name__ == "__main__":
