@@ -12,7 +12,7 @@ import torch
 import torch.distributed as dist
 
 from salaad_moe.checkpoint import load_checkpoint, rng_state, save_checkpoint
-from salaad_moe.config import load_config
+from salaad_moe.config import COSINE_INITIALIZATION, load_config
 from salaad_moe.data import TokenCorpus, make_synthetic_corpus
 from salaad_moe.distributed import agree_or_raise
 from salaad_moe.groups import StackedGroup
@@ -41,9 +41,11 @@ def main():
     parser.add_argument("--delayed-initialization", action="store_true")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--sinkhorn", action="store_true")
+    mode.add_argument("--sinkhorn-cosine-init", action="store_true")
     mode.add_argument("--hungarian-dense", action="store_true")
     mode.add_argument("--sinkhorn-hungarian", action="store_true")
     args = parser.parse_args()
+    args.sinkhorn = args.sinkhorn or args.sinkhorn_cosine_init
     if args.sinkhorn or args.hungarian_dense or args.sinkhorn_hungarian:
         args.delayed_initialization = True
     torch.set_num_threads(1)
@@ -54,6 +56,9 @@ def main():
                        "smoke_hungarian_dp2.yaml" if args.hungarian_dense else
                        "smoke_sinkhorn_dp2.yaml" if args.sinkhorn else "smoke_aligned_dp2.yaml")
         config = load_config(Path(__file__).resolve().parents[2] / "configs" / config_name)
+        if args.sinkhorn_cosine_init:
+            config["salaad"]["initialization"] = COSINE_INITIALIZATION
+            config["salaad"]["channel_alignment"]["sinkhorn"]["early_stopping"] = False
         torch.manual_seed(12)
         # A complete layer belongs to rank 0; rank 1 has no auxiliary state.
         groups = [
@@ -155,6 +160,7 @@ def main():
                 "resume_steps": list(resume_steps),
                 "last_matching_step": resumed.manager.last_matching_step,
                 "alignment_method": resumed.manager.alignment_method,
+                "initialization": config["salaad"]["initialization"],
             }
             (output / "validation.json").write_text(json.dumps(result, indent=2) + "\n")
             print(json.dumps(result), flush=True)

@@ -154,3 +154,33 @@ def initialize_alignment(weights, settings, *, identity=False):
         if old_error - new_error <= settings["improvement_tolerance"] * max(1.0, old_error):
             break
     return permutation, shared
+
+
+@torch.no_grad()
+def initialize_mean_cosine_alignment(weights):
+    """Match raw W once against its unaligned mean, then recompute aligned X.
+
+    Concatenate gate/up rows and down columns before normalizing each channel.
+    Use FP64 cosine scores and the direct Hungarian optimum for every expert;
+    there is no fixed reference, identity fallback, or alternating refinement.
+    """
+    from scipy.optimize import linear_sum_assignment
+
+    with torch.autocast(device_type=weights["gate"].device.type, enabled=False):
+        mean = {p: weights[p].mean(0) for p in PROJECTIONS}
+        descriptor = torch.cat((weights["gate"], weights["up"], weights["down"].mT), -1).double()
+        template = torch.cat((mean["gate"], mean["up"], mean["down"].mT), -1).double()
+        norms = descriptor.norm(dim=-1, keepdim=True)
+        template_norms = template.norm(dim=-1, keepdim=True)
+        if not all_finite((descriptor, template)) or (norms == 0).any() or (template_norms == 0).any():
+            raise ValueError("Mean-cosine initialization requires finite, nonzero channel descriptors")
+        scores = ((descriptor / norms) @ (template / template_norms).mT).cpu().numpy()
+    experts, channels, _ = scores.shape
+    permutation = torch.empty((experts, channels), dtype=torch.int64)
+    for expert, score in enumerate(scores):
+        native, shared = linear_sum_assignment(score, maximize=True)
+        permutation[expert, torch.from_numpy(native)] = torch.from_numpy(shared)
+    permutation = permutation.to(weights["gate"].device)
+    validate_permutation(permutation, experts, channels)
+    shared = {p: aligned_mean(weights[p], permutation, int(p == "down")) for p in PROJECTIONS}
+    return permutation, shared

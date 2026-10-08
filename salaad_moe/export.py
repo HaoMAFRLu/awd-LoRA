@@ -7,7 +7,7 @@ from pathlib import Path
 import torch
 
 from .checkpoint import atomic_save, checkpoint_metadata, load_torch
-from .config import IDENTITY_INITIALIZATION, fingerprint
+from .config import COSINE_INITIALIZATION, IDENTITY_INITIALIZATION, fingerprint
 from .model import MoELanguageModel
 from .alignment import native_shared, validate_permutation
 from .solver import DenseResidualState, GroupState, validate_layer_states
@@ -156,6 +156,7 @@ def checkpoint_states(path, device="cpu"):
     method = alignment_method(payload["config"])
     residual_mode = payload["config"]["salaad"].get("residual_mode", "low_rank_sparse")
     allow_identity = payload["config"]["salaad"].get("initialization") == IDENTITY_INITIALIZATION
+    allow_permutation = payload["config"]["salaad"].get("initialization") == COSINE_INITIALIZATION
     for i in range(meta["world_size"]):
         shard = load_torch(path / f"rank_{i:05d}.pt")["salaad"]
         if shard is None or not shard["initialized"]:
@@ -167,6 +168,7 @@ def checkpoint_states(path, device="cpu"):
         if shard.get("residual_mode", "low_rank_sparse") != residual_mode:
             raise ValueError("Checkpoint residual mode is inconsistent")
         allow_identity = allow_identity and shard.get("sweeps") == 0
+        allow_permutation = allow_permutation and shard.get("sweeps") == 0
         if set(states) & set(shard["states"]):
             raise ValueError("Duplicate auxiliary group")
         states.update(
@@ -194,7 +196,10 @@ def checkpoint_states(path, device="cpu"):
         raise ValueError("Checkpoint decomposition groups do not match the model")
     if aligned:
         alignment = payload["config"]["salaad"]["channel_alignment"]
-        validate_layer_states(states, alignment["reference_expert"], alignment, allow_identity=allow_identity)
+        validate_layer_states(
+            states, alignment["reference_expert"], alignment,
+            allow_identity=allow_identity, allow_permutation=allow_permutation,
+        )
     return payload, states
 
 

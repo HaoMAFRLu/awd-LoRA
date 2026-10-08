@@ -6,7 +6,9 @@ from contextlib import contextmanager
 import torch
 import torch.nn.functional as F
 
-from .alignment import PROJECTIONS, initialize_alignment, validate_permutation
+from .alignment import (
+    PROJECTIONS, initialize_alignment, initialize_mean_cosine_alignment, validate_permutation,
+)
 
 
 def fixed_reference(alignment):
@@ -66,7 +68,7 @@ def log_sinkhorn(logits, settings, reference_expert):
                     (value.sum(-2) - 1).abs().max(),
                 )
                 converged = bool(error <= settings["marginal_tolerance"])
-            if converged:
+            if converged and settings.get("early_stopping", True):
                 break
     if not converged:
         raise FloatingPointError(
@@ -106,8 +108,16 @@ def least_squares_shared(residuals, permutation, *, allow_singular=False):
 
 
 @torch.no_grad()
-def initialize_soft_alignment(weights, alignment, *, identity=False):
-    """Initialize exact identity maps/means, or use the legacy softened match."""
+def initialize_soft_alignment(weights, alignment, *, identity=False, mean_cosine=False):
+    """Initialize exact maps from identity/cosine matching, or a legacy soft match."""
+    if identity and mean_cosine:
+        raise ValueError("Choose one exact permutation initializer")
+    if mean_cosine:
+        indices, shared = initialize_mean_cosine_alignment(weights)
+        p = F.one_hot(indices, indices.shape[-1]).float().mT
+        # Preserve the exact permutation. Finite logits are created by the
+        # first closed-form update, not by softening the initial P.
+        return p, shared, None
     if identity:
         experts, channels, _ = weights["gate"].shape
         p = torch.eye(channels, device=weights["gate"].device, dtype=torch.float32)
@@ -192,14 +202,16 @@ def project_transport_to_permutation(transport, previous):
 
 
 @torch.no_grad()
-def validate_soft_state(p, logits, alignment, *, allow_identity=False):
+def validate_soft_state(p, logits, alignment, *, allow_identity=False, allow_permutation=False):
     settings = alignment["sinkhorn"]
     reference = fixed_reference(alignment)
     validate_transport(p, len(p), p.shape[-1], reference, settings["marginal_tolerance"])
     if logits is None:
+        if allow_permutation and ((p == 0) | (p == 1)).all():
+            return
         identity = torch.eye(p.shape[-1], device=p.device, dtype=p.dtype).expand_as(p)
         if not allow_identity or not torch.equal(p, identity):
-            raise ValueError("Missing Sinkhorn logits outside exact identity initialization")
+            raise ValueError("Missing Sinkhorn logits outside exact identity initialization or permitted initial permutation")
         return
     if (
         logits.dtype != torch.float32 or logits.shape != p.shape

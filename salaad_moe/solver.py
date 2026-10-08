@@ -11,7 +11,7 @@ from dataclasses import dataclass, fields
 import torch
 import torch.distributed as dist
 
-from .config import IDENTITY_INITIALIZATION
+from .config import COSINE_INITIALIZATION, IDENTITY_INITIALIZATION
 from .distributed import agree_or_raise, all_finite, rank, world_size
 from .alignment import (
     PROJECTIONS, aligned_mean, initialize_alignment, layer_groups, match_channels,
@@ -412,6 +412,7 @@ class ConsensusManager:
                         permutation, shared, logits = initialize_soft_alignment(
                             weights, self.alignment,
                             identity=self.config["salaad"]["initialization"] == IDENTITY_INITIALIZATION,
+                            mean_cosine=self.config["salaad"]["initialization"] == COSINE_INITIALIZATION,
                         )
                     else:
                         permutation, shared = initialize_alignment(
@@ -674,6 +675,9 @@ class ConsensusManager:
                         allow_identity=(
                             sweeps == 0 and self.config["salaad"]["initialization"] == IDENTITY_INITIALIZATION
                         ),
+                        allow_permutation=(
+                            sweeps == 0 and self.config["salaad"]["initialization"] == COSINE_INITIALIZATION
+                        ),
                     )
         except Exception as exc:
             error = exc
@@ -684,7 +688,9 @@ class ConsensusManager:
             self.refresh_anchors()
 
 
-def validate_layer_states(states, reference_expert, alignment=None, *, allow_identity=False):
+def validate_layer_states(
+    states, reference_expert, alignment=None, *, allow_identity=False, allow_permutation=False,
+):
     """Check saved triplets and share one immutable P tensor within each layer."""
     if alignment is not None:
         reference_expert = fixed_reference(alignment)
@@ -699,7 +705,10 @@ def validate_layer_states(states, reference_expert, alignment=None, *, allow_ide
         logits = triplet["gate"].alignment_logits
         soft = alignment is not None and alignment.get("method") == "sinkhorn"
         if soft:
-            validate_soft_state(permutation, logits, alignment, allow_identity=allow_identity)
+            validate_soft_state(
+                permutation, logits, alignment,
+                allow_identity=allow_identity, allow_permutation=allow_permutation,
+            )
         elif logits is not None:
             raise ValueError("Missing soft alignment configuration")
         for p, state in triplet.items():

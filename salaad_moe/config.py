@@ -12,6 +12,7 @@ import yaml
 
 CONFIG_ROOT = Path(__file__).resolve().parents[1] / "configs"
 IDENTITY_INITIALIZATION = "identity_shared_mean_residual_dual_zero"
+COSINE_INITIALIZATION = "mean_cosine_hungarian_residual_dual_zero"
 
 
 def config_for_version(version):
@@ -320,7 +321,8 @@ def validate_config(c: dict, world_size=None) -> None:
                     raise ValueError("Dense Hungarian P must update on every structure sweep")
             if method in ("sinkhorn", "sinkhorn_hungarian"):
                 initializations = (
-                    {IDENTITY_INITIALIZATION, "soft_aligned_shared_least_squares_residual_dual_zero"}
+                    {IDENTITY_INITIALIZATION, COSINE_INITIALIZATION,
+                     "soft_aligned_shared_least_squares_residual_dual_zero"}
                     if dense_residual else {"soft_aligned_shared_least_squares_L_zero_S_residual_dual_zero"}
                 )
                 if s.get("initialization") not in initializations:
@@ -336,15 +338,17 @@ def validate_config(c: dict, world_size=None) -> None:
                     raise ValueError("Closed-form Sinkhorn has no gradient steps, learning rate, or movement penalty")
                 if type(settings.get("max_iterations")) is not int or settings["max_iterations"] < 1:
                     raise ValueError("sinkhorn.max_iterations must be a positive integer")
+                if not isinstance(settings.get("early_stopping", True), bool):
+                    raise ValueError("sinkhorn.early_stopping must be a boolean")
                 for key in ("temperature", "clip_min", "marginal_tolerance"):
                     value = settings.get(key)
                     if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
                         raise ValueError(f"sinkhorn.{key} must be finite and positive")
                 if settings["marginal_tolerance"] > 1e-4:
                     raise ValueError("Invalid Sinkhorn marginal tolerance")
-                if s["initialization"] == IDENTITY_INITIALIZATION:
+                if s["initialization"] in (IDENTITY_INITIALIZATION, COSINE_INITIALIZATION):
                     if "initial_softening" in settings:
-                        raise ValueError("Identity initialization does not use initial_softening")
+                        raise ValueError("Exact permutation initialization does not use initial_softening")
                 else:
                     value = settings.get("initial_softening")
                     if type(value) not in (int, float) or not math.isfinite(value) or not 0 < value < 1:
