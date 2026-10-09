@@ -16,7 +16,7 @@ import torch
 from salaad_moe.alignment import validate_permutation
 from salaad_moe.export import checkpoint_states
 from salaad_moe.sinkhorn import project_transport_to_permutation
-from scripts.analyze_moe_matrix_norms import stats, write_csv, write_json
+from scripts.analyze_moe_matrix_norms import permutation_rows, stats, write_csv, write_json
 
 
 def row_maxima(layer, permutation):
@@ -131,11 +131,12 @@ def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None
         raise ValueError("Unexpected checkpoint step")
     if expected_config_hash is not None and payload["config_hash"] != expected_config_hash:
         raise ValueError("Unexpected checkpoint configuration")
-    rows, matrices, layers = [], [], []
+    rows, matrices, layers, soft_matrices = [], [], [], []
     hard_rows, hard_indices = [], []
     for layer in range(payload["config"]["model"]["num_layers"]):
         # checkpoint_states checks that gate/up/down share exactly the same P_e.
         state = states[f"layers.{layer}.moe.experts.gate"]
+        soft_matrices.extend(permutation_rows(layer, state.permutation))
         if with_hungarian:
             projected_rows, projected_indices = project_hungarian(
                 layer, state.permutation, tie_rule=hungarian_tie_rule)
@@ -160,6 +161,11 @@ def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None
         "orientation": "P_e rows are shared channels, columns are native channels; no transpose",
         "comparison": "Exact saved FP32 values promoted to FP64; ties counted separately",
         "matrix_count": len(matrices), "summary": summarize(rows),
+        "soft_matrix_summary": {
+            "identity_count": sum(row["is_identity"] for row in soft_matrices),
+            **{key: stats(row[key] for row in soft_matrices) for key in
+               ("permutation_fro", "identity_distance_fro", "row_sum_error_max", "column_sum_error_max")},
+        },
         "all_rows_diagonal_max_matrices": sum(m["off_diagonal_wins_rows"] == 0 for m in matrices),
         "all_rows_diagonal_strict_max_matrices": sum(m["diagonal_strict_max_rows"] == m["row_count"] for m in matrices),
         "diagonal_max_fraction_per_matrix": stats(m["diagonal_max_fraction"] for m in matrices),
@@ -194,6 +200,7 @@ def analyze(checkpoint, output, *, expected_step=None, expected_config_hash=None
         print("Hungarian projection:", projection["summary"], flush=True)
     write_json(output / "pe_row_maxima.json", report)
     write_csv(output / "per_matrix.csv", matrices)
+    write_csv(output / "soft_matrix_norms.csv", soft_matrices)
     write_csv(output / "per_layer.csv", layers)
     write_csv(output / "per_row.csv", rows)
     print(report["summary"], flush=True)
