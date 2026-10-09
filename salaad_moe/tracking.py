@@ -102,7 +102,9 @@ class WandbTracker:
                     "mode": mode,
                     "tags": [
                         "native-dp",
-                        "salaad" if config["salaad"]["enabled"] else "vanilla",
+                        "salaad" if config["salaad"]["enabled"] else (
+                            "shared-expert" if config["model"]["num_shared_experts"] else "vanilla"
+                        ),
                         "synthetic-smoke"
                         if config["data"].get("synthetic_smoke")
                         else "pretraining",

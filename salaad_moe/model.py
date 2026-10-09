@@ -59,7 +59,7 @@ class ExpertMLP(nn.Module):
         self.down = nn.Parameter(torch.empty(k, d, f))
 
     def forward(self, x, weights, indices):
-        # Forward passes use the full dense weights X. Expert slices with no
+        # Forward passes use the full dense weights W_e. Expert slices with no
         # routed tokens have zero task gradients but still receive SALAAD constraints.
         result = torch.zeros_like(x)
         for expert in range(self.gate.shape[0]):
@@ -77,11 +77,32 @@ class ExpertMLP(nn.Module):
         return result
 
 
+class SharedExpertMLP(nn.Module):
+    """Always-on SwiGLU branch, added with coefficient one outside the router.
+
+    Concatenating shared experts along the FFN width is exactly equivalent to
+    summing independent shared SwiGLU experts, since there are no biases.
+    """
+
+    def __init__(self, c):
+        super().__init__()
+        d = c["hidden_size"]
+        f = c["num_shared_experts"] * c["expert_ffn_hidden_size"]
+        self.gate = nn.Parameter(torch.empty(f, d))
+        self.up = nn.Parameter(torch.empty(f, d))
+        self.down = nn.Parameter(torch.empty(d, f))
+
+    def forward(self, x):
+        hidden = F.silu(F.linear(x, self.gate)) * F.linear(x, self.up)
+        return F.linear(hidden, self.down)
+
+
 class MoE(nn.Module):
     def __init__(self, c):
         super().__init__()
         self.router = nn.Linear(c["hidden_size"], c["num_experts"], bias=False)
         self.experts = ExpertMLP(c)
+        self.shared_experts = SharedExpertMLP(c) if c["num_shared_experts"] else None
         self.topk = c["router_topk"]
 
     def forward(self, x):
@@ -89,7 +110,12 @@ class MoE(nn.Module):
         with torch.autocast(device_type=x.device.type, enabled=False):
             logits = F.linear(flat.float(), self.router.weight.float())
             weights, indices, balance, z_loss, stats = route(logits, self.topk)
-        return self.experts(flat, weights, indices).view_as(x), balance, z_loss, stats
+        output = self.experts(flat, weights, indices)
+        if self.shared_experts is not None:
+            # Routed weights sum to one; shared experts have their own fixed
+            # coefficient one and are excluded from routing and router losses.
+            output = output + self.shared_experts(flat)
+        return output.view_as(x), balance, z_loss, stats
 
 
 class Attention(nn.Module):

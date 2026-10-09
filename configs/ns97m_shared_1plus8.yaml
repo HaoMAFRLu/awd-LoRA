@@ -1,0 +1,5 @@
+# Same parameters/initial weights as 1+7; activate one additional routed expert.
+inherits: ns97m_shared_1plus7.yaml
+experiment: moe_ns97m_shared_1plus8
+model:
+  router_topk: 8

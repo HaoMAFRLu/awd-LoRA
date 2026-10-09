@@ -56,6 +56,8 @@ def environment_report(checkout):
 def megatron_arguments(config, data_directory, tokenizer_directory, output, resume=None):
     """Native flags checked against arguments.py at the exact pinned revision."""
     validate_config(config)
+    if config["model"]["num_shared_experts"]:
+        raise ValueError("Shared-expert baselines currently require the native trainer")
     m, t, d = (config[k] for k in ("model", "training", "data"))
     args = []
 
@@ -152,6 +154,8 @@ def megatron_arguments(config, data_directory, tokenizer_directory, output, resu
 
 def validate_runtime(args, config):
     validate_config(config, world_size())
+    if config["model"]["num_shared_experts"]:
+        raise ValueError("Shared-expert baselines currently require the native trainer")
     expected = {
         "expert_model_parallel_size": 1,
         "tensor_model_parallel_size": 1,

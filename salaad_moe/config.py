@@ -59,9 +59,15 @@ def validate_config(c: dict, world_size=None) -> None:
     sections = ("model", "data", "training", "parallel", "salaad")
     if any(not isinstance(c.get(section), dict) for section in sections):
         raise ValueError("Expected a MoE configuration with model/data/training/parallel/salaad sections")
-    if c["model"].get("family") != "llama_style_no_shared_expert":
-        raise ValueError("Only the no-shared-expert MoE architecture is supported")
     m, t, p, s = (c[k] for k in ("model", "training", "parallel", "salaad"))
+    shared = m.get("num_shared_experts")
+    if type(shared) is not int or shared < 0:
+        raise ValueError("model.num_shared_experts must be a nonnegative integer")
+    expected_family = "llama_style_shared_expert" if shared else "llama_style_no_shared_expert"
+    if m.get("family") != expected_family:
+        raise ValueError(f"model.num_shared_experts={shared} requires model.family={expected_family!r}")
+    if shared and s["enabled"]:
+        raise ValueError("The shared-expert baseline requires salaad.enabled=false")
     alignment = s.get("channel_alignment", {})
     if not isinstance(alignment, dict) or not isinstance(alignment.get("enabled", False), bool):
         raise ValueError("salaad.channel_alignment must be a mapping with a boolean enabled")
@@ -94,7 +100,6 @@ def validate_config(c: dict, world_size=None) -> None:
     ):
         raise ValueError("RoPE requires an even, integral attention head dimension")
     required = {
-        "num_shared_experts": 0,
         "num_query_groups": m["num_attention_heads"],
         "moe_layer_pattern": "all",
         "linear_bias": False,
@@ -356,6 +361,7 @@ def validate_config(c: dict, world_size=None) -> None:
 
 
 def parameter_counts(c: dict) -> dict:
+    """Count model weights, with num_experts denoting the routed expert pool."""
     m = c["model"]
     d, f, layers, k, q, v = (
         m[x]
@@ -368,13 +374,14 @@ def parameter_counts(c: dict) -> dict:
             "padded_vocab_size",
         )
     )
-    experts = 3 * layers * k * d * f
+    shared = m["num_shared_experts"]
+    experts = 3 * layers * (k + shared) * d * f
     other = 2 * v * d + layers * (4 * d * d + k * d + 2 * d) + d
     return {
         "expert_parameters": experts,
         "other_parameters": other,
         "total_parameters": experts + other,
-        "active_parameters_convention": other + 3 * layers * q * d * f,
+        "active_parameters_convention": other + 3 * layers * (q + shared) * d * f,
         "prediction_tokens": c["training"]["total_optimizer_steps"]
         * c["training"]["global_batch_sequences"]
         * c["data"]["seq_length"],

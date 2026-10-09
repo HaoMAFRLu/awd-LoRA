@@ -1,0 +1,11 @@
+# Fixed expert budget: one always-on expert + seven selected from 63 routed.
+# Shared and routed SwiGLUs all have width 176; their outputs are added.
+# The routed top-k weights sum to one; the shared branch has coefficient one.
+inherits: ns97m_vanilla.yaml
+experiment: moe_ns97m_shared_1plus7
+is_wandb: true
+model:
+  family: llama_style_shared_expert
+  num_experts: 63  # Routed pool only; 64 experts in total.
+  num_shared_experts: 1
+  router_topk: 7
