@@ -1,4 +1,4 @@
-"""ADMM with either an unrestricted expert residual or legacy L/S residuals.
+"""ADMM with dense (optionally L2-regularized) or legacy L/S residuals.
 
 The task trainer updates network weights W; this module updates the auxiliaries.
 The dual field stores U = Y_hat / rho. The training anchor is the reconstructed
@@ -244,10 +244,14 @@ def structure_sweep(x, old, config, *, shared=None, permutation=None, alignment_
                 raise ValueError("Aligned shared must be updated jointly across gate/up/down")
             shared = (x - old.residual + old.dual).mean(0)
         mapped = native_shared(shared, permutation, old.channel_axis)
-        # Step 4: X_e(new) = W(new) - mapped X(new) + Y_hat(old)/rho.
+        # Proximal step for (lambda/2) * sum ||X_e||_F^2. Initialization
+        # remains the exact remainder; shrink only during structure sweeps.
         residual = x - mapped + old.dual
-        # Step 5 in scaled units. For a free residual, U(new) is zero up to
-        # roundoff; calculate the update rather than silently resetting U.
+        coefficient = s.get("residual_l2_lambda", 0.0)
+        if coefficient:
+            residual = residual * (s["rho"] / (s["rho"] + coefficient))
+        # Use the shrunken residual in the scaled dual update. U only cancels
+        # for the legacy free residual (lambda=0), up to roundoff.
         dual = old.dual + (x - mapped - residual)
         new = DenseResidualState(
             shared, residual, dual, permutation, old.channel_axis, alignment_logits,
@@ -319,9 +323,13 @@ def aligned_structure_sweep(weights, old, config, rematch):
     shared_first = config["salaad"]["structure_order"][:2] == ["shared", "permutation"]
     if method == "sinkhorn":
         if rematch:
+            kwargs = (
+                {"previous": permutation}
+                if alignment["sinkhorn"]["update_rule"] == "gradient_clip_sinkhorn" else {}
+            )
             permutation, logits = update_soft_alignment(
                 residuals, {p: old[p].shared for p in PROJECTIONS},
-                config["salaad"]["channel_alignment"],
+                alignment, **kwargs,
             )
         shared = least_squares_shared(
             residuals, permutation,
@@ -556,6 +564,10 @@ class ConsensusManager:
                         "diff": error, "residual_norm": residual_norm,
                         "multiplier_norm": multiplier_norm, "rho": rho,
                     }
+                    if "residual_l2_lambda" in self.config["salaad"]:
+                        records[f"{group.name}.expert_{expert}"]["residual_l2_lambda"] = (
+                            self.config["salaad"]["residual_l2_lambda"]
+                        )
                     if nonidentity_channels is not None:
                         records[f"{group.name}.expert_{expert}"].update({
                             "permutation_nonidentity_channels": nonidentity_channels[expert],

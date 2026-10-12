@@ -116,7 +116,7 @@ def initialize_soft_alignment(weights, alignment, *, identity=False, mean_cosine
         indices, shared = initialize_mean_cosine_alignment(weights)
         p = F.one_hot(indices, indices.shape[-1]).float().mT
         # Preserve the exact permutation. Finite logits are created by the
-        # first closed-form update, not by softening the initial P.
+        # first P update, not by softening the initial P.
         return p, shared, None
     if identity:
         experts, channels, _ = weights["gate"].shape
@@ -124,7 +124,7 @@ def initialize_soft_alignment(weights, alignment, *, identity=False, mean_cosine
         p = p.expand(experts, -1, -1).clone()
         shared = {projection: weights[projection].mean(0) for projection in PROJECTIONS}
         # Exact zero entries need no finite log representation. The first
-        # closed-form P update will create logits from its positive clipped Q.
+        # P update will create logits from its positive clipped candidate.
         return p, shared, None
     indices, _ = initialize_alignment(weights, alignment)
     settings = alignment["sinkhorn"]
@@ -142,14 +142,15 @@ def initialize_soft_alignment(weights, alignment, *, identity=False, mean_cosine
 
 
 @torch.no_grad()
-def update_soft_alignment(residuals, shared, alignment):
-    """Closed-form joint least squares, positive clipping, then Sinkhorn.
+def update_soft_alignment(residuals, shared, alignment, *, previous=None):
+    """One direct P gradient step or joint least squares, then clip/Sinkhorn.
 
-    With H=[X_gate, X_up, X_down.T] and D=[R_gate, R_up, R_down.T],
-    solve H.T @ P ~= D.T for every expert using one shared pseudoinverse.
-    This also defines the minimum-norm solution when H is rank deficient,
-    without squaring its condition number through the normal equations.
-    Saved logits encode the clipped solution; they are not optimized.
+    Both rules use H=[X_gate, X_up, X_down.T], D=[R_gate, R_up, R_down.T].
+    The gradient rule takes one step on (1/2)||H.T @ P - D.T||_F^2 from
+    the previous P, including exact identity. The common rho is divided
+    out of this auxiliary objective; learning_rate is in these units.
+    The legacy rule solves H.T @ P ~= D.T with a shared pseudoinverse.
+    Saved logits encode the clipped candidate; they are not optimized.
     """
     settings = alignment["sinkhorn"]
     reference = fixed_reference(alignment)
@@ -157,10 +158,22 @@ def update_soft_alignment(residuals, shared, alignment):
         template = torch.cat((shared["gate"], shared["up"], shared["down"].mT), -1)
         target = torch.cat((residuals["gate"], residuals["up"], residuals["down"].mT), -1)
         if not torch.isfinite(template).all() or not torch.isfinite(target).all():
-            raise FloatingPointError("Nonfinite closed-form alignment inputs")
-        solution = torch.linalg.pinv(template.mT) @ target.mT
+            raise FloatingPointError("Nonfinite alignment inputs")
+        rule = settings["update_rule"]
+        if rule == "gradient_clip_sinkhorn":
+            if previous is None:
+                raise ValueError("Gradient Sinkhorn requires the previous soft P")
+            validate_transport(
+                previous, len(target), template.shape[0], reference, settings["marginal_tolerance"],
+            )
+            gradient = template @ (template.mT @ previous - target.mT)
+            solution = previous - settings["learning_rate"] * gradient
+        elif rule == "closed_form_clip_sinkhorn":
+            solution = torch.linalg.pinv(template.mT) @ target.mT
+        else:
+            raise ValueError(f"Unknown Sinkhorn update rule: {rule}")
         if not torch.isfinite(solution).all():
-            raise FloatingPointError("Nonfinite closed-form alignment solution")
+            raise FloatingPointError("Nonfinite alignment candidate")
         clipped = solution.clamp_min(settings["clip_min"])
         logits = settings["temperature"] * clipped.log()
         if reference is not None:

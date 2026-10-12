@@ -42,17 +42,19 @@ def main():
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--sinkhorn", action="store_true")
     mode.add_argument("--sinkhorn-cosine-init", action="store_true")
+    mode.add_argument("--sinkhorn-gradient-l2", action="store_true")
     mode.add_argument("--hungarian-dense", action="store_true")
     mode.add_argument("--sinkhorn-hungarian", action="store_true")
     args = parser.parse_args()
-    args.sinkhorn = args.sinkhorn or args.sinkhorn_cosine_init
+    args.sinkhorn = args.sinkhorn or args.sinkhorn_cosine_init or args.sinkhorn_gradient_l2
     if args.sinkhorn or args.hungarian_dense or args.sinkhorn_hungarian:
         args.delayed_initialization = True
     torch.set_num_threads(1)
     dist.init_process_group("gloo")
     try:
         current_rank = dist.get_rank()
-        config_name = ("smoke_sinkhorn_hungarian_dp2.yaml" if args.sinkhorn_hungarian else
+        config_name = ("smoke_sinkhorn_gradient_l2_dp2.yaml" if args.sinkhorn_gradient_l2 else
+                       "smoke_sinkhorn_hungarian_dp2.yaml" if args.sinkhorn_hungarian else
                        "smoke_hungarian_dp2.yaml" if args.hungarian_dense else
                        "smoke_sinkhorn_dp2.yaml" if args.sinkhorn else "smoke_aligned_dp2.yaml")
         config = load_config(Path(__file__).resolve().parents[2] / "configs" / config_name)
@@ -161,6 +163,8 @@ def main():
                 "last_matching_step": resumed.manager.last_matching_step,
                 "alignment_method": resumed.manager.alignment_method,
                 "initialization": config["salaad"]["initialization"],
+                "residual_l2_lambda": config["salaad"].get("residual_l2_lambda", 0.0),
+                "sinkhorn_update_rule": config["salaad"]["channel_alignment"].get("sinkhorn", {}).get("update_rule"),
             }
             (output / "validation.json").write_text(json.dumps(result, indent=2) + "\n")
             print(json.dumps(result), flush=True)

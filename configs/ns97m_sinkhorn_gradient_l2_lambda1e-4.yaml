@@ -1,0 +1,5 @@
+# Lambda sweep: all other settings inherit the gradient + soft Sinkhorn run.
+inherits: ns97m_sinkhorn_gradient_l2.yaml
+experiment: moe_ns97m_sinkhorn_gradient_l2_lambda1e-4
+salaad:
+  residual_l2_lambda: 1.0e-4

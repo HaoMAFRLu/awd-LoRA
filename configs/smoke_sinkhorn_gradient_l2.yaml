@@ -1,0 +1,13 @@
+# Exercise the same lambda/rho=10 ratio, with the smoke trainer's rho=0.05.
+inherits: smoke_sinkhorn.yaml
+experiment: moe_sinkhorn_gradient_l2_cpu_smoke
+salaad:
+  state_initialization_step: 0
+  residual_l2_lambda: 0.5
+  channel_alignment:
+    sinkhorn:
+      update_rule: gradient_clip_sinkhorn
+      learning_rate: 1.0
+      clip_min: 1.0e-5
+      max_iterations: 10000
+      early_stopping: true

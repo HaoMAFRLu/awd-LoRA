@@ -226,6 +226,11 @@ def validate_config(c: dict, world_size=None) -> None:
         if residual_mode not in ("low_rank_sparse", "dense"):
             raise ValueError("residual_mode must be low_rank_sparse or dense")
         dense_residual = residual_mode == "dense"
+        residual_l2 = s.get("residual_l2_lambda", 0.0)
+        if type(residual_l2) not in (int, float) or not math.isfinite(residual_l2) or residual_l2 < 0:
+            raise ValueError("salaad.residual_l2_lambda must be finite and nonnegative")
+        if residual_l2 and not dense_residual:
+            raise ValueError("residual_l2_lambda requires dense residuals")
         hard_dense = dense_residual and aligned and alignment.get("method", "hungarian") == "hungarian"
         structure_order = (["permutation"] if aligned else []) + (
             ["shared", "residual", "dual"] if dense_residual else ["shared", "low_rank", "sparse", "dual"]
@@ -337,10 +342,20 @@ def validate_config(c: dict, world_size=None) -> None:
                 settings = alignment.get("sinkhorn")
                 if not isinstance(settings, dict):
                     raise ValueError("Missing Sinkhorn settings")
-                if settings.get("update_rule") != "closed_form_clip_sinkhorn":
-                    raise ValueError("Sinkhorn requires the closed_form_clip_sinkhorn update rule")
-                if any(key in settings for key in ("inner_steps", "learning_rate", "move_penalty_over_rho")):
-                    raise ValueError("Closed-form Sinkhorn has no gradient steps, learning rate, or movement penalty")
+                rule = settings.get("update_rule")
+                if rule not in ("closed_form_clip_sinkhorn", "gradient_clip_sinkhorn"):
+                    raise ValueError("Unsupported Sinkhorn update_rule")
+                if any(key in settings for key in ("inner_steps", "move_penalty_over_rho")):
+                    raise ValueError("Sinkhorn has no inner gradient loop or movement penalty")
+                if rule == "closed_form_clip_sinkhorn":
+                    if "learning_rate" in settings:
+                        raise ValueError("Closed-form Sinkhorn has no learning rate")
+                else:
+                    if not dense_residual or method != "sinkhorn":
+                        raise ValueError("Gradient Sinkhorn requires dense residuals and soft P")
+                    rate = settings.get("learning_rate")
+                    if type(rate) not in (int, float) or not math.isfinite(rate) or rate <= 0:
+                        raise ValueError("sinkhorn.learning_rate must be finite and positive")
                 if type(settings.get("max_iterations")) is not int or settings["max_iterations"] < 1:
                     raise ValueError("sinkhorn.max_iterations must be a positive integer")
                 if not isinstance(settings.get("early_stopping", True), bool):

@@ -1,0 +1,7 @@
+inherits: smoke_sinkhorn_gradient_l2.yaml
+experiment: moe_sinkhorn_gradient_l2_cpu_dp2_smoke
+training:
+  accumulation_steps: 1
+parallel:
+  world_size: 2
+  data_parallel_size: 2

@@ -1,4 +1,8 @@
-# MoE 自由残差 ADMM 与 Sinkhorn 对齐
+# MoE 稠密残差 ADMM 与 Sinkhorn 对齐
+
+新增配置 [ns97m_sinkhorn_gradient_l2.yaml](../configs/ns97m_sinkhorn_gradient_l2.yaml)
+使用 **P 梯度步 → 软 Sinkhorn** 和 **L2 残差更新**，见下文“梯度 P 与 L2 残差”。
+以下原 `ns97m_sinkhorn` 的说明仍对应闭式 P 和自由残差。
 
 配置入口是 `--cfg_version ns97m_sinkhorn`。同层 gate/up/down 共用一份软 P，
 完整 expert 权重 W 用于任务前向。当前模式对应
@@ -42,7 +46,7 @@ PyTorch 权重使用 `[expert, output, input]` 布局，是文中权重矩阵的
 | `marginal_tolerance` | 1e-5 | 最大行/列和误差容限 |
 
 P 更新固定本轮旧 shared 和残差，直接计算新的结果。
-已移除 P 的梯度步数、学习率和旧 P 移动惩罚配置；配置校验会拒绝这些旧字段。
+闭式规则不接受 P 学习率、内部梯度步数或旧 P 移动惩罚配置。
 A 只保存截断结果的对数，不再作为梯度优化变量，也不从旧 A 热启动。
 
 令 X 表示共享权重，R 表示本轮拟合目标，gate/up/down 是三个投影。
@@ -253,3 +257,110 @@ CPU 小模型八步的 FP32、BF16 检查中，16 个 P_e 最终仍为 I；
 另用构造的非单位配对验证了转换、共享更新、保存和导出的正确性。
 硬化可消除软映射对范数的压缩，但不保证离开 I，也没有消除自由 X_e 对共享项的补偿。
 不能从这些实现检查推断正式训练表现。
+
+## 梯度 P 与 L2 残差
+
+配置入口为 `--cfg_version ns97m_sinkhorn_gradient_l2`。正式参数为
+`rho=1e-5`、`residual_l2_lambda=1e-4`，每 10 个 optimizer step 执行一次：
+
+~~~text
+W → P 的一次梯度步及软 Sinkhorn → X → X_e 的 L2 近端更新 → U
+~~~
+
+初始化在第 0 步完成：同层同投影 `X = mean_e(W_e)`，所有专家 `P_e = I`，
+`X_e = W_e - X`，`U_e = 0`。初始化不收缩残差、不软化 P、不执行匹配，
+`alignment_logits=None`。三个投影共享 P，专家 0 也更新。
+
+目标增加 `(lambda/2) * sum_e ||X_e||_F^2`，对全部层、投影和元素求和，
+不按参数数量、专家数量或路由频率取平均。固定新 W 后，结构更新为：
+
+1. 用旧残差和旧乘子构造 `R_e = W_e(new) - X_e(old) + U_e(old)`。
+2. 固定旧 X，直接更新 P 矩阵。沿用代码的转置权重布局，拼接
+   `H = [X_gate, X_up, X_down.T]`、`D_e = [R_gate, R_up, R_down.T]`，得到：
+
+   ~~~text
+   f(P_e) = (1/2) * ||H.T @ P_e - D_e.T||_F^2
+   G_e = H @ (H.T @ P_e(old) - D_e.T)
+   Q_e = clamp_min(P_e(old) - eta * G_e, 1e-5)
+   A_e = temperature * log(Q_e)
+   P_e(new) = log_sinkhorn(A_e)
+   ~~~
+
+   默认 `eta = sinkhorn.learning_rate = 1.0`，每次结构更新只做一个梯度步。
+   这里已将 P 子问题公共系数 rho 除去；若对带 rho 的目标求梯度，等价步长为 eta/rho。
+   梯度直接作用于 P，不对初始化时含零元素的 log(P) 求导。
+   A 只用于保存截断候选及恢复校验，不是梯度变量。
+   Sinkhorn 是对正候选的行列归一化，不是欧氏投影，也不保证本轮重构目标单调下降。
+3. 用新 P 和同一份 R 更新 X，沿用共享最小二乘；无固定参考且矩阵奇异时取最小范数解。
+4. 使用新 X、新 P 和旧 U 更新残差：
+
+   ~~~text
+   X_e(new) = rho / (rho + lambda) * (W_e(new) - X(new) @ P_hat_e(new) + U_e(old))
+   ~~~
+
+5. `U_e(new) = U_e(old) + W_e(new) - X(new) @ P_hat_e(new) - X_e(new)`。
+   随后刷新训练目标 `Q_train = X(new) @ P_hat_e(new) + X_e(new) - U_e(new)`。
+
+残差的最优性条件为 `rho * U_e(new) = lambda * X_e(new)`（允许浮点误差）。
+不将 U 归零，也不在收缩后把重构差额补回残差。lambda=0 退化为原自由残差更新。
+初始化仍使用未收缩的差值，上述最优性条件从第一次结构更新起适用。
+
+正式配置的单次收缩系数为 1/11；它作用于包含旧 U 的候选，不代表最终残差比例。
+任务前向仍使用完整 W，结构梯度仍为 `rho * (W - Q_train)`。
+记录沿用残差范数、重构误差、乘子范数和结构/任务梯度比，并额外记录
+`salaad_hyperparameters/residual_l2_lambda`。
+
+Sinkhorn 温度为 1、行列和误差容限为 1e-5，上限 10000 次、达标提前结束。
+新梯度配置的正值下限为 1e-5；一个带非零旧 U 的近单位矩阵测试中，原 1e-8 下限
+在 10000 次后的最大行列和误差仍为约 1.04e-4，提高下限后通过相同的 1e-5 容差。
+这一数值下限只作用于 P 更新候选，梯度为零时也可能使 P 轻微软化；初始化仍严格为 I。
+接近单位矩阵的正候选可能需要较多归一化迭代。超过上限或发生非有限值时保留旧辅助状态并报错。
+P 始终保存为软矩阵，没有 Hungarian 硬化步骤。
+
+checkpoint 和导出沿用稠密残差格式；完整配置包含 lambda、P 更新规则和步长，
+恢复训练时配置指纹必须匹配。正则化后的原始 W 与重构权重可能存在差异，
+评估必须明确选择 `raw` 或 `reconstructed`；导出仍使用重构权重且不包含 U。
+
+验证入口：
+
+~~~bash
+myenv/bin/python scripts/train_salad.py --cfg_version ns97m_sinkhorn_gradient_l2 --dry-run
+myenv/bin/python -m unittest discover -s tests/moe -p 'test_gradient_l2.py' -v
+myenv/bin/python scripts/train_salad.py --cfg_version smoke_sinkhorn_gradient_l2 \
+  --device cpu --allow-synthetic --output /tmp/new_gradient_l2_smoke
+myenv/bin/torchrun --standalone --nproc-per-node=2 \
+  tests/moe/alignment_distributed_worker.py /tmp/new_gradient_l2_dp2 --sinkhorn-gradient-l2
+~~~
+
+小模型配置使用 rho=0.05、lambda=0.5，保持正式配置的 lambda/rho=10，
+用于检验明显非零的乘子和结构梯度；不能用其训练损失推断正式模型表现。
+
+2026-10-12 验证：新增 8 项测试通过，覆盖精确初始化、与独立 autograd 比较的 P 梯度、
+残差子问题最优性、更新顺序、失败时不提交状态、BF16 逐位恢复、导出和 lambda 日志。
+全套 163 项测试首次有 1 项因 Gloo 无法解析本机回环地址失败；相关 15 项入口测试
+在沙箱外复跑全部通过，其余 162 项在首次全套运行中通过。
+CPU DP2 八步训练及从第 2/3/7 步逐位恢复通过；正式配置 dry-run 通过。
+64 专家、176 通道、256 hidden size 的单层合成权重连续三轮结构更新通过，
+最大行列和误差小于 1e-5，残差最优性误差小于 5e-13。
+这些是实现验证，不代表正式训练结果或验证集 NLL。
+
+### Lambda 扫描
+
+以下三个配置继承同一 `ns97m_sinkhorn_gradient_l2`，仅覆盖实验名与
+`salaad.residual_l2_lambda`：
+
+| lambda | 配置 | 提交文件 |
+|---:|---|---|
+| 1e-3 | [lambda1e-3](../configs/ns97m_sinkhorn_gradient_l2_lambda1e-3.yaml) | [Condor](../sub/moe_ns97m_sinkhorn_gradient_l2_lambda1e-3.sub) |
+| 1e-4 | [lambda1e-4](../configs/ns97m_sinkhorn_gradient_l2_lambda1e-4.yaml) | [Condor](../sub/moe_ns97m_sinkhorn_gradient_l2_lambda1e-4.sub) |
+| 1e-5 | [lambda1e-5](../configs/ns97m_sinkhorn_gradient_l2_lambda1e-5.yaml) | [Condor](../sub/moe_ns97m_sinkhorn_gradient_l2_lambda1e-5.sub) |
+
+三个独立任务均为 4 H100 / DP4、16 CPU、64000 MB、2100 步、bid 100。
+模型、数据 manifest、seed 42、优化器、学习率、batch、rho、P 梯度步长、
+Sinkhorn 设置和结构更新频率相同，使用各自独立的输出与日志目录。
+
+~~~bash
+condor_submit_bid 100 sub/moe_ns97m_sinkhorn_gradient_l2_lambda1e-3.sub
+condor_submit_bid 100 sub/moe_ns97m_sinkhorn_gradient_l2_lambda1e-4.sub
+condor_submit_bid 100 sub/moe_ns97m_sinkhorn_gradient_l2_lambda1e-5.sub
+~~~

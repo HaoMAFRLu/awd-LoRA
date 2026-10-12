@@ -56,6 +56,8 @@ def flatten_metrics(record):
                         result[f"salaad_hyperparameters/{matrix}_{metric}"] = metrics[metric]
                 # Rho is global and fixed; emit one metric shared by all layers.
                 result["salaad_hyperparameters/rho"] = metrics["rho"]
+                if "residual_l2_lambda" in metrics:
+                    result["salaad_hyperparameters/residual_l2_lambda"] = metrics["residual_l2_lambda"]
         elif key != "step":
             if isinstance(value, dict):
                 prefix = key
