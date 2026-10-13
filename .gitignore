@@ -55,5 +55,7 @@
 # ignore local Codex metadata
 .codex
 
-# ignore local discussion notes
-/discussion_notes
+# Keep local discussion artifacts ignored, but version the main MoE notes.
+/discussion_notes/*
+!/discussion_notes/README.md
+!/discussion_notes/MOE_SALAAD_DISCUSSION_LOG.md
