@@ -364,3 +364,38 @@ condor_submit_bid 100 sub/moe_ns97m_sinkhorn_gradient_l2_lambda1e-3.sub
 condor_submit_bid 100 sub/moe_ns97m_sinkhorn_gradient_l2_lambda1e-4.sub
 condor_submit_bid 100 sub/moe_ns97m_sinkhorn_gradient_l2_lambda1e-5.sub
 ~~~
+
+## 闭式 P 更新与残差 L2 重跑（2026-10-13）
+
+正式配置 [ns97m_sinkhorn_closed_form_l2.yaml](../configs/ns97m_sinkhorn_closed_form_l2.yaml)
+复用现有 `closed_form_clip_sinkhorn` 分支：先对三个投影联合求无约束最小二乘候选，
+再 clip 并做 soft Sinkhorn。更新顺序仍为 W -> P -> X -> L2 residual -> U。
+
+与 2026-10-12 的 gradient-L2 三组实验相比，仅更换 P 更新规则，并移除只用于 P
+梯度更新的 `sinkhorn.learning_rate`；训练优化器的学习率保持不变。
+`clip_min=1e-5`、`max_iterations=10000`、`early_stopping=true`、temperature、
+行列和容差、`rho=1e-5`、每 10 步一次结构更新，以及残差 L2 公式全部保持不变。
+初始化仍为第 0 步 `X=mean(W)`、全部 `P=I`、`X_e=W-X`、`U=0`。
+模型、数据 manifest、seed 42、batch、优化器、2100 步预算与硬件要求均沿用此前设置。
+
+| lambda | 配置 | 提交文件 |
+|---:|---|---|
+| 1e-3 | [lambda1e-3](../configs/ns97m_sinkhorn_closed_form_l2_lambda1e-3.yaml) | [Condor](../sub/moe_ns97m_sinkhorn_closed_form_l2_lambda1e-3.sub) |
+| 1e-4 | [lambda1e-4](../configs/ns97m_sinkhorn_closed_form_l2_lambda1e-4.yaml) | [Condor](../sub/moe_ns97m_sinkhorn_closed_form_l2_lambda1e-4.sub) |
+| 1e-5 | [lambda1e-5](../configs/ns97m_sinkhorn_closed_form_l2_lambda1e-5.yaml) | [Condor](../sub/moe_ns97m_sinkhorn_closed_form_l2_lambda1e-5.sub) |
+
+三个独立任务均使用 4 H100 / DP4、16 CPU、64000 MB、bid 100，从相同 seed 重新训练。
+输出与日志使用 `ns97m_sinkhorn_closed_form_l2_lambda*` 名称，以保留旧实验的独立记录。
+
+~~~bash
+condor_submit_bid 100 sub/moe_ns97m_sinkhorn_closed_form_l2_lambda1e-3.sub
+condor_submit_bid 100 sub/moe_ns97m_sinkhorn_closed_form_l2_lambda1e-4.sub
+condor_submit_bid 100 sub/moe_ns97m_sinkhorn_closed_form_l2_lambda1e-5.sub
+~~~
+
+提交前验证：三个正式配置均通过训练入口 dry-run，并逐项对比上一轮实际保存的配置；
+除实验名、P 更新规则与删除 P 梯度步长外，没有参数差异。提交文件也只更换实验名称与
+注释，保留原资源、数据路径和硬件排除条件。11 项 Sinkhorn 测试通过。
+三个 lambda/rho 比例（100、10、1）的 CPU 八步短训练通过，验证均值/单位矩阵/差值初始化、
+非零乘子、残差最优性和 Sinkhorn 边缘容差；最大最优性误差小于 1.9e-9，
+最大行列和误差小于 9.3e-6。短测试不代表正式训练收敛或质量。

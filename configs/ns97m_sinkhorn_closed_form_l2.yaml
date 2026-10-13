@@ -1,0 +1,13 @@
+# W -> closed-form P + soft Sinkhorn -> X -> L2 residual -> U.
+inherits: ns97m_sinkhorn.yaml
+experiment: moe_ns97m_sinkhorn_closed_form_l2
+salaad:
+  rho: 1.0e-5
+  residual_l2_lambda: 1.0e-4  # (lambda/2) * sum of squared residual entries.
+  initialization: identity_shared_mean_residual_dual_zero
+  channel_alignment:
+    sinkhorn:
+      update_rule: closed_form_clip_sinkhorn
+      clip_min: 1.0e-5  # Keep near-identity candidates numerically balanceable.
+      max_iterations: 10000  # Near-identity kernels can balance slowly.
+      early_stopping: true
